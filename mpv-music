@@ -1,0 +1,203 @@
+#!/usr/bin/env bash
+# Purpose: MPV wrapper for music playback
+set -euo pipefail
+
+# --- Configuration ---
+CONFIG_DIR="$HOME/.config/mpv-music"
+CONFIG_FILE="$CONFIG_DIR/mpv-music.conf"
+
+# Default values (will be overridden by config file if it exists)
+MUSIC_DIRS_DEFAULT=("$HOME/Music")
+MPV_ARGS_DEFAULT=(--loop-playlist=inf --shuffle --no-video)
+AUDIO_EXTS_DEFAULT="mp3 flac wav m4a aac ogg opus wma alac aiff amr"
+VIDEO_EXTS_DEFAULT="mp4 mkv webm avi mov flv wmv mpeg mpg 3gp ts vob m4v"
+
+# Ensure config directory exists
+mkdir -p "$CONFIG_DIR"
+
+# Check if config file exists, if not, create a default one
+if [[ ! -f "$CONFIG_FILE" ]]; then
+    cat <<EOF > "$CONFIG_FILE"
+# mpv-music configuration file
+
+# Default music directories (space-separated)
+# You can add multiple paths, e.g., MUSIC_DIRS="\$HOME/Music /mnt/my_music_drive/audio"
+MUSIC_DIRS="${MUSIC_DIRS_DEFAULT[*]}"
+
+# Default MPV arguments (space-separated)
+# These will be used if no other MPV args are passed on the command line.
+# Example: MPV_DEFAULT_ARGS="--loop-playlist=inf --shuffle --no-video --volume=50"
+MPV_DEFAULT_ARGS="${MPV_ARGS_DEFAULT[*]}"
+
+# Audio extensions (space-separated)
+# These are used when --video-ok is NOT specified.
+AUDIO_EXTS="$AUDIO_EXTS_DEFAULT"
+
+# Video extensions (space-separated)
+# These are added to AUDIO_EXTS when --video-ok IS specified.
+VIDEO_EXTS="$VIDEO_EXTS_DEFAULT"
+EOF
+    echo "Created default config file at $CONFIG_FILE"
+fi
+
+# Source the configuration file
+# This will set the variables like MUSIC_DIRS, MPV_DEFAULT_ARGS, etc.
+# shellcheck source=/dev/null
+. "$CONFIG_FILE"
+
+# Convert space-separated strings from config into arrays
+IFS=' ' read -ra MUSIC_DIRS_ARRAY <<< "$MUSIC_DIRS"
+IFS=' ' read -ra MPV_DEFAULT_ARGS_ARRAY <<< "$MPV_DEFAULT_ARGS"
+IFS=' ' read -ra AUDIO_EXTS_ARRAY <<< "$AUDIO_EXTS"
+IFS=' ' read -ra VIDEO_EXTS_ARRAY <<< "$VIDEO_EXTS"
+
+
+# --- Dependency Checks ---
+if ! command -v mpv &>/dev/null || ! command -v fzf &>/dev/null; then
+  echo "Missing dependencies. mpv-music requires:"
+  echo "- mpv: media player (https://mpv.io)"
+  echo "- fzf: fuzzy finder (https://github.com/junegunn/fzf)"
+  echo "Install them and try again."
+  exit 1
+fi
+
+if ! find --version 2>&1 | grep -q 'GNU findutils'; then
+  echo "Error: GNU find is required. Your system might be using BSD find."
+  echo "Please install GNU findutils!"
+  exit 1
+fi
+
+# --- Help Function ---
+show_help() {
+  cat <<EOF
+🦍 MPV Music Script – Monke Wrapper 🍌 (v$VERSION)
+
+Usage:
+  mpv-music [MUSIC_DIR] [OPTIONS]
+
+Examples:
+  mpv-music                       # Uses directories from config with default mpv flags
+  mpv-music /path/to/music        # Uses custom folder with default mpv flags
+  mpv-music --no-video --volume=20 # Uses config directories with custom flags
+  mpv-music /path/to/music --no-video # Custom folder + custom flags
+
+Options:
+  -h, --help        Show this help message and exit
+  -v, --version     Show version and exit
+  --video-ok        Include video file formats (defined in config)
+  --ext=EXT1,EXT2   Use only specified extensions (comma-separated, overrides config)
+
+Interactive Modes:
+  1) Album mode: Pick entire folders
+  2) Track mode: Pick individual files
+
+MPV default flags (if none passed via command line):
+  $(echo "${MPV_DEFAULT_ARGS_ARRAY[@]}" | sed 's/ /\n  /g') # Display defaults from config
+
+Note: Requires GNU find.
+EOF
+}
+
+# --- Global Variables (Initial values) ---
+VIDEO_OK=false
+CUSTOM_EXTS=""
+MPV_ARGS=()
+VERSION="0.3.0"
+
+# --- Argument Parsing ---
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  show_help
+  exit 0
+fi
+
+if [[ "${1:-}" == "-v" || "${1:-}" == "--version" ]]; then
+  echo "mpv-music v$VERSION"
+  exit 0
+fi
+
+# Determine effective MUSIC_DIRS: command line arg takes precedence over config
+EFFECTIVE_MUSIC_DIRS=("${MUSIC_DIRS_ARRAY[@]}")
+if [[ $# -gt 0 && -d "$1" ]]; then
+  EFFECTIVE_MUSIC_DIRS=("$1")
+  shift
+fi
+
+# Extract and remove custom script-specific flags, collect MPV_ARGS
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --video-ok)
+      VIDEO_OK=true
+      shift
+      ;;
+    --ext=*)
+      CUSTOM_EXTS="${1#--ext=}"
+      shift
+      ;;
+    *)
+      MPV_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+# If no MPV arguments were passed on the command line, use the defaults from config
+if [[ ${#MPV_ARGS[@]} -eq 0 ]]; then
+  MPV_ARGS=("${MPV_DEFAULT_ARGS_ARRAY[@]}")
+fi
+
+# --- Build Extension Filter Array ---
+EXT_FILTER=()
+CURRENT_EXTS=()
+
+if [[ -n "$CUSTOM_EXTS" ]]; then
+  IFS=',' read -ra CURRENT_EXTS <<< "$CUSTOM_EXTS"
+elif [[ "$VIDEO_OK" == true ]]; then
+  CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}" "${VIDEO_EXTS_ARRAY[@]}")
+else
+  CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}")
+fi
+
+for i in "${!CURRENT_EXTS[@]}"; do
+  EXT_FILTER+=( -iname "*.${CURRENT_EXTS[$i]}" )
+  if [[ $((i+1)) -lt ${#CURRENT_EXTS[@]} ]]; then
+    EXT_FILTER+=( -o )
+  fi
+done
+
+# --- Interactive Mode Selection ---
+echo "🎧 Pick mode:"
+echo "1) Play entire folder(s) (album mode)"
+echo "2) Pick individual tracks"
+read -rp "Enter choice [1/2]: " MODE
+
+if [[ "$MODE" == "1" ]]; then
+  SELECTED=$(find "${EFFECTIVE_MUSIC_DIRS[@]}" -type d | fzf --multi --prompt="📁 Pick folder(s): ") || {
+    echo "No folders picked. Monke confused. 🙃"
+    exit 1
+  }
+
+  mapfile -t FOLDERS <<< "$SELECTED"
+  echo "📦 Selected ${#FOLDERS[@]} folder(s)."
+
+  FILES=()
+  for DIR in "${FOLDERS[@]}"; do
+    while IFS= read -r -d '' FILE; do
+      FILES+=("$FILE")
+    done < <(find "$DIR" -type f \( "${EXT_FILTER[@]}" \) -print0)
+  done
+
+  [[ ${#FILES[@]} -eq 0 ]] && echo "No music found in those folders. Monke hear nothing 🙊" && exit 1
+  echo "🎶 Found ${#FILES[@]} file(s) total."
+  mpv "${MPV_ARGS[@]}" "${FILES[@]}"
+
+elif [[ "$MODE" == "2" ]]; then
+  mapfile -t FILES < <(find "${EFFECTIVE_MUSIC_DIRS[@]}" -type f \( "${EXT_FILTER[@]}" \) | fzf --multi --prompt="🎵 Pick your tracks: ")
+
+  [[ ${#FILES[@]} -eq 0 ]] && echo "No tracks picked. Monke walk away. 🚶" && exit 1
+  echo "🎶 Selected ${#FILES[@]} track(s)."
+  mpv "${MPV_ARGS[@]}" "${FILES[@]}"
+
+else
+  echo "Invalid input. Monke smash keyboard in confusion 🍌💥"
+  exit 1
+fi
