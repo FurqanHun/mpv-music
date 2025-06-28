@@ -16,6 +16,7 @@ An MPV wrapper for music playback, with fzf integration and configurable options
 
 ## Features
 
+* **Direct File/URL Playback:** Play specific local audio/video files or stream directly from URLs(e.g., YouTube) by passing them as arguments.
 * **Interactive Music Selection:** Use `fzf` to fuzzy-find and select music.
 * **Two Playback Modes:**
   * **Album Mode:** Select entire folders/albums to play.
@@ -62,11 +63,14 @@ An MPV wrapper for music playback, with fzf integration and configurable options
 Run the script from your terminal:
 
 ```bash
-mpv-music [MUSIC_DIR] [OPTIONS]
+mpv-music [PATH_OR_URL_OR_MUSIC_DIR] [OPTIONS]
 ```
 
 * **No arguments:** Uses music directories defined in `~/.config/mpv-music/mpv-music.conf` and default `mpv` flags.
-* **`[MUSIC_DIR]`:** Specify a custom base directory for music. This overrides the config's `MUSIC_DIRS` for the current run.
+* **`[PATH_OR_URL_OR_MUSIC_DIR]`:**
+  * **Direct Playback:** Provide a direct path to a local file (e.g., ~/Music/song.mp3) or a URL (e.g., https://maybeaurl/file) to play immediately. This bypasses interactive selection.
+
+  * **Custom Music Directory:** Provide a path to an existing directory (e.g., /path/to/my/tunes). This will override the MUSIC_DIRS from your config for the current run, but will not bypass interactive selection.
 * **`[OPTIONS]`:** Pass any `mpv` flags (e.g., `--volume=50 --no-video`) or script-specific options.
 
 **Examples:**
@@ -74,6 +78,8 @@ mpv-music [MUSIC_DIR] [OPTIONS]
 ```bash
 mpv-music                                   # Uses directories from config with default mpv flags
 mpv-music /path/to/music                    # Uses custom folder with default mpv flags
+mpv-music ~/Music/my_favorite_song.flac     # Plays a specific local FLAC file directly
+mpv-music https://maybeaurl/file            # Plays a file from URL video/audio directly
 mpv-music --no-video --volume=20            # Uses config directories with custom flags
 mpv-music /path/to/music --no-video         # Custom folder + custom flags
 
@@ -102,7 +108,7 @@ You can edit this file to customize:
 
 # Default music directories (space-separated)
 # You can add multiple paths, e.g., MUSIC_DIRS="$HOME/Music /mnt/my_music_drive/audio"
-MUSIC_DIRS="/home/qan/Music /mnt/qanhdd/A-STUFF/musicdd/"
+MUSIC_DIRS="/home/qan/Music"
 
 # Default MPV arguments (space-separated)
 # These will be used if no other MPV args are passed on the command line.
@@ -128,6 +134,8 @@ VIDEO_EXTS="mp4 mkv webm avi mov flv wmv mpeg mpg 3gp ts vob m4v"
   👉 [https://mpv.io](https://mpv.io)
 * **`fzf`**: A general-purpose command-line fuzzy finder.
   👉 [https://github.com/junegunn/fzf](https://github.com/junegunn/fzf)
+* **`yt-dlp`**: A youtube-dl fork for downloading videos from YouTube and other sites. Required for URL playback.
+  👉 [https://github.com/yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp)
 * **GNU `find`**: Your system's `find` utility must be the GNU version (e.g., from `findutils`). A check is performed at startup.
 
 ---
