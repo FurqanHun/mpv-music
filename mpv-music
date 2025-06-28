@@ -75,8 +75,8 @@ if ! command -v ffprobe &>/dev/null; then
 fi
 
 if ! command -v jq &>/dev/null; then
-  echo "Warning: jq not found. Advanced metadata parsing might be limited."
-  echo "Install jq (e.g., sudo apt install jq or brew install jq) for full metadata support."
+  echo "Error: jq not found. Metadata indexing and advanced features will be unavailable."
+  echo "Install jq (e.g., sudo apt install jq or brew install jq) for full functionality."
   exit 1 # index file is json, so need jq for parsing metadata
 fi
 
@@ -85,11 +85,13 @@ if ! command -v mediainfo &>/dev/null; then
   echo "Install mediainfo (e.g., sudo apt install mediainfo or brew install mediainfo)."
 fi
 
-if ! find --version 2>&1 | grep -q 'GNU findutils'; then
+if ! command -v find &>/dev/null || ! find --version 2>&1 | grep -q 'GNU findutils'; then
   echo "Error: GNU find is required. Your system might be using BSD find."
   echo "Please install GNU findutils!"
   exit 1
 fi
+
+# --- Helper Functions (Defined before main execution logic) ---
 
 # --- Help Function ---
 show_help() {
@@ -112,6 +114,8 @@ Options:
   -v, --version     Show version and exit
   --video-ok        Include video file formats (defined in config)
   --ext=EXT1,EXT2   Use only specified extensions (comma-separated, overrides config)
+  --refresh-index   Force a smart update of the music index (checks file changes).
+  --reindex         Force a complete rebuild of the music index (resets everything).
 
 Interactive Modes:
   1) Album mode: Pick entire folders
@@ -137,7 +141,7 @@ get_audio_metadata() {
   local metadata_json # For ffprobe JSON output
 
   # --- Attempt 1: Use ffprobe ---
-  # echo "DEBUG: using ffprobe!"
+  # Removed: echo "using ffprobe!"
   metadata_json=$(ffprobe -v quiet -hide_banner -show_format -show_streams -of json "$file" 2>/dev/null)
 
   # For debugging ffprobe: Uncomment these lines (outputs to stderr, not captured by shell command substitution)
@@ -195,7 +199,7 @@ get_audio_metadata() {
     if command -v mediainfo &>/dev/null; then
       # Use mediainfo to get specific fields
       local mediainfo_raw
-      echo "DEBUG: Using mediainfo fallback for '$file' (ffprobe failed to find title/artist)." >&2 # Output to stderr
+      # echo "DEBUG: Using mediainfo fallback for '$file' (ffprobe failed to find title/artist)." >&2 # Output to stderr
       mediainfo_raw=$(mediainfo --Inform="General;%Track_Name%|%Performer%" "$file" 2>/dev/null)
 
       # For debugging mediainfo:
@@ -236,27 +240,39 @@ get_audio_metadata() {
 # --- Music Library Indexing Function ---
 # Builds or rebuilds the entire music index.
 # This function will be called initially and potentially for full rebuilds.
-# --- Music Library Indexing Function ---
-# Builds or rebuilds the entire music index.
-# This function will be called initially and potentially for full rebuilds.
 build_music_index() {
   local music_dirs=("${MUSIC_DIRS_ARRAY[@]}") # Use the configured music directories
   local ext_filter=("${EXT_FILTER[@]}")       # Use the generated extension filter
   local all_music_files=()
-  local json_array="[]" # Start with an empty JSON array
+  local tracks_json_array="[]"
+  local indexed_dirs_json_array="[]"
 
   echo "Indexing music library for the first time... This may take a while for large collections."
   echo "Please wait. Monke is working! 🐒"
 
-  # Find all music files in configured directories based on extensions
-  # Using -print0 and mapfile -d '' for robust handling of spaces/special characters
-  while IFS= read -r -d '' file; do
-    all_music_files+=("$file")
-  done < <(find "${music_dirs[@]}" -type f \( "${ext_filter[@]}" \) -print0)
+  # Populate all_music_files and indexed_dirs_json_array
+  for dir_path in "${music_dirs[@]}"; do
+    if [[ -d "$dir_path" ]]; then
+      # Fix for newline: Ensure dir_path is trimmed before passing to jq
+      local trimmed_dir_path=$(echo "$dir_path" | tr -d '\n\r')
+      local dir_mtime=$(stat -c %Y "$dir_path" 2>/dev/null || echo "")
+      local dir_json=$(jq -n --arg path "$trimmed_dir_path" --arg mtime "$dir_mtime" '{path: $path, mtime: $mtime}')
+      indexed_dirs_json_array=$(echo "$indexed_dirs_json_array" | jq --argjson new_dir "$dir_json" '. + [$new_dir]')
+
+      # Find files within this specific directory and its subdirectories
+      while IFS= read -r -d '' file; do
+        all_music_files+=("$file")
+      done < <(find "$dir_path" -type f \( "${ext_filter[@]}" \) -print0)
+    else
+      echo "Warning: Configured music directory '$dir_path' does not exist. Skipping." >&2
+    fi
+  done
+
 
   if [[ ${#all_music_files[@]} -eq 0 ]]; then
     echo "No music files found in configured directories. Index will be empty. 🙊"
-    echo "$json_array" | jq . > "$MUSIC_INDEX_FILE" # Write an empty array
+    # Even if no tracks, we should save the dir info
+    jq -n --argjson dirs "$indexed_dirs_json_array" '{indexed_directories: $dirs, tracks: []}' > "$MUSIC_INDEX_FILE"
     return 0
   fi
 
@@ -265,7 +281,6 @@ build_music_index() {
 
   for file_path in "${all_music_files[@]}"; do
     count=$((count + 1))
-    # Print progress (optional, but good for user feedback during long operations)
     printf "\rIndexing: %d/%d (%s)" "$count" "$total" "$(basename "$file_path")" >&2
 
     # Get metadata for the current file
@@ -285,17 +300,16 @@ build_music_index() {
     local album="${metadata_array[2]}"
     local genre="${metadata_array[3]}"
 
-    # --- NEW: Get file mtime and size ---
-    local mtime=$(stat -c %Y "$file_path" 2>/dev/null || echo "") # %Y = seconds since Epoch
-    local size=$(stat -c %s "$file_path" 2>/dev/null || echo "")  # %s = size in bytes
+    local mtime=$(stat -c %Y "$file_path" 2>/dev/null || echo "")
+    local size=$(stat -c %s "$file_path" 2>/dev/null || echo "")
 
-    # Escape path for JSON
-    local escaped_path=$(echo "$file_path" | jq -sRr @json)
+    # Fix for newline: Ensure file_path is trimmed before escaping for JSON
+    local trimmed_file_path=$(echo "$file_path" | tr -d '\n\r')
+    local escaped_path=$(echo "$trimmed_file_path" | jq -sRr @json)
 
-    # Create a JSON object for the current track, including mtime and size
     local track_json
     track_json=$(jq -n \
-      --arg path "$file_path" \
+      --arg path "$trimmed_file_path" \
       --arg title "$title" \
       --arg artist "$artist" \
       --arg album "$album" \
@@ -304,29 +318,177 @@ build_music_index() {
       --arg size "$size" \
       '{path: $path, title: $title, artist: $artist, album: $album, genre: $genre, mtime: $mtime, size: $size}')
 
-    # Append the new track JSON object to the existing JSON array
-    json_array=$(echo "$json_array" | jq --argjson new_track "$track_json" '. + [$new_track]')
+    tracks_json_array=$(echo "$tracks_json_array" | jq --argjson new_track "$track_json" '. + [$new_track]')
 
     # check for jq error just in case
     if [[ $? -ne 0 ]]; then
       echo -e "\nError: jq failed to append metadata for $file_path. Skipping. Index may be incomplete." >&2
       # might add better error handling, like logging or writing partial index in future
-      break
+      return 1
     fi
 
   done
   printf "\rIndexing complete: %d/%d files processed. 🎉\n" "$total" "$total" >&2
 
-  # Write the final JSON array to the index file
-  echo "$json_array" | jq . > "$MUSIC_INDEX_FILE"
+  # Write the final JSON object with both directories and tracks arrays
+  echo "{\"indexed_directories\": $(echo "$indexed_dirs_json_array" | jq -c .), \"tracks\": $(echo "$tracks_json_array" | jq -c .)}" | jq . > "$MUSIC_INDEX_FILE"
   echo "Index saved to $MUSIC_INDEX_FILE"
 }
+
+# --- Music Library Update Function ---
+# Updates the music index by checking for new, removed, or modified files.
+update_music_index() {
+  local music_dirs=("${MUSIC_DIRS_ARRAY[@]}")
+  local ext_filter=("${EXT_FILTER[@]}")
+  local current_files_on_disk=() # To store paths of all currently found files
+  local new_index_array="[]"    # The JSON array for the updated index
+  declare -A old_index_map      # Associative array: path -> full JSON object of the track
+  local old_index_json_string   # To hold the raw JSON from the file
+
+  echo "Updating music library index. Monke smart! 🧠"
+
+  # 1. Load existing index into a map for fast lookups
+  if [[ -f "$MUSIC_INDEX_FILE" ]]; then
+    old_index_json_string=$(cat "$MUSIC_INDEX_FILE")
+    # Check if the file contains valid JSON and has the expected top-level 'tracks' key as an array
+    if ! echo "$old_index_json_string" | jq -e '.tracks | arrays' &>/dev/null; then
+        echo "Warning: Index file '$MUSIC_INDEX_FILE' is invalid or missing/corrupted 'tracks' array. Rebuilding index." >&2
+        build_music_index # Rebuild from scratch if corrupt
+        return 0 # Exit update as rebuild handled it
+    fi
+
+    # Populate old_index_map: Key = path, Value = full JSON object of the track
+    # Use process substitution to populate array in current shell
+    while IFS=$'\t' read -r path json_obj; do
+        old_index_map["$(echo "$path" | tr -d '\n\r')"]="$json_obj" # FIX: Trim path when adding to map
+    done < <(echo "$old_index_json_string" | jq -c '.tracks[] | "\(.path)\t\(.)"')
+  else
+    echo "Index file not found. Building index for the first time."
+    build_music_index # If no index exists, build it
+    return 0 # Exit update as build handled it
+  fi
+
+  # 2. Scan current filesystem and build the new index based on comparison
+  # Find all eligible music files on disk
+  for dir_path in "${music_dirs[@]}";
+    do # Iterate through each config dir
+    if [[ -d "$dir_path" ]]; then
+      while IFS= read -r -d '' file; do
+        current_files_on_disk+=("$file")
+      done < <(find "$dir_path" -type f \( "${ext_filter[@]}" \) -print0)
+    fi
+  done
+
+  local count=0
+  local total=${#current_files_on_disk[@]}
+
+  if [[ ${#current_files_on_disk[@]} -eq 0 ]]; then
+    echo "No music files found on disk during update scan. Index will be empty. 🙊" >&2
+    # Ensure index is written with correct empty structure
+    local current_indexed_dirs=$(echo "$old_index_json_string" | jq -c '.indexed_directories // []') # Get dirs from old index, or empty array
+    echo "{\"indexed_directories\": $(echo "$current_indexed_dirs" | jq -c .), \"tracks\": []}" | jq . > "$MUSIC_INDEX_FILE"
+    return 0
+  fi
+
+
+
+  for file_path in "${current_files_on_disk[@]}"; do
+    count=$((count + 1))
+    printf "\rScanning and updating: %d/%d (%s)" "$count" "$total" "$(basename "$file_path")" >&2
+
+    local current_mtime=$(stat -c %Y "$file_path" 2>/dev/null || echo "")
+    local current_size=$(stat -c %s "$file_path" 2>/dev/null || echo "")
+
+    local track_json_to_add # Holds the JSON for the current track to be added to new_index_array
+
+    # Check if file existed in old index and is unchanged
+    local trimmed_file_path=$(echo "$file_path" | tr -d '\n\r') # FIX: Trim file_path for map lookup
+    if [[ -n "${old_index_map[$trimmed_file_path]+x}" ]]; then # Check if key exists in map using trimmed path
+      local old_track_json="${old_index_map[$trimmed_file_path]}" # Retrieve using trimmed path
+      local old_mtime=$(echo "$old_track_json" | jq -r '.mtime // ""')
+      local old_size=$(echo "$old_track_json" | jq -r '.size // ""')
+
+      if [[ "$current_mtime" == "$old_mtime" && "$current_size" == "$old_size" ]]; then
+        # File is unchanged, use its old JSON directly
+        track_json_to_add="$old_track_json"
+      else
+        # File modified, re-read metadata
+        echo -e "\n  (Modified: $(basename "$file_path"))" >&2 # Debug message
+        local raw_metadata_output=$(get_audio_metadata "$file_path")
+        IFS=',' read -r -a metadata_array <<< "$raw_metadata_output"
+
+        local title="${metadata_array[0]}"
+        local artist="${metadata_array[1]}"
+        local album="${metadata_array[2]}"
+        local genre="${metadata_array[3]}"
+
+        track_json_to_add=$(jq -n \
+          --arg path "$trimmed_file_path" \
+          --arg title "$title" \
+          --arg artist "$artist" \
+          --arg album "$album" \
+          --arg genre "$genre" \
+          --arg mtime "$current_mtime" \
+          --arg size "$current_size" \
+          '{path: $path, title: $title, artist: $artist, album: $album, genre: $genre, mtime: $mtime, size: $size}')
+      fi
+    else
+      # File is new, read metadata
+      # echo -e "\n  (New: $(basename "$file_path"))" >&2 # Debug message
+      local raw_metadata_output=$(get_audio_metadata "$file_path")
+      IFS=',' read -r -a metadata_array <<< "$raw_metadata_output"
+
+      local title="${metadata_array[0]}"
+      local artist="${metadata_array[1]}"
+      local album="${metadata_array[2]}"
+      local genre="${metadata_array[3]}"
+
+      track_json_to_add=$(jq -n \
+        --arg path "$trimmed_file_path" \
+        --arg title "$title" \
+        --arg artist "$artist" \
+        --arg album "$album" \
+        --arg genre "$genre" \
+        --arg mtime "$current_mtime" \
+        --arg size "$current_size" \
+        '{path: $path, title: $title, artist: $artist, album: $album, genre: $genre, mtime: $mtime, size: $size}')
+    fi
+
+    # Append the track JSON object to the new JSON array
+    if [[ -n "$track_json_to_add" ]]; then
+      new_index_array=$(echo "$new_index_array" | jq --argjson new_track "$track_json_to_add" '. + [$new_track]')
+      if [[ $? -ne 0 ]]; then
+        echo -e "\nError: jq failed to append track $file_path. Index may be corrupted." >&2
+        return 1 # Indicate failure
+      fi
+    fi
+
+  done
+  printf "\rScanning and updating complete: %d/%d files processed. 🎉\n" "$total" "$total" >&2
+
+
+  # 3. Write the final new index, including updated indexed_directories.
+  # Get the CURRENT directory mtimes for the new index
+  local current_indexed_dirs_json_array="[]"
+  for dir_path in "${music_dirs[@]}"; do
+    if [[ -d "$dir_path" ]]; then
+      local trimmed_dir_path=$(echo "$dir_path" | tr -d '\n\r') # FIX: Trim dir_path before adding to JSON
+      local dir_mtime=$(stat -c %Y "$dir_path" 2>/dev/null || echo "")
+      local dir_json=$(jq -n --arg path "$trimmed_dir_path" --arg mtime "$dir_mtime" '{path: $path, mtime: $mtime}')
+      current_indexed_dirs_json_array=$(echo "$current_indexed_dirs_json_array" | jq --argjson new_dir "$dir_json" '. + [$new_dir]')
+    fi
+  done
+
+  echo "{\"indexed_directories\": $(echo "$current_indexed_dirs_json_array" | jq -c .), \"tracks\": $(echo "$new_index_array" | jq -c .)}" | jq . > "$MUSIC_INDEX_FILE"
+  echo "Index updated and saved to $MUSIC_INDEX_FILE"
+}
+
 
 # --- Global Variables (Initial values) ---
 VIDEO_OK=false
 CUSTOM_EXTS=""
 MPV_ARGS=()
-VERSION="0.5.0"
+VERSION="0.6.1"
 DIRECT_PLAY_TARGET="" # Will store the file path or URL if provided
 CUSTOM_MUSIC_DIR="" # Will store a custom music directory if provided
 
@@ -350,9 +512,51 @@ while [[ $# -gt 0 ]]; do
       CUSTOM_EXTS="${1#--ext=}"
       shift
       ;;
-    # Check for direct play target (URL or file)
-    # This must be done carefully to not consume a directory argument too early
-    # It assumes a direct play target or custom music dir will be the *first* positional arg
+    --refresh-index) # New: Force smart update
+      # Build EXT_FILTER here as it's needed by update_music_index
+      EXT_FILTER=()
+      CURRENT_EXTS=()
+      if [[ -n "$CUSTOM_EXTS" ]]; then
+        IFS=',' read -ra CURRENT_EXTS <<< "$CUSTOM_EXTS"
+      elif [[ "$VIDEO_OK" == true ]]; then
+        CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}" "${VIDEO_EXTS_ARRAY[@]}")
+      else
+        CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}")
+      fi
+      for i in "${!CURRENT_EXTS[@]}"; do
+        EXT_FILTER+=( -iname "*.${CURRENT_EXTS[$i]}" )
+        if [[ $((i+1)) -lt ${#CURRENT_EXTS[@]} ]]; then
+          EXT_FILTER+=( -o )
+        fi
+      done
+      # End EXT_FILTER build for this specific case
+
+      update_music_index
+      exit 0 # Exit after forced update
+      ;;
+    --reindex) # New: Force rebuild
+      # Build EXT_FILTER here as it's needed by build_music_index
+      EXT_FILTER=()
+      CURRENT_EXTS=()
+      if [[ -n "$CUSTOM_EXTS" ]]; then
+        IFS=',' read -ra CURRENT_EXTS <<< "$CUSTOM_EXTS"
+      elif [[ "$VIDEO_OK" == true ]]; then
+        CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}" "${VIDEO_EXTS_ARRAY[@]}")
+      else
+        CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}")
+      fi
+      for i in "${!CURRENT_EXTS[@]}"; do
+        EXT_FILTER+=( -iname "*.${CURRENT_EXTS[$i]}" )
+        if [[ $((i+1)) -lt ${#CURRENT_EXTS[@]} ]]; then
+          EXT_FILTER+=( -o )
+        fi
+      done
+      # End EXT_FILTER build for this specific case
+
+      echo "Forcing a complete rebuild of the music index."
+      build_music_index
+      exit 0 # Exit after forced rebuild
+      ;;
     *)
       if [[ -z "$DIRECT_PLAY_TARGET" && -z "$CUSTOM_MUSIC_DIR" ]]; then
         # Check if it's a URL
@@ -372,7 +576,6 @@ while [[ $# -gt 0 ]]; do
           continue # Move to next arg to collect potential MPV flags for the interactive mode
         fi
       fi
-      # If it's not a recognized script option, URL, file, or custom music dir, treat as MPV arg
       MPV_ARGS+=("$1")
       shift
       ;;
@@ -392,48 +595,8 @@ if [[ -n "$DIRECT_PLAY_TARGET" ]]; then
 fi
 
 # --- Music Library Indexing Check ---
-# Check if the index file exists, if not, build it.
-if [[ ! -f "$MUSIC_INDEX_FILE" ]]; then
-  # Build EXT_FILTER here as it's needed by build_music_index
-  # (Copy/paste the EXT_FILTER building logic here from below temporarily)
-  # This section ensures EXT_FILTER is built for the indexer if not already built for fzf.
-  EXT_FILTER=()
-  CURRENT_EXTS=()
-
-  if [[ -n "$CUSTOM_EXTS" ]]; then
-    IFS=',' read -ra CURRENT_EXTS <<< "$CUSTOM_EXTS"
-  elif [[ "$VIDEO_OK" == true ]]; then
-    CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}" "${VIDEO_EXTS_ARRAY[@]}")
-  else
-    CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}")
-  fi
-
-  for i in "${!CURRENT_EXTS[@]}"; do
-    EXT_FILTER+=( -iname "*.${CURRENT_EXTS[$i]}" )
-    if [[ $((i+1)) -lt ${#CURRENT_EXTS[@]} ]]; then
-      EXT_FILTER+=( -o )
-    fi
-  done
-  # End of temporary EXT_FILTER build
-
-  build_music_index
-fi
-
-# --- Determine effective MUSIC_DIRS for interactive mode ---
-EFFECTIVE_MUSIC_DIRS=("${MUSIC_DIRS_ARRAY[@]}")
-if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then # If a custom directory was provided via command line
-  EFFECTIVE_MUSIC_DIRS=("$CUSTOM_MUSIC_DIR")
-fi
-
-# ... (the rest of your script remains the same) ...
-
-# --- Determine effective MUSIC_DIRS for interactive mode ---
-EFFECTIVE_MUSIC_DIRS=("${MUSIC_DIRS_ARRAY[@]}")
-if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then # If a custom directory was provided via command line
-  EFFECTIVE_MUSIC_DIRS=("$CUSTOM_MUSIC_DIR")
-fi
-
-# --- Build Extension Filter Array ---
+# Build EXT_FILTER here as it's needed by both build_music_index and update_music_index.
+# Moved EXT_FILTER building here to ensure it's always available before indexing calls.
 EXT_FILTER=()
 CURRENT_EXTS=()
 
@@ -451,6 +614,19 @@ for i in "${!CURRENT_EXTS[@]}"; do
     EXT_FILTER+=( -o )
   fi
 done
+# EXT_FILTER is now always built here.
+
+# Check if the index file exists, if not, build it.
+if [[ ! -f "$MUSIC_INDEX_FILE" ]]; then
+  echo "Index file '$MUSIC_INDEX_FILE' not found. Building index from scratch."
+  build_music_index # Build from scratch
+fi
+
+# --- Determine effective MUSIC_DIRS for interactive mode ---
+EFFECTIVE_MUSIC_DIRS=("${MUSIC_DIRS_ARRAY[@]}")
+if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then # If a custom directory was provided via command line
+  EFFECTIVE_MUSIC_DIRS=("$CUSTOM_MUSIC_DIR")
+fi
 
 # --- Interactive Mode Selection ---
 echo "🎧 Pick mode:"
