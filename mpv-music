@@ -61,6 +61,12 @@ if ! command -v mpv &>/dev/null || ! command -v fzf &>/dev/null; then
   exit 1
 fi
 
+if ! command -v yt-dlp &>/dev/null; then
+  echo "Warning: yt-dlp not found. URL playback might be limited."
+  echo "Install yt-dlp (https://github.com/yt-dlp/yt-dlp/) for full URL support."
+  # no exit here, cuz local file/folder playback
+fi
+
 if ! find --version 2>&1 | grep -q 'GNU findutils'; then
   echo "Error: GNU find is required. Your system might be using BSD find."
   echo "Please install GNU findutils!"
@@ -73,11 +79,13 @@ show_help() {
 🦍 MPV Music Script – Monke Wrapper 🍌 (v$VERSION)
 
 Usage:
-  mpv-music [MUSIC_DIR] [OPTIONS]
+  mpv-music [PATH_OR_URL] [OPTIONS]
 
 Examples:
   mpv-music                       # Uses directories from config with default mpv flags
   mpv-music /path/to/music        # Uses custom folder with default mpv flags
+  mpv-music ~/Music/song.mp3      # Plays a specific local file directly
+  mpv-music https://maybeaurl/file # Plays a file from URL directly (requires yt-dlp)
   mpv-music --no-video --volume=20 # Uses config directories with custom flags
   mpv-music /path/to/music --no-video # Custom folder + custom flags
 
@@ -103,28 +111,21 @@ VIDEO_OK=false
 CUSTOM_EXTS=""
 MPV_ARGS=()
 VERSION="0.3.0"
+DIRECT_PLAY_TARGET="" # Will store the file path or URL if provided
+CUSTOM_MUSIC_DIR="" # Will store a custom music directory if provided
 
 # --- Argument Parsing ---
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  show_help
-  exit 0
-fi
-
-if [[ "${1:-}" == "-v" || "${1:-}" == "--version" ]]; then
-  echo "mpv-music v$VERSION"
-  exit 0
-fi
-
-# Determine effective MUSIC_DIRS: command line arg takes precedence over config
-EFFECTIVE_MUSIC_DIRS=("${MUSIC_DIRS_ARRAY[@]}")
-if [[ $# -gt 0 && -d "$1" ]]; then
-  EFFECTIVE_MUSIC_DIRS=("$1")
-  shift
-fi
-
-# Extract and remove custom script-specific flags, collect MPV_ARGS
+# Iterate through all arguments to identify direct play target, script options, or mpv flags
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    -v|--version)
+      echo "mpv-music v$VERSION"
+      exit 0
+      ;;
     --video-ok)
       VIDEO_OK=true
       shift
@@ -133,7 +134,29 @@ while [[ $# -gt 0 ]]; do
       CUSTOM_EXTS="${1#--ext=}"
       shift
       ;;
+    # Check for direct play target (URL or file)
+    # This must be done carefully to not consume a directory argument too early
+    # It assumes a direct play target or custom music dir will be the *first* positional arg
     *)
+      if [[ -z "$DIRECT_PLAY_TARGET" && -z "$CUSTOM_MUSIC_DIR" ]]; then
+        # Check if it's a URL
+        if [[ "$1" =~ ^https?://|^ftp://|^file://|^yt-dlp:// ]]; then
+          DIRECT_PLAY_TARGET="$1"
+          shift
+          continue # Move to next arg to collect potential MPV flags for the URL
+        # Check if it's an existing file
+        elif [[ -f "$1" ]]; then
+          DIRECT_PLAY_TARGET="$1"
+          shift
+          continue # Move to next arg to collect potential MPV flags for the file
+        # Check if it's an existing directory (custom music dir)
+        elif [[ -d "$1" ]]; then
+          CUSTOM_MUSIC_DIR="$1"
+          shift
+          continue # Move to next arg to collect potential MPV flags for the interactive mode
+        fi
+      fi
+      # If it's not a recognized script option, URL, file, or custom music dir, treat as MPV arg
       MPV_ARGS+=("$1")
       shift
       ;;
@@ -143,6 +166,19 @@ done
 # If no MPV arguments were passed on the command line, use the defaults from config
 if [[ ${#MPV_ARGS[@]} -eq 0 ]]; then
   MPV_ARGS=("${MPV_DEFAULT_ARGS_ARRAY[@]}")
+fi
+
+# --- Execute Direct Play if target was found ---
+if [[ -n "$DIRECT_PLAY_TARGET" ]]; then
+  echo "▶️ Playing: $DIRECT_PLAY_TARGET"
+  mpv "${MPV_ARGS[@]}" "$DIRECT_PLAY_TARGET"
+  exit 0
+fi
+
+# --- Determine effective MUSIC_DIRS for interactive mode ---
+EFFECTIVE_MUSIC_DIRS=("${MUSIC_DIRS_ARRAY[@]}")
+if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then # If a custom directory was provided via command line
+  EFFECTIVE_MUSIC_DIRS=("$CUSTOM_MUSIC_DIR")
 fi
 
 # --- Build Extension Filter Array ---
