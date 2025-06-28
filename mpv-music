@@ -16,6 +16,11 @@ VIDEO_EXTS_DEFAULT="mp4 mkv webm avi mov flv wmv mpeg mpg 3gp ts vob m4v"
 # Ensure config directory exists
 mkdir -p "$CONFIG_DIR"
 
+# --- Trap for cleanup ---
+trap 'rm -f "$temp_folder_list" "$temp_track_list"' EXIT
+temp_folder_list=""
+temp_track_list=""
+
 # Check if config file exists, if not, create a default one
 if [[ ! -f "$CONFIG_FILE" ]]; then
     cat <<EOF > "$CONFIG_FILE"
@@ -635,16 +640,36 @@ echo "2) Pick individual tracks"
 read -rp "Enter choice [1/2]: " MODE
 
 if [[ "$MODE" == "1" ]]; then
-  SELECTED=$(find "${EFFECTIVE_MUSIC_DIRS[@]}" -type d | fzf --multi --prompt="📁 Pick folder(s): ") || {
+  # Folder mode - simplified to avoid ANSI color issues
+  # Store full paths in a temporary file with display format
+  temp_folder_list=$(mktemp)
+  find "${EFFECTIVE_MUSIC_DIRS[@]}" -type d | sort | while read -r dir_path; do
+    # Get just the basename for display
+    dir_name=$(basename "$dir_path")
+    # Handle empty dir names (root directories)
+    if [[ -z "$dir_name" || "$dir_name" == "/" ]]; then
+      dir_name="[ROOT]"
+    fi
+    echo "$dir_name|$dir_path" >> "$temp_folder_list"
+  done
+
+  # Use fzf with the prepared list
+  SELECTED=$(cat "$temp_folder_list" | fzf --multi --with-nth=1 --delimiter="|" --prompt="📁 Pick folder(s): " | cut -d'|' -f2) || {
+    rm -f "$temp_folder_list"
     echo "No folders picked. Monke confused. 🙃"
     exit 1
   }
+
+  # Clean up
+  rm -f "$temp_folder_list"
 
   mapfile -t FOLDERS <<< "$SELECTED"
   echo "📦 Selected ${#FOLDERS[@]} folder(s)."
 
   FILES=()
   for DIR in "${FOLDERS[@]}"; do
+    # Debug output
+    echo "Searching in: $DIR"
     while IFS= read -r -d '' FILE; do
       FILES+=("$FILE")
     done < <(find "$DIR" -type f \( "${EXT_FILTER[@]}" \) -print0)
@@ -654,12 +679,41 @@ if [[ "$MODE" == "1" ]]; then
   echo "🎶 Found ${#FILES[@]} file(s) total."
   mpv "${MPV_ARGS[@]}" "${FILES[@]}"
 
-elif [[ "$MODE" == "2" ]]; then
-  mapfile -t FILES < <(find "${EFFECTIVE_MUSIC_DIRS[@]}" -type f \( "${EXT_FILTER[@]}" \) | fzf --multi --prompt="🎵 Pick your tracks: ")
+  elif [[ "$MODE" == "2" ]]; then
+    # Check if index file exists
+    if [[ ! -f "$MUSIC_INDEX_FILE" ]]; then
+      echo "No index file found. Please run with --reindex or --refresh-index first."
+      exit 1
+    fi
 
-  [[ ${#FILES[@]} -eq 0 ]] && echo "No tracks picked. Monke walk away. 🚶" && exit 1
-  echo "🎶 Selected ${#FILES[@]} track(s)."
-  mpv "${MPV_ARGS[@]}" "${FILES[@]}"
+    # Create a formatted display for tracks from the index
+    temp_track_list=$(mktemp)
+
+    # Format for display - using concatenation for display, but keeping original fields separate for preview
+    jq -r '.tracks[] | (.title // "[NO TITLE]") + "|" +
+           (.title // "[NO TITLE]") + "|" +
+           (.artist // "[NO ARTIST]") + "|" +
+           (.album // "[NO ALBUM]") + "|" +
+           (.genre // "[NO GENRE]") + "|" +
+           .path' "$MUSIC_INDEX_FILE" > "$temp_track_list"
+
+    # Use a simpler preview that directly shows the fields from the jq output
+    SELECTED=$(cat "$temp_track_list" | fzf --multi \
+      --prompt="🎵 Pick your tracks: " \
+      --delimiter="|" \
+      --with-nth=1 \
+      --preview='echo -e "\033[1;36mTitle:\033[0m {2}\n\033[1;33mArtist:\033[0m {3}\n\033[1;32mAlbum:\033[0m {4}\n\033[1;35mGenre:\033[0m {5}"' \
+      --preview-window=top:4 | awk -F'|' '{print $NF}')
+
+    # Clean up temp file
+    rm -f "$temp_track_list"
+
+    # Create array of selected files
+    mapfile -t FILES <<< "$SELECTED"
+
+    [[ ${#FILES[@]} -eq 0 ]] && echo "No tracks picked. Monke walk away. 🚶" && exit 1
+    echo "🎶 Selected ${#FILES[@]} track(s)."
+    mpv "${MPV_ARGS[@]}" "${FILES[@]}"
 
 else
   echo "Invalid input. Monke smash keyboard in confusion 🍌💥"
