@@ -22,8 +22,9 @@ temp_folder_list=""
 temp_track_list=""
 temp_index_file=""
 
-# Check if config file exists, if not, create a default one
-if [[ ! -f "$CONFIG_FILE" ]]; then
+# --- Create Config Function ---
+# Creates the configuration file for mpv-music.
+create_config() {
     cat <<EOF > "$CONFIG_FILE"
 # mpv-music configuration file
 
@@ -45,6 +46,11 @@ AUDIO_EXTS="$AUDIO_EXTS_DEFAULT"
 VIDEO_EXTS="$VIDEO_EXTS_DEFAULT"
 EOF
     echo "Created default config file at $CONFIG_FILE"
+}
+
+# Check if config file exists, if not, create a default one
+if [[ ! -f "$CONFIG_FILE" ]]; then
+    create_config
 fi
 
 # Source the configuration file
@@ -118,6 +124,8 @@ Examples:
 Options:
   -h, --help        Show this help message and exit
   -v, --version     Show version and exit
+  --config          Open config file in text editor (defaults to nano, falls back to vi)
+  --config=EDITOR   Open config file in specified editor (e.g., --config=vim)
   --video-ok        Include video file formats (defined in config)
   --ext=EXT1,EXT2   Use only specified extensions (comma-separated, overrides config)
   --refresh-index   Force a smart update of the music index (checks file changes).
@@ -533,7 +541,7 @@ update_music_index() {
 VIDEO_OK=false
 CUSTOM_EXTS=""
 MPV_ARGS=()
-VERSION="0.7.2"
+VERSION="0.8.0"
 DIRECT_PLAY_TARGET="" # Will store the file path or URL if provided
 CUSTOM_MUSIC_DIR="" # Will store a custom music directory if provided
 
@@ -549,6 +557,26 @@ while [[ $# -gt 0 ]]; do
       echo "mpv-music v$VERSION"
       exit 0
       ;;
+    --config|--config=*)
+    # If it's "--config=editor", extract the editor
+    if [[ "$1" == "--config="* ]]; then
+        EDITOR="${1#--config=}"
+    else
+        # No editor specified, try nano or fall back to vi
+        if command -v nano &>/dev/null; then
+            EDITOR="nano"
+        elif command -v vi &>/dev/null; then
+            EDITOR="vi"
+        else
+            echo "Error: Neither nano nor vi found. Please specify an editor with --config=editor"
+            exit 1
+        fi
+    fi
+
+    # Open the config file with the selected editor
+    $EDITOR "$CONFIG_FILE"
+    exit 0
+    ;;
     --video-ok)
       VIDEO_OK=true
       shift

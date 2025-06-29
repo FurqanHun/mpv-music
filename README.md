@@ -90,6 +90,8 @@ mpv-music [PATH_OR_URL_OR_DIR] [OPTIONS]
 
 ### Options:
 
+* `--config` → open config file in text editor (nano/vi)
+* `--config=editor` → open config in specified editor
 * `--no-video`, `--volume=50`, etc → any `mpv` flag works
 * `--video-ok` → include video files
 * `--ext=mp3,ogg` → override file extensions
@@ -105,6 +107,8 @@ mpv-music ~/Music/track.flac        # plays file instantly
 mpv-music https://yt.link/video     # plays URL instantly
 mpv-music --shuffle --no-video      # with custom mpv flags
 mpv-music --reindex                 # rebuild the index from scratch
+mpv-music --config                  # open config file text editor (nano/vi)
+mpv-music --config=vim              # open config in specified editor (like, vim here)
 ```
 
 ---
