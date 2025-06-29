@@ -129,6 +129,8 @@ Searching the filesystem with `find` every time is **slow af**, specially if you
 * `--reindex` → Full rebuild
 * `--refresh-index` → Smart update
 
+_Note: You may want to run these flags alongside `--video-ok` to include video files in the index. For example, to include video files in the index, use `mpv-music --video-ok --reindex`._
+
 ---
 
 ## Configuration
