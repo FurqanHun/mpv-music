@@ -6,6 +6,7 @@ set -euo pipefail
 CONFIG_DIR="$HOME/.config/mpv-music"
 CONFIG_FILE="$CONFIG_DIR/mpv-music.conf"
 MUSIC_INDEX_FILE="$CONFIG_DIR/music_index.json"
+LOG_FILE="$CONFIG_DIR/mpv-music.log"
 
 # Default values (will be overridden by config file if it exists)
 MUSIC_DIRS_DEFAULT=("$HOME/Music")
@@ -16,11 +17,87 @@ VIDEO_EXTS_DEFAULT="mp4 mkv webm avi mov flv wmv mpeg mpg 3gp ts vob m4v"
 # Ensure config directory exists
 mkdir -p "$CONFIG_DIR"
 
-# --- Trap for cleanup ---
-trap 'rm -f "$temp_folder_list" "$temp_track_list" "$temp_index_file"' EXIT
-temp_folder_list=""
-temp_track_list=""
-temp_index_file=""
+# --- Log Management ---
+rotate_log() {
+  # Only rotate the log if BOTH flags are enabled
+  if [[ "$VERBOSE" == true && "$DEBUG" == true ]]; then
+    local max_size_kb=1024 # 1MB
+    if [[ -f "$LOG_FILE" ]]; then
+      local current_size_kb
+      current_size_kb=$(du -k "$LOG_FILE" | cut -f1)
+      if [[ "$current_size_kb" -gt "$max_size_kb" ]]; then
+        mv "$LOG_FILE" "${LOG_FILE}.old"
+        # Use log_debug so this message also gets logged
+        log_debug "Log file rotated. Old log is at ${LOG_FILE}.old"
+      fi
+    fi
+  fi
+}
+# --- Verbose and Debug Mode ---
+VERBOSE=false
+DEBUG=false
+
+# Helper function for verbose logging
+log_verbose() {
+    # This outer 'if' ensures the message is printed to the screen if --verbose is on
+    if [[ "$VERBOSE" == true ]]; then
+        local message="[VERBOSE] $@"
+        # This inner 'if' checks if we should ALSO write to the log file
+        if [[ "$DEBUG" == true ]]; then
+            echo -e "$message" | tee -a "$LOG_FILE" >&2
+        else
+            echo -e "$message" >&2
+        fi
+    fi
+}
+
+# Helper function for debug logging
+log_debug() {
+    # This outer 'if' ensures the message is printed to the screen if --debug is on
+    if [[ "$DEBUG" == true ]]; then
+        local message="[DEBUG] $@"
+        # This inner 'if' checks if we should ALSO write to the log file
+        if [[ "$VERBOSE" == true ]]; then
+            echo -e "$message" | tee -a "$LOG_FILE" >&2
+        else
+            echo -e "$message" >&2
+        fi
+    fi
+}
+
+# --- Temporary File Management ---
+# Array to store all temporary files
+declare -a TEMP_FILES=()
+
+# Function to create a temporary file and track it for cleanup
+create_temp_file() {
+  local -n out_var=$1
+  out_var=$(mktemp)
+  TEMP_FILES+=("$out_var")
+}
+
+# Function to clean up all temporary files
+cleanup_temp_files() {
+  log_debug "\n--- Cleanup triggered ---"
+  if [[ ${#TEMP_FILES[@]} -gt 0 ]]; then
+    log_debug "Cleaning up ${#TEMP_FILES[@]} temporary files..."
+    for tmp_file in "${TEMP_FILES[@]}"; do
+      if [[ -f "$tmp_file" ]]; then
+        log_debug "Removing: $tmp_file" >&2
+        rm -f "$tmp_file"
+        # Verify removal
+        [[ ! -f "$tmp_file" ]] && log_debug "✓ Successfully removed" || log_debug "❌ Failed to remove"
+      else
+        log_debug "File already gone: $tmp_file"
+      fi
+    done
+    log_debug "--- Cleanup complete ---"
+  else
+      log_debug "No temporary files to clean up"
+  fi
+}
+# Set up comprehensive trap for all common termination signals
+trap cleanup_temp_files EXIT HUP INT TERM QUIT
 
 # --- Create Config Function ---
 # Creates the configuration file for mpv-music.
@@ -45,7 +122,7 @@ AUDIO_EXTS="$AUDIO_EXTS_DEFAULT"
 # These are added to AUDIO_EXTS when --video-ok IS specified.
 VIDEO_EXTS="$VIDEO_EXTS_DEFAULT"
 EOF
-    echo "Created default config file at $CONFIG_FILE"
+    log_verbose "Created default config file at $CONFIG_FILE"
 }
 
 # Check if config file exists, if not, create a default one
@@ -130,6 +207,10 @@ Options:
   --ext=EXT1,EXT2   Use only specified extensions (comma-separated, overrides config)
   --refresh-index   Force a smart update of the music index (checks file changes).
   --reindex         Force a complete rebuild of the music index (resets everything).
+  -V, --verbose     Increase verbosity level
+  --debug           Print debug messages
+                    (When both --verbose and --debug are enabled, logs are saved to
+                    $HOME/.config/mpv-music/mpv-music.log)
 
 Interactive Modes:
   1) Album mode: Pick entire folders
@@ -155,12 +236,11 @@ get_audio_metadata() {
   local metadata_json # For ffprobe JSON output
 
   # --- Attempt 1: Use ffprobe ---
-  # Removed: echo "using ffprobe!"
+  log_debug "using ffprobe!"
   metadata_json=$(ffprobe -v quiet -hide_banner -show_format -show_streams -of json "$file" 2>/dev/null)
 
-  # For debugging ffprobe: Uncomment these lines (outputs to stderr, not captured by shell command substitution)
-  # echo "DEBUG: ffprobe JSON output for '$file':" >&2
-  # echo "$metadata_json" >&2
+  log_debug "ffprobe JSON output for '$file':"
+  log_debug "$metadata_json"
 
   if [[ -n "$metadata_json" ]]; then
     if command -v jq &>/dev/null; then
@@ -196,9 +276,8 @@ get_audio_metadata() {
       metadata_flat=$(ffprobe -v quiet -hide_banner -show_format -show_streams \
         -of flat=p=true,nobins,nokv "$file" 2>/dev/null)
 
-      # For debugging ffprobe flat:
-      # echo "DEBUG: ffprobe FLAT output for '$file':" >&2
-      # echo "$metadata_flat" >&2
+      log_debug "ffprobe FLAT output for '$file':"
+      log_debug "$metadata_flat"
 
       title=$(echo "$metadata_flat" | grep -iE 'tags\.(title|tit2|name|track_name)=' | head -n 1 | cut -d'=' -f2- | sed 's/^"//;s/"$//')
       artist=$(echo "$metadata_flat" | grep -iE 'tags\.(artist|tpe1|tpe2|performer|album_artist)=' | head -n 1 | cut -d'=' -f2- | sed 's/^"//;s/"$//')
@@ -213,12 +292,11 @@ get_audio_metadata() {
     if command -v mediainfo &>/dev/null; then
       # Use mediainfo to get specific fields
       local mediainfo_raw
-      # echo "DEBUG: Using mediainfo fallback for '$file' (ffprobe failed to find title/artist)." >&2 # Output to stderr
+      log_debug "Using mediainfo fallback for '$file' (ffprobe failed to find title/artist)."
       mediainfo_raw=$(mediainfo --Inform="General;%Track_Name%|%Performer%" "$file" 2>/dev/null)
 
-      # For debugging mediainfo:
-      # echo "DEBUG: mediainfo raw output for '$file':" >&2
-      # echo "$mediainfo_raw" >&2
+      log_debug "mediainfo raw output for '$file':"
+      log_debug "$mediainfo_raw"
 
       if [[ -n "$mediainfo_raw" ]]; then
         # Split by pipe '|' which is the default separator for --Inform
@@ -251,6 +329,83 @@ get_audio_metadata() {
   echo "${title},${artist},${album},${genre}"
 }
 
+# --- Temporary Index Build Function ---
+# Builds a temporary index for a given directory.
+# Arguments: $1 = directory path, $2 = reference to variable to store temp index file path
+build_temp_index() {
+    local custom_dir="$1"
+    local -n temp_index_ref=$2 # Use nameref for the output variable
+    local ext_filter=("${EXT_FILTER[@]}")
+    local temp_files_list
+    local tracks_json="[]"
+
+    log_verbose "Temporarily indexing files from '$custom_dir' for selection..."
+
+    create_temp_file temp_index_ref
+    create_temp_file temp_files_list
+
+    find "$custom_dir" -type f \( "${ext_filter[@]}" \) -print0 | while IFS= read -r -d '' file; do
+        echo "$file"
+    done > "$temp_files_list"
+
+    local file_count
+    file_count=$(wc -l < "$temp_files_list")
+
+    if [[ $file_count -eq 0 ]]; then
+        echo "No music files found in '$custom_dir'. Monke sad. 🙊" >&2
+        # rm -f "$temp_files_list" "$temp_index_ref"
+        # Create an empty index so downstream commands don't fail
+        echo '{"tracks": []}' > "$temp_index_ref"
+        return 1
+    fi
+
+    log_verbose "Found $file_count files. Processing metadata..."
+    local count=0
+
+    while IFS= read -r file_path; do
+        count=$((count + 1))
+        printf "\rIndexing: %d/%d (%s)" "$count" "$file_count" "$(basename "$file_path")" >&2
+
+        local raw_metadata_output
+        raw_metadata_output=$(get_audio_metadata "$file_path")
+        IFS=',' read -r -a metadata_array <<< "$raw_metadata_output"
+
+        local title="${metadata_array[0]}"
+        local artist="${metadata_array[1]}"
+        local album="${metadata_array[2]}"
+        local genre="${metadata_array[3]}"
+
+        local file_ext="${file_path##*.}"
+        file_ext="${file_ext,,}"
+        local media_type="UNKNOWN"
+        if [[ " ${AUDIO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
+            media_type="audio"
+        elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
+            media_type="video"
+        fi
+
+        local track_json
+        track_json=$(jq -n \
+          --arg path "$file_path" \
+          --arg title "$title" \
+          --arg artist "$artist" \
+          --arg album "$album" \
+          --arg genre "$genre" \
+          --arg media_type "$media_type" \
+          '{path: $path, title: $title, artist: $artist, album: $album, genre: $genre, media_type: $media_type}')
+
+        tracks_json=$(echo "$tracks_json" | jq --argjson new_track "$track_json" '. + [$new_track]')
+
+    done < "$temp_files_list"
+
+    printf "\rProcessing complete: %d/%d files processed.\n" "$count" "$file_count" >&2
+
+    # Create the final index file structure
+    echo "{\"tracks\": $tracks_json}" > "$temp_index_ref"
+    # rm -f "$temp_files_list"
+    log_verbose "Temporary index created at '$temp_index_ref'."
+}
+
 # --- Music Library Indexing Function ---
 # Builds or rebuilds the entire music index.
 # This function will be called initially and potentially for full rebuilds.
@@ -261,7 +416,7 @@ build_music_index() {
   local tracks_json_array="[]"
   local indexed_dirs_json_array="[]"
 
-  echo "Indexing music library for the first time... This may take a while for large collections."
+  log_verbose "Indexing music library for the first time... This may take a while for large collections."
   echo "Please wait. Monke is working! 🐒"
 
   # Populate all_music_files and indexed_dirs_json_array
@@ -278,7 +433,7 @@ build_music_index() {
         all_music_files+=("$file")
       done < <(find "$dir_path" -type f \( "${ext_filter[@]}" \) -print0)
     else
-      echo "Warning: Configured music directory '$dir_path' does not exist. Skipping." >&2
+        log_verbose "Warning: Configured music directory '$dir_path' does not exist. Skipping."
     fi
   done
 
@@ -301,10 +456,9 @@ build_music_index() {
     local raw_metadata_output
     raw_metadata_output="$(get_audio_metadata "$file_path")"
 
-    # --- DEBUGGING LINES START HERE ---
-    # echo "DEBUG (build_index): Processing file: '$file_path'" >&2
-    # echo "DEBUG (build_index): Raw metadata function output: '$raw_metadata_output'" >&2
-    # --- DEBUGGING LINES END HERE ---
+    log_debug "(build_index): Processing file: '$file_path'"
+    log_debug "(build_index): Raw metadata function output: '$raw_metadata_output'"
+
 
     # Split metadata string (title,artist,album,genre)
     IFS=',' read -r -a metadata_array <<< "$raw_metadata_output"
@@ -349,7 +503,7 @@ build_music_index() {
 
     # check for jq error just in case
     if [[ $? -ne 0 ]]; then
-      echo -e "\nError: jq failed to append metadata for $file_path. Skipping. Index may be incomplete." >&2
+      log_verbose -e "\nError: jq failed to append metadata for $file_path. Skipping. Index may be incomplete." >&2
       # might add better error handling, like logging or writing partial index in future
       return 1
     fi
@@ -359,7 +513,7 @@ build_music_index() {
 
   # Write the final JSON object with both directories and tracks arrays
   echo "{\"indexed_directories\": $(echo "$indexed_dirs_json_array" | jq -c .), \"tracks\": $(echo "$tracks_json_array" | jq -c .)}" | jq . > "$MUSIC_INDEX_FILE"
-  echo "Index saved to $MUSIC_INDEX_FILE"
+  log_verbose "Index saved to $MUSIC_INDEX_FILE"
 }
 
 # --- Music Library Update Function ---
@@ -417,8 +571,6 @@ update_music_index() {
     return 0
   fi
 
-
-
   for file_path in "${current_files_on_disk[@]}"; do
     count=$((count + 1))
     printf "\rScanning and updating: %d/%d (%s)" "$count" "$total" "$(basename "$file_path")" >&2
@@ -440,7 +592,7 @@ update_music_index() {
         track_json_to_add="$old_track_json"
       else
         # File modified, re-read metadata
-        echo -e "\n  (Modified: $(basename "$file_path"))" >&2 # Debug message
+        log_debug "(Modified: $(basename "$file_path"))"
         local raw_metadata_output=$(get_audio_metadata "$file_path")
         IFS=',' read -r -a metadata_array <<< "$raw_metadata_output"
 
@@ -474,7 +626,7 @@ update_music_index() {
       fi
     else
       # File is new, read metadata
-      # echo -e "\n  (New: $(basename "$file_path"))" >&2 # Debug message
+      log_debug "(New: $(basename "$file_path"))"
       local raw_metadata_output=$(get_audio_metadata "$file_path")
       IFS=',' read -r -a metadata_array <<< "$raw_metadata_output"
 
@@ -533,7 +685,7 @@ update_music_index() {
   done
 
   echo "{\"indexed_directories\": $(echo "$current_indexed_dirs_json_array" | jq -c .), \"tracks\": $(echo "$new_index_array" | jq -c .)}" | jq . > "$MUSIC_INDEX_FILE"
-  echo "Index updated and saved to $MUSIC_INDEX_FILE"
+  log_verbose "Index updated and saved to $MUSIC_INDEX_FILE"
 }
 
 
@@ -541,7 +693,7 @@ update_music_index() {
 VIDEO_OK=false
 CUSTOM_EXTS=""
 MPV_ARGS=()
-VERSION="0.8.0"
+VERSION="0.9.0"
 DIRECT_PLAY_TARGET="" # Will store the file path or URL if provided
 CUSTOM_MUSIC_DIR="" # Will store a custom music directory if provided
 
@@ -556,6 +708,14 @@ while [[ $# -gt 0 ]]; do
     -v|--version)
       echo "mpv-music v$VERSION"
       exit 0
+      ;;
+      -V|--verbose)
+      VERBOSE=true
+      shift
+      ;;
+      --debug)
+      DEBUG=true
+      shift
       ;;
     --config|--config=*)
     # If it's "--config=editor", extract the editor
@@ -689,177 +849,102 @@ for i in "${!CURRENT_EXTS[@]}"; do
 done
 # EXT_FILTER is now always built here.
 
-# Check if the index file exists, if not, build it.
-if [[ ! -f "$MUSIC_INDEX_FILE" ]]; then
-  echo "Index file '$MUSIC_INDEX_FILE' not found. Building index from scratch."
-  build_music_index # Build from scratch
+# Logic for handling custom directory vs. default index
+INDEX_TO_USE="$MUSIC_INDEX_FILE" # Default to the main index
+if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then
+    # A custom directory was provided, build a temporary index for it
+    build_temp_index "$CUSTOM_MUSIC_DIR" temp_index_file
+    INDEX_TO_USE="$temp_index_file"
+else
+    # No custom directory, ensure the main index exists
+    if [[ ! -f "$MUSIC_INDEX_FILE" ]]; then
+        echo "Index file '$MUSIC_INDEX_FILE' not found. Building index from scratch."
+        build_music_index
+    fi
 fi
 
-# --- Determine effective MUSIC_DIRS for interactive mode ---
-EFFECTIVE_MUSIC_DIRS=("${MUSIC_DIRS_ARRAY[@]}")
-if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then # If a custom directory was provided via command line
-  EFFECTIVE_MUSIC_DIRS=("$CUSTOM_MUSIC_DIR")
-fi
 
 # --- Interactive Mode Selection ---
 echo "🎧 Pick mode:"
 echo "1) Play entire folder(s) (album mode)"
 echo "2) Pick individual tracks"
-read -rp "Enter choice [1/2]: " MODE
+# read -rp "Enter choice [1/2]: " MODE
+# Use -t with a very long timeout instead of blocking read
+# This allows the SIGINT to be caught by our trap
+read -t 31536000 -rp "Enter choice [1/2]: " MODE || {
+    echo -e "\nRead interrupted. Exiting."
+    exit 1
+}
 
 if [[ "$MODE" == "1" ]]; then
-  # Folder mode - simplified to avoid ANSI color issues
-  # Store full paths in a temporary file with display format
-  temp_folder_list=$(mktemp)
-  find "${EFFECTIVE_MUSIC_DIRS[@]}" -type d | sort | while read -r dir_path; do
-    # Get just the basename for display
-    dir_name=$(basename "$dir_path")
-    # Handle empty dir names (root directories)
-    if [[ -z "$dir_name" || "$dir_name" == "/" ]]; then
-      dir_name="[ROOT]"
+    # Album Mode
+    if [[ ! -f "$INDEX_TO_USE" || ! -s "$INDEX_TO_USE" ]]; then
+        echo "Error: Index file is missing or empty. Cannot proceed."
+        exit 1
     fi
-    echo "$dir_name|$dir_path" >> "$temp_folder_list"
-  done
 
-  # Use fzf with the prepared list
-  SELECTED=$(cat "$temp_folder_list" | fzf --multi --with-nth=1 --delimiter="|" --prompt="📁 Pick folder(s): " | cut -d'|' -f2) || {
-    rm -f "$temp_folder_list"
-    echo "No folders picked. Monke confused. 🙃"
-    exit 1
-  }
+    create_temp_file temp_folder_list
 
-  # Clean up
-  rm -f "$temp_folder_list"
+    # Extract parent directories from the index for fzf
+    jq -r '
+        .tracks[]
+        | (.path | split("/")[:-1] | join("/"))
+        | select(length > 0)
+    ' "$INDEX_TO_USE" | sort -u | while IFS= read -r dir_path; do
+        dir_name=$(basename "$dir_path")
+        # For root-level dirs in custom paths, basename might be empty
+        if [[ -z "$dir_name" || "$dir_name" == "/" ]]; then
+            dir_name="$dir_path"
+        fi
+        echo "${dir_name}|${dir_path}" # display name | full path
+    done > "$temp_folder_list"
 
-  mapfile -t FOLDERS <<< "$SELECTED"
-  echo "📦 Selected ${#FOLDERS[@]} folder(s)."
+    if [[ ! -s "$temp_folder_list" ]]; then
+        echo "No playable music folders found in the selection. Please check your source and try again."
+        exit 1
+    fi
 
-  FILES=()
-  for DIR in "${FOLDERS[@]}"; do
-    # Debug output
-    echo "Searching in: $DIR"
-    while IFS= read -r -d '' FILE; do
-      FILES+=("$FILE")
-    done < <(find "$DIR" -type f \( "${EXT_FILTER[@]}" \) -print0)
-  done
+    SELECTED=$(cat "$temp_folder_list" | fzf --multi --with-nth=1 --delimiter="|" --prompt="📁 Pick folder(s): " | cut -d'|' -f2) || {
+        echo "No folders picked. Monke confused. 🙃"
+        exit 1
+    }
 
-  [[ ${#FILES[@]} -eq 0 ]] && echo "No music found in those folders. Monke hear nothing 🙊" && exit 1
-  echo "🎶 Found ${#FILES[@]} file(s) total."
-  mpv "${MPV_ARGS[@]}" "${FILES[@]}"
+    # rm -f "$temp_folder_list"
+
+    mapfile -t FOLDERS <<< "$SELECTED"
+    echo "📦 Selected ${#FOLDERS[@]} folder(s)."
+
+    FILES=()
+    for DIR in "${FOLDERS[@]}"; do
+        # Use jq to find all tracks whose paths start with the selected directory's path
+        TRACK_PATHS=$(jq -r --arg dir_prefix "${DIR}/" '.tracks[] | select(.path | startswith($dir_prefix)) | .path' "$INDEX_TO_USE")
+        while IFS= read -r TRACK_FILE; do
+            [[ -n "$TRACK_FILE" ]] && FILES+=("$TRACK_FILE")
+        done <<< "$TRACK_PATHS"
+    done
+
+    [[ ${#FILES[@]} -eq 0 ]] && echo "No music found in those folders. Monke hear nothing 🙊" && exit 1
+    echo "🎶 Found ${#FILES[@]} file(s) total."
+    mpv "${MPV_ARGS[@]}" "${FILES[@]}"
 
 elif [[ "$MODE" == "2" ]]; then
-    # Check if a custom directory was provided
-    if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then
-      # A custom directory was provided but mode 2 is using the index file
-      echo "Custom directory detected: $CUSTOM_MUSIC_DIR"
-      echo "Temporarily indexing files from this directory for selection..."
-
-      # Create a temporary index file just for this session
-      temp_index_file=$(mktemp)
-
-      # Find all eligible files in the custom directory
-      temp_files_list=$(mktemp)
-      find "$CUSTOM_MUSIC_DIR" -type f \( "${EXT_FILTER[@]}" \) -print0 | while IFS= read -r -d '' file; do
-        echo "$file" >> "$temp_files_list"
-      done
-
-      # Count files found
-      file_count=$(wc -l < "$temp_files_list")
-
-      if [[ $file_count -eq 0 ]]; then
-        echo "No music files found in '$CUSTOM_MUSIC_DIR'. Monke sad. 🙊"
-        rm -f "$temp_files_list" "$temp_index_file"
+    # Track Mode
+    if [[ ! -f "$INDEX_TO_USE" || ! -s "$INDEX_TO_USE" ]]; then
+        echo "Error: Index file is missing or empty. Cannot proceed."
         exit 1
-      fi
-
-      echo "Found $file_count files. Processing metadata..."
-
-      # Create a JSON array to hold track data
-      tracks_json="["
-      count=0
-
-      # Process each file to get metadata
-      while IFS= read -r file_path; do
-        count=$((count + 1))
-        printf "\rIndexing: %d/%d (%s)" "$count" "$file_count" "$(basename "$file_path")"
-
-        # Get metadata
-        raw_metadata_output=$(get_audio_metadata "$file_path")
-        IFS=',' read -r -a metadata_array <<< "$raw_metadata_output"
-
-        title="${metadata_array[0]}"
-        artist="${metadata_array[1]}"
-        album="${metadata_array[2]}"
-        genre="${metadata_array[3]}"
-
-        # Determine media type
-        file_ext="${file_path##*.}"
-        file_ext="${file_ext,,}"  # Convert to lowercase
-        media_type="UNKNOWN"
-
-        if [[ " ${AUDIO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
-          media_type="audio"
-        elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
-          media_type="video"
-        fi
-
-        # Add to JSON array
-        [[ $count -gt 1 ]] && tracks_json+=","
-
-        # Escape paths for JSON
-        escaped_path=$(echo "$file_path" | tr -d '\n\r' | jq -R .)
-
-        tracks_json+="{\"path\": $escaped_path, \"title\": \"$title\", \"artist\": \"$artist\", \"album\": \"$album\", \"genre\": \"$genre\", \"media_type\": \"$media_type\"}"
-      done < "$temp_files_list"
-
-      tracks_json+="]"
-
-      # Create a simple index file structure
-      echo "{\"tracks\": $tracks_json}" > "$temp_index_file"
-
-      printf "\rProcessing complete: %d/%d files processed.\n" "$count" "$file_count"
-
-      # Use the temporary index for selection
-      echo "Showing files from custom directory: $CUSTOM_MUSIC_DIR"
-
-      # Create formatted display from temporary index
-      temp_track_list=$(mktemp)
-
-      jq -r '.tracks[] |
-           (if .media_type == "video" then "🎬 " else "🎵 " end) +
-           (.title // "[NO TITLE]") + " " + "|" +
-           (.title // "[NO TITLE]") + "|" +
-           (.artist // "[NO ARTIST]") + "|" +
-           (.album // "[NO ALBUM]") + "|" +
-           (.genre // "[NO GENRE]") + "|" +
-           (.media_type // "UNKNOWN") + "|" +
-           .path' "$temp_index_file" > "$temp_track_list"
-
-      # Clean up temporary index file
-      rm -f "$temp_index_file" "$temp_files_list"
-    else
-      # No custom directory, use the regular index file
-      # Check if index file exists
-      if [[ ! -f "$MUSIC_INDEX_FILE" ]]; then
-        echo "No index file found. Please run with --reindex first."
-        exit 1
-      fi
-
-      # Create a formatted display for tracks from the index
-      temp_track_list=$(mktemp)
-      jq -r '.tracks[] |
-            (if .media_type == "video" then "🎬 " else "🎵 " end) +
-            (.title // "[NO TITLE]") + " " + "|" +
-            (.title // "[NO TITLE]") + "|" +
-            (.artist // "[NO ARTIST]") + "|" +
-            (.album // "[NO ALBUM]") + "|" +
-            (.genre // "[NO GENRE]") + "|" +
-            (.media_type // "UNKNOWN") + "|" +
-            .path' "$MUSIC_INDEX_FILE" > "$temp_track_list"
-
     fi
 
-    # Use the prepared track list for selection
+    create_temp_file temp_track_list
+    jq -r '.tracks[] |
+          (if .media_type == "video" then "🎬 " else "🎵 " end) +
+          (.title // "[NO TITLE]") + " " + "|" +
+          (.title // "[NO TITLE]") + "|" +
+          (.artist // "[NO ARTIST]") + "|" +
+          (.album // "[NO ALBUM]") + "|" +
+          (.genre // "[NO GENRE]") + "|" +
+          (.media_type // "UNKNOWN") + "|" +
+          .path' "$INDEX_TO_USE" > "$temp_track_list"
+
     SELECTED=$(cat "$temp_track_list" | fzf --multi \
       --prompt="🎵 Pick your tracks: " \
       --delimiter="|" \
@@ -867,12 +952,9 @@ elif [[ "$MODE" == "2" ]]; then
       --preview='echo -e "\033[1;36mTitle:\033[0m {2}\n\033[1;33mArtist:\033[0m {3}\n\033[1;32mAlbum:\033[0m {4}\n\033[1;35mGenre:\033[0m {5}\n\033[1;34mType:\033[0m {6}"' \
       --preview-window=top:5 | awk -F'|' '{print $NF}')
 
-    # Clean up temp file
-    rm -f "$temp_track_list"
+    # rm -f "$temp_track_list"
 
-    # Create array of selected files
     mapfile -t FILES <<< "$SELECTED"
-
     [[ ${#FILES[@]} -eq 0 ]] && echo "No tracks picked. Monke walk away. 🚶" && exit 1
     echo "🎶 Selected ${#FILES[@]} track(s)."
     mpv "${MPV_ARGS[@]}" "${FILES[@]}"

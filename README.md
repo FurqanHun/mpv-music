@@ -97,6 +97,10 @@ mpv-music [PATH_OR_URL_OR_DIR] [OPTIONS]
 * `--ext=mp3,ogg` → override file extensions
 * `--reindex` → force rebuild the full index
 * `--refresh-index` → update index without wiping it
+* `-V, --verbose` → Increase verbosity, printing additional information
+* `--debug` → Print detailed debug messages
+
+When **both** `--verbose` and `--debug` are enabled together, logs will be saved to:`~/.config/mpv-music/mpv-music.log`. This log file automatically rotates when it reaches 1MB in size.
 
 ### Examples:
 
@@ -109,6 +113,7 @@ mpv-music --shuffle --no-video      # with custom mpv flags
 mpv-music --reindex                 # rebuild the index from scratch
 mpv-music --config                  # open config file text editor (nano/vi)
 mpv-music --config=vim              # open config in specified editor (like, vim here)
+mpv-music --verbose --debug         # run with full logging enabled
 ```
 
 ---
