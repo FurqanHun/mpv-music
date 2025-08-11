@@ -13,6 +13,7 @@ MUSIC_DIRS_DEFAULT=("$HOME/Music")
 MPV_ARGS_DEFAULT=(--loop-playlist=inf --shuffle --no-video)
 AUDIO_EXTS_DEFAULT="mp3 flac wav m4a aac ogg opus wma alac aiff amr"
 VIDEO_EXTS_DEFAULT="mp4 mkv webm avi mov flv wmv mpeg mpg 3gp ts vob m4v"
+PLAYLIST_EXTS_DEFAULT="m3u m3u8 pls"
 
 # Ensure config directory exists
 mkdir -p "$CONFIG_DIR"
@@ -121,6 +122,9 @@ AUDIO_EXTS="$AUDIO_EXTS_DEFAULT"
 # Video extensions (space-separated)
 # These are added to AUDIO_EXTS when --video-ok IS specified.
 VIDEO_EXTS="$VIDEO_EXTS_DEFAULT"
+
+# Playlist extensions (space-separated)
+PLAYLIST_EXTS="$PLAYLIST_EXTS_DEFAULT"
 EOF
     log_verbose "Created default config file at $CONFIG_FILE"
 }
@@ -140,6 +144,7 @@ IFS=' ' read -ra MUSIC_DIRS_ARRAY <<< "$MUSIC_DIRS"
 IFS=' ' read -ra MPV_DEFAULT_ARGS_ARRAY <<< "$MPV_DEFAULT_ARGS"
 IFS=' ' read -ra AUDIO_EXTS_ARRAY <<< "$AUDIO_EXTS"
 IFS=' ' read -ra VIDEO_EXTS_ARRAY <<< "$VIDEO_EXTS"
+IFS=' ' read -ra PLAYLIST_EXTS_ARRAY <<< "$PLAYLIST_EXTS"
 
 
 # --- Dependency Checks ---
@@ -215,12 +220,36 @@ Options:
 Interactive Modes:
   1) Album mode: Pick entire folders
   2) Track mode: Pick individual files
+  3) Playlist mode: Pick and play saved playlists
+  Tip: You can press TAB to select multiple items.
 
 MPV default flags (if none passed via command line):
   $(echo "${MPV_DEFAULT_ARGS_ARRAY[@]}" | sed 's/ /\n  /g') # Display defaults from config
 
 Note: Requires GNU find.
 EOF
+}
+
+# --- Build Extension Filter Function ---
+# Builds the 'find' extension filter based on script settings
+build_ext_filter() {
+  local current_exts=()
+  if [[ -n "$CUSTOM_EXTS" ]]; then
+    IFS=',' read -ra current_exts <<< "$CUSTOM_EXTS"
+  elif [[ "$VIDEO_OK" == true ]]; then
+    current_exts=("${AUDIO_EXTS_ARRAY[@]}" "${VIDEO_EXTS_ARRAY[@]}")
+  else
+    current_exts=("${AUDIO_EXTS_ARRAY[@]}")
+  fi
+
+  # Clear the global EXT_FILTER before rebuilding
+  EXT_FILTER=()
+  for i in "${!current_exts[@]}"; do
+    EXT_FILTER+=( -iname "*.${current_exts[$i]}" )
+    if [[ $((i+1)) -lt ${#current_exts[@]} ]]; then
+      EXT_FILTER+=( -o )
+    fi
+  done
 }
 
 # --- Metadata Extraction Function ---
@@ -233,7 +262,7 @@ get_audio_metadata() {
   local artist=""
   local album=""
   local genre=""
-  local metadata_json # For ffprobe JSON output
+  local metadata_json
 
   # --- Attempt 1: Use ffprobe ---
   log_debug "using ffprobe!"
@@ -243,47 +272,20 @@ get_audio_metadata() {
   log_debug "$metadata_json"
 
   if [[ -n "$metadata_json" ]]; then
-    if command -v jq &>/dev/null; then
-      # Robustly extract tags using jq from ffprobe's JSON
-      title=$(echo "$metadata_json" | jq -r '
-        .format.tags.title // .streams[0]?.tags?.title //
-        .format.tags.TIT2 // .streams[0]?.tags?.TIT2 //
-        .format.tags.NAME // .streams[0]?.tags?.NAME //
-        .format.tags.TITLE // .streams[0]?.tags?.TITLE //
-        .format.tags."Track name" // .streams[0]?.tags?."Track name" // ""
-      ')
-      artist=$(echo "$metadata_json" | jq -r '
-        .format.tags.artist // .streams[0]?.tags?.artist //
-        .format.tags.TPE1 // .streams[0]?.tags?.TPE1 //
-        .format.tags.TPE2 // .streams[0]?.tags?.TPE2 //
-        .format.tags.album_artist // .streams[0]?.tags?.album_artist //
-        .format.tags.ARTIST // .streams[0]?.tags?.ARTIST //
-        .format.tags.Performer // .streams[0]?.tags?.Performer // ""
-      ')
-      album=$(echo "$metadata_json" | jq -r '
-        .format.tags.album // .streams[0]?.tags?.album //
-        .format.tags.TALB // .streams[0]?.tags?.TALB //
-        .format.tags.ALBUM // .streams[0]?.tags?.ALBUM // ""
-      ')
-      genre=$(echo "$metadata_json" | jq -r '
-        .format.tags.genre // .streams[0]?.tags?.genre //
-        .format.tags.TCON // .streams[0]?.tags?.TCON //
-        .format.tags.GENRE // .streams[0]?.tags?.GENRE // ""
-      ')
-    else
-      # Fallback for ffprobe without jq (flat output)
-      local metadata_flat
-      metadata_flat=$(ffprobe -v quiet -hide_banner -show_format -show_streams \
-        -of flat=p=true,nobins,nokv "$file" 2>/dev/null)
+    # OPTIMIZATION: Extract all tags at once with a single jq call.
+    # The output is tab-separated (@tsv), which is safer for parsing.
+    local metadata_line
+    metadata_line=$(echo "$metadata_json" | jq -r '
+      [
+        .format.tags.title // .streams[0]?.tags?.title // .format.tags.TIT2 // .streams[0]?.tags?.TIT2 // .format.tags.NAME // .streams[0]?.tags?.NAME // .format.tags.TITLE // .streams[0]?.tags?.TITLE // .format.tags."Track name" // .streams[0]?.tags?."Track name" // "",
+        .format.tags.artist // .streams[0]?.tags?.artist // .format.tags.TPE1 // .streams[0]?.tags?.TPE1 // .format.tags.TPE2 // .streams[0]?.tags?.TPE2 // .format.tags.album_artist // .streams[0]?.tags?.album_artist // .format.tags.ARTIST // .streams[0]?.tags?.ARTIST // .format.tags.Performer // .streams[0]?.tags?.Performer // "",
+        .format.tags.album // .streams[0]?.tags?.album // .format.tags.TALB // .streams[0]?.tags?.TALB // .format.tags.ALBUM // .streams[0]?.tags?.ALBUM // "",
+        .format.tags.genre // .streams[0]?.tags?.genre // .format.tags.TCON // .streams[0]?.tags?.TCON // .format.tags.GENRE // .streams[0]?.tags?.GENRE // ""
+      ] | @tsv
+    ')
 
-      log_debug "ffprobe FLAT output for '$file':"
-      log_debug "$metadata_flat"
-
-      title=$(echo "$metadata_flat" | grep -iE 'tags\.(title|tit2|name|track_name)=' | head -n 1 | cut -d'=' -f2- | sed 's/^"//;s/"$//')
-      artist=$(echo "$metadata_flat" | grep -iE 'tags\.(artist|tpe1|tpe2|performer|album_artist)=' | head -n 1 | cut -d'=' -f2- | sed 's/^"//;s/"$//')
-      album=$(echo "$metadata_flat" | grep -iE 'tags\.(album|talb)=' | head -n 1 | cut -d'=' -f2- | sed 's/^"//;s/"$//')
-      genre=$(echo "$metadata_flat" | grep -iE 'tags\.(genre|tcon)=' | head -n 1 | cut -d'=' -f2- | sed 's/^"//;s/"$//')
-    fi
+    # Read the tab-separated output from jq directly into variables.
+    IFS=$'\t' read -r title artist album genre <<< "$metadata_line"
   fi
 
   # --- Attempt 2: Fallback to mediainfo if ffprobe didn't find title/artist ---
@@ -300,10 +302,7 @@ get_audio_metadata() {
 
       if [[ -n "$mediainfo_raw" ]]; then
         # Split by pipe '|' which is the default separator for --Inform
-        IFS='|' read -r -a mediainfo_tags <<< "$mediainfo_raw"
-        title="${mediainfo_tags[0]:-}"
-        artist="${mediainfo_tags[1]:-}"
-        # mediainfo output confirmed no Album or Genre for this file, so they remain empty
+        IFS='|' read -r title artist <<< "$mediainfo_raw"
       fi
     fi
   fi
@@ -325,7 +324,7 @@ get_audio_metadata() {
   album="${album:-UNKNOWN}"
   genre="${genre:-UNKNOWN}"
 
-  # Output as comma-separated string including genre
+  # Output as comma-separated string to maintain compatibility
   echo "${title},${artist},${album},${genre}"
 }
 
@@ -413,7 +412,6 @@ build_music_index() {
   local music_dirs=("${MUSIC_DIRS_ARRAY[@]}") # Use the configured music directories
   local ext_filter=("${EXT_FILTER[@]}")       # Use the generated extension filter
   local all_music_files=()
-  local tracks_json_array="[]"
   local indexed_dirs_json_array="[]"
 
   log_verbose "Indexing music library for the first time... This may take a while for large collections."
@@ -423,9 +421,12 @@ build_music_index() {
   for dir_path in "${music_dirs[@]}"; do
     if [[ -d "$dir_path" ]]; then
       # Fix for newline: Ensure dir_path is trimmed before passing to jq
-      local trimmed_dir_path=$(echo "$dir_path" | tr -d '\n\r')
-      local dir_mtime=$(stat -c %Y "$dir_path" 2>/dev/null || echo "")
-      local dir_json=$(jq -n --arg path "$trimmed_dir_path" --arg mtime "$dir_mtime" '{path: $path, mtime: $mtime}')
+      local trimmed_dir_path
+      trimmed_dir_path=$(echo "$dir_path" | tr -d '\n\r')
+      local dir_mtime
+      dir_mtime=$(stat -c %Y "$dir_path" 2>/dev/null || echo "")
+      local dir_json
+      dir_json=$(jq -n --arg path "$trimmed_dir_path" --arg mtime "$dir_mtime" '{path: $path, mtime: $mtime}')
       indexed_dirs_json_array=$(echo "$indexed_dirs_json_array" | jq --argjson new_dir "$dir_json" '. + [$new_dir]')
 
       # Find files within this specific directory and its subdirectories
@@ -433,10 +434,9 @@ build_music_index() {
         all_music_files+=("$file")
       done < <(find "$dir_path" -type f \( "${ext_filter[@]}" \) -print0)
     else
-        log_verbose "Warning: Configured music directory '$dir_path' does not exist. Skipping."
+      log_verbose "Warning: Configured music directory '$dir_path' does not exist. Skipping."
     fi
   done
-
 
   if [[ ${#all_music_files[@]} -eq 0 ]]; then
     echo "No music files found in configured directories. Index will be empty. 🙊"
@@ -444,6 +444,10 @@ build_music_index() {
     jq -n --argjson dirs "$indexed_dirs_json_array" '{indexed_directories: $dirs, tracks: []}' > "$MUSIC_INDEX_FILE"
     return 0
   fi
+
+  # --- OPTIMIZED INDEXING LOOP ---
+  # Create a temporary file to store one JSON object per line
+  create_temp_file temp_json_lines
 
   local count=0
   local total=${#all_music_files[@]}
@@ -467,17 +471,14 @@ build_music_index() {
     local artist="${metadata_array[1]}"
     local album="${metadata_array[2]}"
     local genre="${metadata_array[3]}"
-
-    local mtime=$(stat -c %Y "$file_path" 2>/dev/null || echo "")
-    local size=$(stat -c %s "$file_path" 2>/dev/null || echo "")
-
-    # Fix for newline: Ensure file_path is trimmed before escaping for JSON
-    local trimmed_file_path=$(echo "$file_path" | tr -d '\n\r')
-    local escaped_path=$(echo "$trimmed_file_path" | jq -sRr @json)
-
-    # When processing each file, determine its media_type
+    local mtime
+    mtime=$(stat -c %Y "$file_path" 2>/dev/null || echo "")
+    local size
+    size=$(stat -c %s "$file_path" 2>/dev/null || echo "")
+    local trimmed_file_path
+    trimmed_file_path=$(echo "$file_path" | tr -d '\n\r')
     local file_ext="${file_path##*.}"
-    file_ext="${file_ext,,}"  # Convert to lowercase
+    file_ext="${file_ext,,}" # Convert to lowercase
     local media_type="UNKNOWN"
 
     # Check if extension is in audio or video lists
@@ -487,8 +488,9 @@ build_music_index() {
       media_type="video"
     fi
 
-    local track_json
-    track_json=$(jq -n \
+    # Append a single, compact JSON line to the temp file for each track
+    # The '-c' flag in jq makes the output compact (one line)
+    jq -cn \
       --arg path "$trimmed_file_path" \
       --arg title "$title" \
       --arg artist "$artist" \
@@ -497,22 +499,23 @@ build_music_index() {
       --arg mtime "$mtime" \
       --arg size "$size" \
       --arg media_type "$media_type" \
-      '{path: $path, title: $title, artist: $artist, album: $album, genre: $genre, mtime: $mtime, size: $size, media_type: $media_type}')
-
-    tracks_json_array=$(echo "$tracks_json_array" | jq --argjson new_track "$track_json" '. + [$new_track]')
-
-    # check for jq error just in case
-    if [[ $? -ne 0 ]]; then
-      log_verbose -e "\nError: jq failed to append metadata for $file_path. Skipping. Index may be incomplete." >&2
-      # might add better error handling, like logging or writing partial index in future
-      return 1
-    fi
+      '{path: $path, title: $title, artist: $artist, album: $album, genre: $genre, mtime: $mtime, size: $size, media_type: $media_type}' >> "$temp_json_lines"
 
   done
+
   printf "\rIndexing complete: %d/%d files processed. 🎉\n" "$total" "$total" >&2
 
-  # Write the final JSON object with both directories and tracks arrays
-  echo "{\"indexed_directories\": $(echo "$indexed_dirs_json_array" | jq -c .), \"tracks\": $(echo "$tracks_json_array" | jq -c .)}" | jq . > "$MUSIC_INDEX_FILE"
+  # --- EFFICIENT JSON ASSEMBLY ---
+  # Use jq's --slurp flag to read all the JSON lines and wrap them in an array
+  local tracks_json_array
+  tracks_json_array=$(jq -s '.' "$temp_json_lines")
+
+  # Write the final JSON object in a single, clean command
+  jq -n \
+    --argjson dirs "$indexed_dirs_json_array" \
+    --argjson tracks "$tracks_json_array" \
+    '{indexed_directories: $dirs, tracks: $tracks}' > "$MUSIC_INDEX_FILE"
+
   log_verbose "Index saved to $MUSIC_INDEX_FILE"
 }
 
@@ -693,7 +696,7 @@ update_music_index() {
 VIDEO_OK=false
 CUSTOM_EXTS=""
 MPV_ARGS=()
-VERSION="0.9.0"
+VERSION="0.10.0"
 DIRECT_PLAY_TARGET="" # Will store the file path or URL if provided
 CUSTOM_MUSIC_DIR="" # Will store a custom music directory if provided
 
@@ -746,46 +749,13 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --refresh-index) # New: Force smart update
-      # Build EXT_FILTER here as it's needed by update_music_index
-      EXT_FILTER=()
-      CURRENT_EXTS=()
-      if [[ -n "$CUSTOM_EXTS" ]]; then
-        IFS=',' read -ra CURRENT_EXTS <<< "$CUSTOM_EXTS"
-      elif [[ "$VIDEO_OK" == true ]]; then
-        CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}" "${VIDEO_EXTS_ARRAY[@]}")
-      else
-        CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}")
-      fi
-      for i in "${!CURRENT_EXTS[@]}"; do
-        EXT_FILTER+=( -iname "*.${CURRENT_EXTS[$i]}" )
-        if [[ $((i+1)) -lt ${#CURRENT_EXTS[@]} ]]; then
-          EXT_FILTER+=( -o )
-        fi
-      done
-      # End EXT_FILTER build for this specific case
-
+      build_ext_filter
       update_music_index
       exit 0 # Exit after forced update
       ;;
     --reindex) # New: Force rebuild
       # Build EXT_FILTER here as it's needed by build_music_index
-      EXT_FILTER=()
-      CURRENT_EXTS=()
-      if [[ -n "$CUSTOM_EXTS" ]]; then
-        IFS=',' read -ra CURRENT_EXTS <<< "$CUSTOM_EXTS"
-      elif [[ "$VIDEO_OK" == true ]]; then
-        CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}" "${VIDEO_EXTS_ARRAY[@]}")
-      else
-        CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}")
-      fi
-      for i in "${!CURRENT_EXTS[@]}"; do
-        EXT_FILTER+=( -iname "*.${CURRENT_EXTS[$i]}" )
-        if [[ $((i+1)) -lt ${#CURRENT_EXTS[@]} ]]; then
-          EXT_FILTER+=( -o )
-        fi
-      done
-      # End EXT_FILTER build for this specific case
-
+      build_ext_filter
       echo "Forcing a complete rebuild of the music index."
       build_music_index
       exit 0 # Exit after forced rebuild
@@ -830,23 +800,7 @@ fi
 # --- Music Library Indexing Check ---
 # Build EXT_FILTER here as it's needed by both build_music_index and update_music_index.
 # Moved EXT_FILTER building here to ensure it's always available before indexing calls.
-EXT_FILTER=()
-CURRENT_EXTS=()
-
-if [[ -n "$CUSTOM_EXTS" ]]; then
-  IFS=',' read -ra CURRENT_EXTS <<< "$CUSTOM_EXTS"
-elif [[ "$VIDEO_OK" == true ]]; then
-  CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}" "${VIDEO_EXTS_ARRAY[@]}")
-else
-  CURRENT_EXTS=("${AUDIO_EXTS_ARRAY[@]}")
-fi
-
-for i in "${!CURRENT_EXTS[@]}"; do
-  EXT_FILTER+=( -iname "*.${CURRENT_EXTS[$i]}" )
-  if [[ $((i+1)) -lt ${#CURRENT_EXTS[@]} ]]; then
-    EXT_FILTER+=( -o )
-  fi
-done
+build_ext_filter
 # EXT_FILTER is now always built here.
 
 # Logic for handling custom directory vs. default index
@@ -868,10 +822,11 @@ fi
 echo "🎧 Pick mode:"
 echo "1) Play entire folder(s) (album mode)"
 echo "2) Pick individual tracks"
+echo "3) Play a saved playlist"
 # read -rp "Enter choice [1/2]: " MODE
 # Use -t with a very long timeout instead of blocking read
 # This allows the SIGINT to be caught by our trap
-read -t 31536000 -rp "Enter choice [1/2]: " MODE || {
+read -t 31536000 -rp "Enter choice [1/2/3]: " MODE || {
     echo -e "\nRead interrupted. Exiting."
     exit 1
 }
@@ -959,6 +914,54 @@ elif [[ "$MODE" == "2" ]]; then
     echo "🎶 Selected ${#FILES[@]} track(s)."
     mpv "${MPV_ARGS[@]}" "${FILES[@]}"
 
+elif [[ "$MODE" == "3" ]]; then
+    # Playlist Mode
+    search_paths=()
+    if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then
+        search_paths=("$CUSTOM_MUSIC_DIR")
+    else
+        search_paths=("${MUSIC_DIRS_ARRAY[@]}")
+    fi
+
+    playlist_filter=()
+    for i in "${!PLAYLIST_EXTS_ARRAY[@]}"; do
+        playlist_filter+=( -iname "*.${PLAYLIST_EXTS_ARRAY[$i]}" )
+        if [[ $((i+1)) -lt ${#PLAYLIST_EXTS_ARRAY[@]} ]]; then
+            playlist_filter+=( -o )
+        fi
+    done
+
+    create_temp_file temp_playlist_list
+    # Output: display name | full path
+    find "${search_paths[@]}" -type f \( "${playlist_filter[@]}" \) -print0 | \
+        while IFS= read -r -d '' file; do
+            echo "📜 $(basename "$file")|$file"
+        done | sort > "$temp_playlist_list"
+
+    if [[ ! -s "$temp_playlist_list" ]]; then
+        echo "No playlists found in the search paths. 🐒"
+        exit 1
+    fi
+
+    SELECTED_PATHS=$(cat "$temp_playlist_list" | fzf --multi \
+        --with-nth=1 \
+        --delimiter="|" \
+        --prompt="📜 Pick playlist(s): " \
+        --preview='cat {2}' \
+        --preview-window=top:10 | cut -d'|' -f2) || {
+        echo "No playlist picked. Monke sad. 🍌"
+        exit 1
+    }
+
+    # The variable now holds the clean paths, ready to use
+    mapfile -t FILES <<< "$SELECTED_PATHS"
+    if [[ ${#FILES[@]} -eq 0 ]]; then
+        echo "No playlists picked. Monke walk away. 🚶"
+        exit 1
+    fi
+
+    echo "🎶 Loading ${#FILES[@]} playlist(s)."
+    mpv "${MPV_ARGS[@]}" "${FILES[@]}"
 else
   echo "Invalid input. Monke smash keyboard in confusion 🍌💥"
   exit 1

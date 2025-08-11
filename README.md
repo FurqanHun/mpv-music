@@ -22,6 +22,7 @@ A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-
 * **Interactive Selection (fzf) -- Two Playback Modes:**
   * **Track Mode:** Fuzzy-search individual tracks with metadata previews.
   * **Album Mode:** Navigate folders with clean names instead of full paths.
+  * **Playlist Mode:** Find and play your saved `.m3u` or `.pls` playlists.
 * **Direct File/URL Playback:** Instantly play local audio/video files or URLs (e.g., YouTube) without going through the menu.
 * **Configurable File Types:** Support for both audio and video extensions — easily tweakable.
 * **Custom MPV Flags:** Pass `mpv` flags directly or set defaults in the config.
@@ -90,6 +91,8 @@ mpv-music [PATH_OR_URL_OR_DIR] [OPTIONS]
 
 ### Options:
 
+* `-h, --help` → Show the help message and exit
+* `-v, --version` → Show the script's version and exit
 * `--config` → open config file in text editor (nano/vi)
 * `--config=editor` → open config in specified editor
 * `--no-video`, `--volume=50`, etc → any `mpv` flag works
@@ -158,6 +161,7 @@ MUSIC_DIRS="$HOME/Music /mnt/media/audio"
 MPV_DEFAULT_ARGS="--loop-playlist=inf --shuffle --no-video --volume=50"
 AUDIO_EXTS="mp3 flac wav m4a aac ogg opus"
 VIDEO_EXTS="mp4 mkv webm avi"
+PLAYLIST_EXTS="m3u m3u8 pls"
 ```
 
 ---
