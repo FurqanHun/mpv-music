@@ -1,4 +1,4 @@
-# mpv-music
+# mpv-music ![version](https://img.shields.io/badge/version-0.11.0-blue)
 A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-rich previews, direct playback, and full config customization.
 
 ---
@@ -20,13 +20,19 @@ A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-
 * **Blazing-Fast Indexed Searching:** Automatically indexes your music library into a JSON file for lightning-fast search using `fzf`. (If the `music_index.json` doesn't exist, else load the existing index.)
 * **Rich Metadata Previews:** In track mode, view song title, artist, album, and genre directly in the `fzf` preview window.
 * **Interactive Selection (fzf) -- Two Playback Modes:**
+  * **Directory Mode:** Navigate folders with clean names instead of full paths.
   * **Track Mode:** Fuzzy-search individual tracks with metadata previews.
-  * **Album Mode:** Navigate folders with clean names instead of full paths.
   * **Playlist Mode:** Find and play your saved `.m3u` or `.pls` playlists.
+  * **Tag Filter Mode:** Drill down by genre, artist, album, or title interactively.
+  * **Play All:** Instantly play your entire indexed library.
 * **Direct File/URL Playback:** Instantly play local audio/video files or URLs (e.g., YouTube) without going through the menu.
 * **Configurable File Types:** Support for both audio and video extensions — easily tweakable.
 * **Custom MPV Flags:** Pass `mpv` flags directly or set defaults in the config.
 * **Video Toggle:** `--video-ok` lets you include videos in your library without playing visuals unless you want to.
+* **CLI Filtering & Power Features:**
+  * Now supports flags like `--genre`, `--artist`, `--album`, `--title`, `--play-all`, `--playlist` for direct access.
+* **Enhanced Logging:**
+  * Verbose/debug modes, log rotation, and configurable log file size.
 
 ---
 
@@ -64,13 +70,15 @@ A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-
 
 3. **Move to your PATH:**
     ```bash
-    mv mpv-music ~/.local/bin/ # Or /usr/local/bin/
+    mv mpv-music /usr/local/bin/
     ```
 
 4. **First run (setup):**
     ```bash
     mpv-music
     ```
+    _Note: You may want to run `mpv-music --config` to customize your settings and music directories before indexing_
+
     That creates:
     - `~/.config/mpv-music/mpv-music.conf`
     - `~/.config/mpv-music/music_index.json` (your indexed library)
@@ -81,6 +89,7 @@ A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-
 
 ```bash
 mpv-music [PATH_OR_URL_OR_DIR] [OPTIONS]
+mpv-music [FILTER_FLAGS] [--play-all]
 ```
 
 ### Arguments:
@@ -102,20 +111,26 @@ mpv-music [PATH_OR_URL_OR_DIR] [OPTIONS]
 * `--refresh-index` → update index without wiping it
 * `-V, --verbose` → Increase verbosity, printing additional information
 * `--debug` → Print detailed debug messages
+* `-g, --genre [val]` → Filter by genre
+* `-a, --artist [val]` → Filter by artist
+* `-b, --album [val]` → Filter by album
+* `-t, --title [val]` → Filter by track title
+* `-p, --play-all` → Play all tracks matching filters
+* `-l, --playlist` → Playlist mode
 
 When **both** `--verbose` and `--debug` are enabled together, logs will be saved to:`~/.config/mpv-music/mpv-music.log`. This log file automatically rotates when it reaches 1MB in size.
 
 ### Examples:
 
 ```bash
-mpv-music                            # interactive mode (track/folder)
-mpv-music /path/to/music            # interactive mode in specific folder
+mpv-music                            # full interactive menu
+mpv-music /path/to/music            # interactive in a specific folder
 mpv-music ~/Music/track.flac        # plays file instantly
 mpv-music https://yt.link/video     # plays URL instantly
-mpv-music --shuffle --no-video      # with custom mpv flags
+mpv-music --genre="Rock" --play-all # play all rock tracks
+mpv-music --artist="Ado"            # fuzzy search by artist
+mpv-music --volume=50 --shuffle     # custom mpv flags
 mpv-music --reindex                 # rebuild the index from scratch
-mpv-music --config                  # open config file text editor (nano/vi)
-mpv-music --config=vim              # open config in specified editor (like, vim here)
 mpv-music --verbose --debug         # run with full logging enabled
 ```
 
@@ -162,6 +177,7 @@ MPV_DEFAULT_ARGS="--loop-playlist=inf --shuffle --no-video --volume=50"
 AUDIO_EXTS="mp3 flac wav m4a aac ogg opus"
 VIDEO_EXTS="mp4 mkv webm avi"
 PLAYLIST_EXTS="m3u m3u8 pls"
+LOG_MAX_SIZE_KB=1024
 ```
 
 ---
