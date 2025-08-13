@@ -760,7 +760,7 @@ interactive_filter() {
 VIDEO_OK=false
 CUSTOM_EXTS=""
 MPV_ARGS=()
-VERSION="0.11.1"
+VERSION="0.11.2"
 DIRECT_PLAY_TARGET="" # Will store the file path or URL if provided
 CUSTOM_MUSIC_DIR="" # Will store a custom music directory if provided
 declare -a GENRE_FILTERS=()
@@ -991,18 +991,6 @@ run_play_all_mode() {
     play_all_music
 }
 
-# Logic for handling custom directory vs. default index
-INDEX_TO_USE="$MUSIC_INDEX_FILE" # Default to the main index
-if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then
-    build_temp_index "$CUSTOM_MUSIC_DIR" temp_index_file
-    INDEX_TO_USE="$temp_index_file"
-else
-    if [[ ! -f "$MUSIC_INDEX_FILE" ]]; then
-        echo "Index file '$MUSIC_INDEX_FILE' not found. Building index from scratch."
-        build_music_index
-    fi
-fi
-
 # --- Argument Parsing ---
 # Iterate through all arguments to identify direct play target, script options, or mpv flags
 while [[ $# -gt 0 ]]; do
@@ -1086,6 +1074,24 @@ while [[ $# -gt 0 ]]; do
       MPV_ARGS+=("$1"); shift;;
   esac
 done
+
+# --- Music Library Indexing Check ---
+# Build EXT_FILTER here as it's needed by both build_music_index and update_music_index.
+# Moved EXT_FILTER building here to ensure it's always available before indexing calls.
+build_ext_filter
+# EXT_FILTER is now always built here.
+
+# Logic for handling custom directory vs. default index
+INDEX_TO_USE="$MUSIC_INDEX_FILE" # Default to the main index
+if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then
+    build_temp_index "$CUSTOM_MUSIC_DIR" temp_index_file
+    INDEX_TO_USE="$temp_index_file"
+else
+    if [[ ! -f "$MUSIC_INDEX_FILE" ]]; then
+        echo "Index file '$MUSIC_INDEX_FILE' not found. Building index from scratch."
+        build_music_index
+    fi
+fi
 
 if [[ ${#MPV_ARGS[@]} -eq 0 ]]; then
   MPV_ARGS=("${MPV_DEFAULT_ARGS_ARRAY[@]}")
@@ -1230,13 +1236,6 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
         fi
         exit 0
     fi
-
-
-# --- Music Library Indexing Check ---
-# Build EXT_FILTER here as it's needed by both build_music_index and update_music_index.
-# Moved EXT_FILTER building here to ensure it's always available before indexing calls.
-build_ext_filter
-# EXT_FILTER is now always built here.
 
 # --- Interactive Mode Selection ---
 echo "🎧 Pick mode:"
