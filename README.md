@@ -1,4 +1,4 @@
-# mpv-music ![version](https://img.shields.io/badge/version-0.11.0-blue)
+# mpv-music ![version](https://img.shields.io/badge/version-0.11.1-blue)
 A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-rich previews, direct playback, and full config customization.
 
 ---
@@ -173,7 +173,7 @@ If a config file doesn't exist, `mpv-music` will create one at startup. If you w
 # mpv-music configuration
 
 MUSIC_DIRS="$HOME/Music /mnt/media/audio"
-MPV_DEFAULT_ARGS="--loop-playlist=inf --shuffle --no-video --volume=50"
+MPV_DEFAULT_ARGS="--loop-playlist=inf --shuffle --no-video --audio-display=no --volume=50"
 AUDIO_EXTS="mp3 flac wav m4a aac ogg opus"
 VIDEO_EXTS="mp4 mkv webm avi"
 PLAYLIST_EXTS="m3u m3u8 pls"
