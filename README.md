@@ -1,4 +1,4 @@
-# mpv-music ![version](https://img.shields.io/badge/version-0.11.2-blue)
+# mpv-music ![version](https://img.shields.io/badge/version-0.11.3-blue)
 A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-rich previews, direct playback, and full config customization.
 
 ---
@@ -118,7 +118,9 @@ mpv-music [FILTER_FLAGS] [--play-all]
 * `-p, --play-all` → Play all tracks matching filters
 * `-l, --playlist` → Playlist mode
 
-When **both** `--verbose` and `--debug` are enabled together, logs will be saved to:`~/.config/mpv-music/mpv-music.log`. This log file automatically rotates when it reaches 1MB in size.
+When **both** `--verbose` and `--debug` are enabled together, logs will be saved to `~/.config/mpv-music/mpv-music.log`.
+The log file automatically rotates after reaching the configured size (default: 1024KB/1MB; adjustable via the config file).
+If `LOG_MAX_SIZE_KB` is set to `0` in your config, log messages will only be displayed and not saved.
 
 ### Examples:
 
