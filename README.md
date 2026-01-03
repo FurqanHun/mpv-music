@@ -1,4 +1,4 @@
-# mpv-music ![version](https://img.shields.io/badge/version-0.11.3-blue)
+# mpv-music ![version](https://img.shields.io/badge/version-0.12.1-blue)
 A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-rich previews, direct playback, and full config customization.
 
 ---
@@ -107,6 +107,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 * `--no-video`, `--volume=50`, etc → any `mpv` flag works
 * `--video-ok` → include video files
 * `--ext=mp3,ogg` → override file extensions
+* `--update` → update the script to the latest version
 * `--reindex` → force rebuild the full index
 * `--refresh-index` → update index without wiping it
 * `-V, --verbose` → Increase verbosity, printing additional information

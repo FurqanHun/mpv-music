@@ -47,10 +47,10 @@ if ! grep -q "bash" "$TEMP_DOWNLOAD"; then
     exit 1
 fi
 
-echo "Replacing $TARGET_PATH..."
+# echo "Replacing $TARGET_PATH..."
 if mv "$TEMP_DOWNLOAD" "$TARGET_PATH"; then
-    echo -e "${GREEN}Update successful!${NC}"
-    echo "$TARGET_PATH is now v$NEW_VERSION"
+    echo -e "${GREEN}Update to v$NEW_VERSION successful!${NC}"
+    # echo "$TARGET_PATH is now v$NEW_VERSION"
 else
     echo -e "${RED}Error: Failed to replace file. Check permissions.${NC}"
     rm "$TEMP_DOWNLOAD"
