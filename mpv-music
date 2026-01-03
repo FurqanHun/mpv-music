@@ -237,6 +237,7 @@ Options:
   -t, --title [val]   Filter by title.
   --config[=EDITOR]   Open config file in an editor.
   --video-ok          Include video file formats in scans.
+  --update            Update mpv-music to the latest version
   --reindex           Force a complete rebuild of the music index.
   --refresh-index     Update index with file changes (smarter, faster).
   -V, --verbose       Increase verbosity level.
@@ -251,6 +252,30 @@ Interactive Modes (when run with no arguments):
 
 Note: Requires GNU find, fzf, jq, and ffprobe.
 EOF
+}
+
+# --- Update Trigger Function ---
+invoke_updater() {
+    local updater_url="https://raw.githubusercontent.com/FurqanHun/mpv-music/master/mpv-music-updater"
+    local local_updater="$CONFIG_DIR/mpv-music-updater"
+    local current_script_path
+
+    # robustly get the current script path
+    current_script_path=$(readlink -f "$0")
+
+    log_verbose "Fetching updater..."
+
+    if curl -sL "$updater_url" -o "$local_updater"; then
+        chmod +x "$local_updater"
+
+        # Pass control to the updater
+        # We use 'exec' so this script process ends and the updater takes over PID
+        log_verbose "Launching updater..."
+        exec "$local_updater" "$current_script_path"
+    else
+        echo "Error: Failed to retrieve updater script." >&2
+        exit 1
+    fi
 }
 
 # --- Build Extension Filter Function ---
@@ -760,7 +785,7 @@ interactive_filter() {
 VIDEO_OK=false
 CUSTOM_EXTS=""
 MPV_ARGS=()
-VERSION="0.11.3"
+VERSION="0.12.0"
 DIRECT_PLAY_TARGET="" # Will store the file path or URL if provided
 CUSTOM_MUSIC_DIR="" # Will store a custom music directory if provided
 declare -a GENRE_FILTERS=()
@@ -1042,6 +1067,7 @@ while [[ $# -gt 0 ]]; do
     -V|--verbose) VERBOSE=true; shift;;
     --debug) DEBUG=true; shift;;
     --video-ok) VIDEO_OK=true; shift;;
+    --update) invoke_updater;;
     --ext=*) CUSTOM_EXTS="${1#--ext=}"; shift;;
     --refresh-index) build_ext_filter; update_music_index; exit 0;;
     --reindex) build_ext_filter; echo "Forcing a complete rebuild of the music index."; build_music_index; exit 0;;
