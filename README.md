@@ -1,4 +1,4 @@
-# mpv-music ![version](https://img.shields.io/badge/version-0.12.2-blue)
+# mpv-music ![version](https://img.shields.io/badge/version-0.12.3-blue)
 A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-rich previews, direct playback, and full config customization.
 
 ---
