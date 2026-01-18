@@ -44,7 +44,7 @@ fi
 
 # Convert space-separated strings from config into arrays
 IFS=' ' read -ra MUSIC_DIRS_ARRAY <<< "$MUSIC_DIRS"
-IFS=' ' read -ra MPV_DEFAULT_ARGS_ARRAY <<< "$MPV_DEFAULT_ARGS"
+eval "MPV_DEFAULT_ARGS_ARRAY=(${MPV_DEFAULT_ARGS[@]})"
 IFS=' ' read -ra AUDIO_EXTS_ARRAY <<< "$AUDIO_EXTS"
 IFS=' ' read -ra VIDEO_EXTS_ARRAY <<< "$VIDEO_EXTS"
 IFS=' ' read -ra PLAYLIST_EXTS_ARRAY <<< "$PLAYLIST_EXTS"
