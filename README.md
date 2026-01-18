@@ -1,4 +1,4 @@
-# mpv-music ![version](https://img.shields.io/badge/version-0.12.3-blue)
+# mpv-music ![version](https://img.shields.io/badge/version-0.13.0-blue)
 A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-rich previews, direct playback, and full config customization.
 
 ---
@@ -182,6 +182,14 @@ VIDEO_EXTS="mp4 mkv webm avi"
 PLAYLIST_EXTS="m3u m3u8 pls"
 LOG_MAX_SIZE_KB=1024
 ```
+
+---
+
+## Development
+
+This project is developed using a modular source structure.
+* **Source Code:** Located in `src/`.
+* **Building:** Run `./build.sh` to compile the modules into the final `mpv-music` executable.
 
 ---
 
