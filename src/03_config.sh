@@ -1,6 +1,8 @@
 # --- Create Config Function ---
 # Creates the configuration file for mpv-music.
 create_config() {
+    local safe_simple_args
+        safe_simple_args=$(printf "%q " "${MPV_ARGS_SIMPLE[@]}")
     cat <<EOF > "$CONFIG_FILE"
 # mpv-music configuration file
 
@@ -8,10 +10,17 @@ create_config() {
 # You can add multiple paths, e.g., MUSIC_DIRS="\$HOME/Music /mnt/my_music_drive/audio"
 MUSIC_DIRS="${MUSIC_DIRS_DEFAULT[*]}"
 
+BANNER_TEXT='$BANNER'
+STATUS_MSG='$MPV_STATUS_MSG_DEFAULT'
+
 # Default MPV arguments (space-separated)
 # These will be used if no other MPV args are passed on the command line.
 # Example: MPV_DEFAULT_ARGS="--loop-playlist=inf --shuffle --no-video --volume=50"
-MPV_DEFAULT_ARGS="${MPV_ARGS_DEFAULT[*]}"
+MPV_DEFAULT_ARGS=(
+    $safe_simple_args
+    "--term-playing-msg=\$(tput clear)\$BANNER_TEXT"
+    "--term-status-msg=\$STATUS_MSG"
+)
 
 # Audio extensions (space-separated)
 # These are used when --video-ok is NOT specified.
@@ -44,7 +53,11 @@ fi
 
 # Convert space-separated strings from config into arrays
 IFS=' ' read -ra MUSIC_DIRS_ARRAY <<< "$MUSIC_DIRS"
-eval "MPV_DEFAULT_ARGS_ARRAY=(${MPV_DEFAULT_ARGS[@]})"
+if [ -n "${MPV_DEFAULT_ARGS+x}" ]; then
+    MPV_DEFAULT_ARGS_ARRAY=("${MPV_DEFAULT_ARGS[@]}")
+else
+    MPV_DEFAULT_ARGS_ARRAY=()
+fi
 IFS=' ' read -ra AUDIO_EXTS_ARRAY <<< "$AUDIO_EXTS"
 IFS=' ' read -ra VIDEO_EXTS_ARRAY <<< "$VIDEO_EXTS"
 IFS=' ' read -ra PLAYLIST_EXTS_ARRAY <<< "$PLAYLIST_EXTS"
