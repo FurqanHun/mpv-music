@@ -21,7 +21,7 @@ echo -e "${BLUE}🎧 mpv-music Installer${NC}"
 # --- 1. Interactive Path Selection ---
 echo -e "\nWhere would you like to install the script?"
 echo -e "Default: ${GREEN}$DEFAULT_INSTALL_DIR${NC} (Recommended)"
-read -rp "Press ENTER to use default, or type a custom path: " USER_INPUT
+read -rp "Press ENTER to use default, or type a custom path: " USER_INPUT < /dev/tty
 
 INSTALL_DIR="${USER_INPUT:-$DEFAULT_INSTALL_DIR}"
 
