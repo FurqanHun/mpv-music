@@ -51,12 +51,9 @@ Note: Requires GNU find, fzf, jq, and ffprobe.
 EOF
 }
 
-
-
-
 # --- Play All Music Function ---
 play_all_music() {
-    log_verbose "🎵 Getting all tracks from the index..."
+    log_verbose "Getting all tracks from the index..."
 
     # Check if index exists and is not empty
     if [[ ! -s "$MUSIC_INDEX_FILE" ]]; then
@@ -72,7 +69,7 @@ play_all_music() {
         exit 1
     fi
 
-    log_verbose "🎶 Loading all ${#FILES[@]} track(s)..."
+    msg_success "Loading all ${#FILES[@]} track(s)..."
     mpv "${MPV_ARGS[@]}" "${FILES[@]}"
     exit 0
 }
@@ -158,7 +155,7 @@ run_dir_mode() {
     }
 
     mapfile -t FOLDERS <<< "$SELECTED"
-    log_verbose "📦 Selected ${#FOLDERS[@]} folder(s)."
+    log_verbose "Selected ${#FOLDERS[@]} folder(s)."
 
     local FILES=() #
     for DIR in "${FOLDERS[@]}"; do
@@ -171,7 +168,8 @@ run_dir_mode() {
     done
 
     [[ ${#FILES[@]} -eq 0 ]] && msg_warn "No music found in those folders." && exit 1
-    log_verbose "🎶 Found ${#FILES[@]} file(s) total."
+
+    msg_success "Playing ${#FILES[@]} file(s)..."
     mpv "${MPV_ARGS[@]}" "${FILES[@]}" #
 }
 
@@ -208,7 +206,8 @@ run_track_mode() {
 
     mapfile -t FILES <<< "$SELECTED"
     [[ ${#FILES[@]} -eq 0 ]] && msg_warn "No tracks picked." && exit 1
-    log_verbose "🎶 Selected ${#FILES[@]} track(s)."
+
+    msg_success "Playing ${#FILES[@]} track(s)..."
     mpv "${MPV_ARGS[@]}" "${FILES[@]}"
 }
 
@@ -247,12 +246,12 @@ run_playlist_mode() {
         exit 1
     fi
 
-    log_verbose "🎶 Loading ${#FILES[@]} playlist(s)."
+    msg_success "Loading ${#FILES[@]} playlist(s)..."
     mpv "${MPV_ARGS[@]}" "${FILES[@]}"
 }
 
 run_tag_mode() {
-    echo "🔎 Filter by:"
+    echo -e "${CYAN}🔎 Filter by:${NC}"
     echo "1) Genre"
     echo "2) Artist"
     echo "3) Album"
@@ -265,7 +264,7 @@ run_tag_mode() {
         1) filter_key="genre"; fzf_prompt="🎶 Pick genre(s) (TAB to select multiple): ";;
         2) filter_key="artist"; fzf_prompt="🎤 Pick artist(s) (TAB to select multiple): ";;
         3) filter_key="album"; fzf_prompt="💿 Pick album(s) (TAB to select multiple): ";;
-        *) echo "Invalid choice. Exiting."; exit 1;;
+        *) msg_error "Invalid choice. Exiting."; exit 1;;
     esac
 
     # Get one or more selections from the user
@@ -289,7 +288,7 @@ run_tag_mode() {
         exit 1
     fi
 
-    log_verbose "Found $track_count matching tracks. What's next?"
+    echo -e "${GREEN}[OK]${NC} Found $track_count matching tracks. What's next?"
     echo "1) Play all $track_count tracks"
     echo "2) Select individual tracks from this list"
     read -rp "Enter choice [1/2]: " PLAY_CHOICE
@@ -297,32 +296,33 @@ run_tag_mode() {
     case "$PLAY_CHOICE" in
         1) # Play All
             mapfile -t FILES < <(jq -r '.tracks[].path' "$filtered_index_file")
-            log_verbose "🎶 Loading all ${#FILES[@]} track(s)..."
+            msg_success "Playing all..."
             mpv "${MPV_ARGS[@]}" "${FILES[@]}"
             ;;
         2) # Select Individual
             create_temp_file temp_track_list
             jq -r '.tracks[] |
-                  (if .media_type == "video" then "🎬 " else "🎵 " end) +
-                  (.title // "[NO TITLE]") + " " + "|" +
-                  (.title // "[NO TITLE]") + "|" +
-                  (.artist // "[NO ARTIST]") + "|" +
-                  (.album // "[NO ALBUM]") + "|" +
-                  (.genre // "[NO GENRE]") + "|" +
-                  (.media_type // "UNKNOWN") + "|" +
-                  .path' "$filtered_index_file" > "$temp_track_list"
+                  [
+                      (if .media_type == "video" then "🎬 " else "🎵 " end) + (.title // "[NO TITLE]"),
+                      .title // "[NO TITLE]",
+                      .artist // "[NO ARTIST]",
+                      .album // "[NO ALBUM]",
+                      .genre // "[NO GENRE]",
+                      .media_type // "UNKNOWN",
+                      .path
+                  ] | @tsv' "$filtered_index_file" > "$temp_track_list"
 
             SELECTED=$(cat "$temp_track_list" | fzf --multi \
               --prompt="🎵 Pick your filtered tracks (TAB to multi-select): " \
-              --delimiter="|" \
+              --delimiter="\t" \
               --with-nth=1 \
-              --preview='echo -e "\033[1;36mTitle:\033[0m {2}\n\033[1;33mArtist:\033[0m {3}\n\033[1;32mAlbum:\033[0m {4}\n\033[1;35mGenre:\033[0m {5}\n\033[1;34mType:\033[0m {6}"' \
-              --preview-window=top:5 | awk -F'|' '{print $NF}')
+              --preview='echo -e "\033[1;36mTitle:\033[0m {2}\n\033[1;33mArtist:\033[0m {3}..."' \
+              --preview-window=top:5 | awk -F'\t' '{print $NF}')
 
             mapfile -t FILES <<< "$SELECTED"
             [[ ${#FILES[@]} -eq 0 ]] && msg_warn "No tracks picked." && exit 1
 
-            log_verbose "🎶 Selected ${#FILES[@]} track(s)."
+            msg_success "Playing ${#FILES[@]} track(s)..."
             mpv "${MPV_ARGS[@]}" "${FILES[@]}"
             ;;
         *)

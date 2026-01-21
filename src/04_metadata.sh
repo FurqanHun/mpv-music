@@ -145,7 +145,11 @@ build_temp_index() {
 
     while IFS= read -r file_path; do
         count=$((count + 1))
-        printf "\rIndexing: %d/%d (%s)" "$count" "$file_count" "$(basename "$file_path")" >&2
+
+        # Only show progress in verbose mode for temp index (usually fast)
+        if [[ "$VERBOSE" == true ]]; then
+            printf "\rIndexing: %d/%d (%s)" "$count" "$file_count" "$(basename "$file_path" | cut -c 1-20)..." >&2
+        fi
 
         local raw_metadata_output
         raw_metadata_output=$(get_audio_metadata "$file_path")
@@ -177,8 +181,7 @@ build_temp_index() {
 
     done < "$temp_files_list"
 
-    printf "\rProcessing complete: %d/%d files processed.\n" "$count" "$file_count" >&2
-
+    if [[ "$VERBOSE" == true ]]; then echo ""; fi # Newline if we printed progress
     jq -s '{tracks: .}' "$temp_json_lines" > "$temp_index_ref"
 
     log_verbose "Temporary index created at '$temp_index_ref'."
@@ -278,7 +281,8 @@ build_music_index() {
 
   done
 
-  printf "\rIndexing complete: %d/%d files processed.\n" "$total" "$total" >&2
+  printf "\n"
+  msg_success "Indexing complete: $total files processed."
 
   # --- EFFICIENT JSON ASSEMBLY ---
   # Use jq's --slurp flag to read all the JSON lines and wrap them in an array
@@ -303,7 +307,7 @@ update_music_index() {
   declare -A old_index_map
   local old_index_json_string
 
-  msg_info "Updating music library index..."
+  log_verbose "Updating music library index..."
 
   if [[ -f "$MUSIC_INDEX_FILE" ]]; then
     old_index_json_string=$(cat "$MUSIC_INDEX_FILE")
@@ -346,7 +350,10 @@ update_music_index() {
 
   for file_path in "${current_files_on_disk[@]}"; do
     count=$((count + 1))
-    printf "\rScanning and updating: %d/%d (%s)" "$count" "$total" "$(basename "$file_path")" >&2
+
+    if [[ "$VERBOSE" == true ]]; then
+        printf "\rScanning and updating: %d/%d (%s)" "$count" "$total" "$(basename "$file_path")" >&2
+    fi
 
     local current_mtime=$(stat -c %Y "$file_path" 2>/dev/null || echo "")
     local current_size=$(stat -c %s "$file_path" 2>/dev/null || echo "")
@@ -415,7 +422,9 @@ update_music_index() {
     fi
 
   done
-  printf "\rScanning and updating complete: %d/%d files processed.\n" "$total" "$total" >&2
+
+  if [[ "$VERBOSE" == true ]]; then echo ""; fi
+  log_verbose "Library update complete."
 
   local current_indexed_dirs_json_array="[]"
   for dir_path in "${music_dirs[@]}"; do

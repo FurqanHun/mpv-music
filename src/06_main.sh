@@ -180,7 +180,8 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
     }
 
     # --- Stage 1: Attempt an Exact (Whole Word) Match ---
-    log_verbose "🔎 Trying smart match..."
+    log_verbose "Trying smart match..."
+
     final_filtered_json=$(cat "$MUSIC_INDEX_FILE")
     if [[ ${#GENRE_FILTERS[@]} -gt 0 ]]; then final_filtered_json=$(echo "$final_filtered_json" | apply_filter "exact" "genre" "${GENRE_FILTERS[@]}"); fi
     if [[ ${#ARTIST_FILTERS[@]} -gt 0 ]]; then final_filtered_json=$(echo "$final_filtered_json" | apply_filter "exact" "artist" "${ARTIST_FILTERS[@]}"); fi
@@ -191,7 +192,7 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
 
     if [[ "$track_count" -eq 0 ]]; then
         # --- Stage 2: Fallback to "Contains" Search & Clarification ---
-        log_verbose "❌ No smart match found. Searching for partial matches..."
+        log_verbose "No smart match found. Searching for partial matches..."
         active_filter_key=""
         active_filter_values=()
 
@@ -280,7 +281,7 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
     fi
 
 # --- Interactive Mode Selection ---
-echo "🎧 Pick mode:"
+echo -e "${CYAN}🎧 Pick mode:${NC}"
 echo "1) Play entire Directory(s)"
 echo "2) Pick individual tracks"
 echo "3) Play a saved playlist"
