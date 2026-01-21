@@ -300,7 +300,7 @@ run_tag_mode() {
             msg_success "Playing all..."
             mpv "${MPV_ARGS[@]}" "${FILES[@]}"
             ;;
-        2) # Select Individual
+        2) # Select Individual - FIXED DELIMITER
             create_temp_file temp_track_list
             jq -r '.tracks[] |
                   [
@@ -317,7 +317,7 @@ run_tag_mode() {
               --prompt="🎵 Pick your filtered tracks (TAB to multi-select): " \
               --delimiter="\t" \
               --with-nth=1 \
-              --preview='echo -e "\033[1;36mTitle:\033[0m {2}\n\033[1;33mArtist:\033[0m {3}..."' \
+              --preview='echo -e "\033[1;36mTitle:\033[0m {2}\n\033[1;33mArtist:\033[0m {3}\n\033[1;32mAlbum:\033[0m {4}\n\033[1;35mGenre:\033[0m {5}\n\033[1;34mType:\033[0m {6}"' \
               --preview-window=top:5 | awk -F'\t' '{print $NF}')
 
             mapfile -t FILES <<< "$SELECTED"
