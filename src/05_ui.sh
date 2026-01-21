@@ -288,9 +288,10 @@ run_tag_mode() {
         exit 1
     fi
 
-    echo -e "${GREEN}[OK]${NC} Found $track_count matching tracks. What's next?"
+    msg_success "Found $track_count matching track(s)."
+    echo "What's next?"
     echo "1) Play all $track_count tracks"
-    echo "2) Select individual tracks from this list"
+    echo "2) Select individual tracks"
     read -rp "Enter choice [1/2]: " PLAY_CHOICE
 
     case "$PLAY_CHOICE" in
