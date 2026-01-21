@@ -15,6 +15,22 @@ rotate_log() {
     fi
   fi
 }
+
+# --- Colors & Printing Helpers ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Standardized message helpers
+msg_error()   { echo -e "${RED}[ERROR]${NC} $1" >&2; }
+msg_warn()    { echo -e "${YELLOW}[WARN]${NC}  $1" >&2; }
+msg_success() { echo -e "${GREEN}[OK]${NC}    $1" >&2; }
+msg_info()    { echo -e "${BLUE}[INFO]${NC}  $1" >&2; }
+msg_note()    { echo -e "${CYAN}[NOTE]${NC}  $1" >&2; }
+
 # --- Verbose and Debug Mode ---
 VERBOSE=false
 DEBUG=false
@@ -91,17 +107,17 @@ invoke_updater() {
     # robustly get the current script path
     current_script_path=$(readlink -f "$0")
 
-    log_verbose "Fetching updater..."
+    msg_info "Fetching updater..."
 
     if curl -sL "$updater_url" -o "$local_updater"; then
         chmod +x "$local_updater"
 
         # Pass control to the updater
         # We use 'exec' so this script process ends and the updater takes over PID
-        log_verbose "Launching updater..."
+        msg_info "Launching updater..."
         exec "$local_updater" "$current_script_path"
     else
-        echo "Error: Failed to retrieve updater script." >&2
+        msg_error "Failed to retrieve updater script."
         exit 1
     fi
 }

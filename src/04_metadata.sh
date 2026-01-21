@@ -130,7 +130,7 @@ build_temp_index() {
     file_count=$(wc -l < "$temp_files_list")
 
     if [[ $file_count -eq 0 ]]; then
-        echo "No music files found in '$custom_dir'. Monke sad. 🙊" >&2
+        msg_warn "No music files found in '$custom_dir'."
         # Create an empty index so downstream commands don't fail
         echo '{"tracks": []}' > "$temp_index_ref"
         return 1
@@ -192,8 +192,7 @@ build_music_index() {
   local all_music_files=()
   local indexed_dirs_json_array="[]"
 
-  log_verbose "Indexing music library for the first time... This may take a while for large collections."
-  log_verbose "Please wait. Monke is working! 🐒"
+  msg_info "Indexing music library for the first time... This may take a while for large collections."
 
   # Populate all_music_files and indexed_dirs_json_array
   for dir_path in "${music_dirs[@]}"; do
@@ -212,12 +211,12 @@ build_music_index() {
         all_music_files+=("$file")
       done < <(find "$dir_path" -type f \( "${ext_filter[@]}" \) -print0)
     else
-      log_verbose "Warning: Configured music directory '$dir_path' does not exist. Skipping."
+      msg_warn "Configured music directory '$dir_path' does not exist. Skipping."
     fi
   done
 
   if [[ ${#all_music_files[@]} -eq 0 ]]; then
-    echo "No music files found in configured directories. Index will be empty. 🙊"
+    msg_warn "No music files found in configured directories. Index will be empty."
     # Even if no tracks, we should save the dir info
     jq -n --argjson dirs "$indexed_dirs_json_array" '{indexed_directories: $dirs, tracks: []}' > "$MUSIC_INDEX_FILE"
     return 0
@@ -279,7 +278,7 @@ build_music_index() {
 
   done
 
-  printf "\rIndexing complete: %d/%d files processed. 🎉\n" "$total" "$total" >&2
+  printf "\rIndexing complete: %d/%d files processed.\n" "$total" "$total" >&2
 
   # --- EFFICIENT JSON ASSEMBLY ---
   # Use jq's --slurp flag to read all the JSON lines and wrap them in an array
@@ -292,7 +291,7 @@ build_music_index() {
     --argjson tracks "$tracks_json_array" \
     '{indexed_directories: $dirs, tracks: $tracks}' > "$MUSIC_INDEX_FILE"
 
-  log_verbose "Index saved to $MUSIC_INDEX_FILE"
+  msg_success "Index saved to $MUSIC_INDEX_FILE"
 }
 
 # --- Music Library Update Function ---
@@ -304,12 +303,12 @@ update_music_index() {
   declare -A old_index_map
   local old_index_json_string
 
- log_verbose "Updating music library index. Monke smart! 🧠"
+  msg_info "Updating music library index..."
 
   if [[ -f "$MUSIC_INDEX_FILE" ]]; then
     old_index_json_string=$(cat "$MUSIC_INDEX_FILE")
     if ! echo "$old_index_json_string" | jq -e '.tracks | arrays' &>/dev/null; then
-        echo "Warning: Index file '$MUSIC_INDEX_FILE' is invalid or missing/corrupted 'tracks' array. Rebuilding index." >&2
+        msg_warn "Index file '$MUSIC_INDEX_FILE' is invalid or missing/corrupted 'tracks' array. Rebuilding index."
         build_music_index
         return 0
     fi
@@ -318,7 +317,7 @@ update_music_index() {
         old_index_map["$(echo "$path" | tr -d '\n\r')"]="$json_obj"
     done < <(echo "$old_index_json_string" | jq -c '.tracks[] | "\(.path)\t\(.)"')
   else
-    log_verbose "Index file not found. Building index for the first time."
+    msg_info "Index file not found. Building index for the first time."
     build_music_index
     return 0
   fi
@@ -332,7 +331,7 @@ update_music_index() {
   done
 
   if [[ ${#current_files_on_disk[@]} -eq 0 ]]; then
-    echo "No music files found on disk during update scan. Index will be empty. 🙊" >&2
+    msg_warn "No music files found on disk during update scan. Index will be empty."
     local current_indexed_dirs=$(echo "$old_index_json_string" | jq -c '.indexed_directories // []')
     echo "{\"indexed_directories\": $(echo "$current_indexed_dirs" | jq -c .), \"tracks\": []}" | jq . > "$MUSIC_INDEX_FILE"
     return 0
@@ -416,7 +415,7 @@ update_music_index() {
     fi
 
   done
-  printf "\rScanning and updating complete: %d/%d files processed. 🎉\n" "$total" "$total" >&2
+  printf "\rScanning and updating complete: %d/%d files processed.\n" "$total" "$total" >&2
 
   local current_indexed_dirs_json_array="[]"
   for dir_path in "${music_dirs[@]}"; do
@@ -436,5 +435,5 @@ update_music_index() {
     --slurpfile tracks "$new_index_lines" \
     '{indexed_directories: $dirs, tracks: $tracks}' > "$MUSIC_INDEX_FILE"
 
-  log_verbose "Index updated and saved to $MUSIC_INDEX_FILE"
+  msg_success "Index updated and saved to $MUSIC_INDEX_FILE"
 }

@@ -3,7 +3,7 @@
 # --- Help Function ---
 show_help() {
   cat <<EOF
-🦍 MPV Music Script – Monke Wrapper 🍌 (v$VERSION)
+MPV Music Script (v$VERSION)
 
 Usage:
   mpv-music [PATH_OR_URL_OR_DIR] [OPTIONS]
@@ -60,15 +60,15 @@ play_all_music() {
 
     # Check if index exists and is not empty
     if [[ ! -s "$MUSIC_INDEX_FILE" ]]; then
-        echo "Error: Music index is empty or not found. Cannot play all." >&2
-        echo "Try running --reindex first." >&2
+        msg_error "Music index is empty or not found. Cannot play all."
+        msg_note "Try running --reindex first."
         exit 1
     fi
 
     mapfile -t FILES < <(jq -r '.tracks[].path' "$MUSIC_INDEX_FILE")
 
     if [[ ${#FILES[@]} -eq 0 ]]; then
-        echo "No tracks found in the index. 🙊" >&2
+        msg_warn "No tracks found in the index."
         exit 1
     fi
 
@@ -108,7 +108,7 @@ interactive_filter() {
             --preview-window=top:5)
 
     if [[ -z "$selected_lines" ]]; then
-        echo "No selection made. Exiting." >&2
+        msg_warn "No selection made. Exiting."
         exit 1
     fi
 
@@ -119,7 +119,7 @@ interactive_filter() {
 # --- Modes: Functions ---
 run_dir_mode() {
     if [[ ! -f "$INDEX_TO_USE" || ! -s "$INDEX_TO_USE" ]]; then #
-        echo "Error: Index file is missing or empty. Cannot proceed." #
+        msg_error "Index file is missing or empty. Cannot proceed."
         exit 1 #
     fi
 
@@ -140,7 +140,7 @@ run_dir_mode() {
     ' "$INDEX_TO_USE" > "$temp_folder_list"
 
     if [[ ! -s "$temp_folder_list" ]]; then #
-        echo "No playable music folders found in the selection. Please check your source and try again."
+        msg_warn "No playable music folders found in the selection. Please check your source and try again."
         exit 1
     fi
 
@@ -153,7 +153,7 @@ run_dir_mode() {
         --prompt="📁 Pick folder(s) (TAB to multi-select): " \
         --preview='echo -e "Folder: {1}\nPath: {2}\nTracks: {3}\nSample: {4}"' \
         --preview-window=top:6 | cut -d$'\t' -f2) || {
-        echo "🚶 No folders picked."
+        msg_warn "No folders picked."
         exit 1
     }
 
@@ -170,14 +170,14 @@ run_dir_mode() {
         done <<< "$TRACK_PATHS"
     done
 
-    [[ ${#FILES[@]} -eq 0 ]] && echo "No music found in those folders. Monke hear nothing 🙊" && exit 1
+    [[ ${#FILES[@]} -eq 0 ]] && msg_warn "No music found in those folders." && exit 1
     log_verbose "🎶 Found ${#FILES[@]} file(s) total."
     mpv "${MPV_ARGS[@]}" "${FILES[@]}" #
 }
 
 run_track_mode() {
     if [[ ! -f "$INDEX_TO_USE" || ! -s "$INDEX_TO_USE" ]]; then #
-        echo "Error: Index file is missing or empty. Cannot proceed." #
+        msg_error "Index file is missing or empty. Cannot proceed."
         exit 1
     fi
 
@@ -207,7 +207,7 @@ run_track_mode() {
       --preview-window=top:6 | awk -F'\t' '{print $NF}')
 
     mapfile -t FILES <<< "$SELECTED"
-    [[ ${#FILES[@]} -eq 0 ]] && echo "No tracks picked. Monke walk away. 🚶" && exit 1
+    [[ ${#FILES[@]} -eq 0 ]] && msg_warn "No tracks picked." && exit 1
     log_verbose "🎶 Selected ${#FILES[@]} track(s)."
     mpv "${MPV_ARGS[@]}" "${FILES[@]}"
 }
@@ -224,8 +224,8 @@ run_playlist_mode() {
       ] | @tsv' "$INDEX_TO_USE" > "$temp_playlist_list"
 
     if [[ ! -s "$temp_playlist_list" ]]; then #
-        echo "No playlists found in the index. 🐒" >&2
-        echo "Try running --reindex to add them." >&2
+        msg_warn "No playlists found in the index."
+        msg_note "Try running --reindex to add them."
         exit 1
     fi
 
@@ -236,14 +236,14 @@ run_playlist_mode() {
         --prompt="📜 Pick playlist(s) (TAB to multi-select): " \
         --preview-window=top:5 \
         --preview='cat {2}') || {
-        echo "No playlist picked. Monke sad. 🍌" #
+        msg_warn "No playlist picked."
         exit 1
     }
 
     mapfile -t FILES < <(echo "$SELECTED_PATHS" | cut -d$'\t' -f2)
 
     if [[ ${#FILES[@]} -eq 0 ]]; then
-        echo "No playlists picked. Monke walk away. 🚶"
+        msg_warn "No playlists picked."
         exit 1
     fi
 
@@ -285,7 +285,7 @@ run_tag_mode() {
     track_count=$(jq '.tracks | length' "$filtered_index_file")
 
     if [[ "$track_count" -eq 0 ]]; then
-        echo "No tracks found matching that filter. 🙊" >&2
+        msg_warn "No tracks found matching that filter."
         exit 1
     fi
 
@@ -320,13 +320,13 @@ run_tag_mode() {
               --preview-window=top:5 | awk -F'|' '{print $NF}')
 
             mapfile -t FILES <<< "$SELECTED"
-            [[ ${#FILES[@]} -eq 0 ]] && echo "No tracks picked. Monke walk away. 🚶" && exit 1
+            [[ ${#FILES[@]} -eq 0 ]] && msg_warn "No tracks picked." && exit 1
 
             log_verbose "🎶 Selected ${#FILES[@]} track(s)."
             mpv "${MPV_ARGS[@]}" "${FILES[@]}"
             ;;
         *)
-            echo "Invalid choice. Exiting."
+            msg_warn "Invalid choice. Exiting."
             exit 1
             ;;
     esac

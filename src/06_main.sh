@@ -30,7 +30,7 @@ for arg in "$@"; do
       else
         if command -v nano &>/dev/null; then EDITOR="nano"
         elif command -v vi &>/dev/null; then EDITOR="vi"
-        else echo "Error: Neither nano nor vi found."; exit 1
+        else msg_error "Neither nano nor vi found."; exit 1
         fi
       fi
       "$EDITOR" "$CONFIG_FILE"
@@ -52,7 +52,7 @@ if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then
     INDEX_TO_USE="$temp_index_file"
 else
     if [[ ! -f "$MUSIC_INDEX_FILE" ]]; then
-        echo "Index file '$MUSIC_INDEX_FILE' not found. Building index from scratch."
+        msg_info "Index file '$MUSIC_INDEX_FILE' not found. Building index from scratch."
         build_music_index
     fi
 fi
@@ -67,7 +67,7 @@ while [[ $# -gt 0 ]]; do
     --update) invoke_updater;;
     --ext=*) CUSTOM_EXTS="${1#--ext=}"; shift;;
     --refresh-index) build_ext_filter; update_music_index; exit 0;;
-    --reindex) build_ext_filter; echo "Forcing a complete rebuild of the music index."; build_music_index; exit 0;;
+    --reindex) build_ext_filter; msg_info "Forcing a complete rebuild of the music index."; build_music_index; exit 0;;
     -p|--play-all) PLAY_ALL=true; shift;;
     -l|--playlist) CLI_PLAYLIST_MODE=true; shift;;
 
@@ -225,11 +225,11 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
     track_count=$(echo "$final_filtered_json" | jq '.tracks | length')
 
     if [[ "$track_count" -eq 0 ]]; then
-        echo "Did you just asked monke nothing. 🙊" >&2
+        msg_error "No matching tracks found."
         exit 1
     fi
 
-    log_verbose "✅ Found $track_count matching track(s)."
+    msg_success "Found $track_count matching track(s)."
 
     if [[ "$PLAY_ALL" == true || "$track_count" -eq 1 ]]; then
         # If --play-all is used OR if there's only one result, play directly
@@ -269,11 +269,11 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
                     --preview-window=top:5 | awk -F'|' '{print $NF}')
 
                 mapfile -t FILES <<< "$SELECTED"
-                [[ ${#FILES[@]} -eq 0 ]] && echo "No tracks picked. 🚶" && exit 1
+                [[ ${#FILES[@]} -eq 0 ]] && msg_warn "No tracks picked." && exit 1
                 log_verbose "🎶 Selected ${#FILES[@]} track(s)."
                 mpv "${MPV_ARGS[@]}" "${FILES[@]}"
                 ;;
-            *) echo "Invalid choice. Exiting."; exit 1;;
+            *) msg_error "Invalid choice. Exiting."; exit 1;;
             esac
         fi
         exit 0
@@ -310,6 +310,6 @@ elif [[ "$MODE" == "5" ]]; then
     run_play_all_mode
 
 else
-  echo "Invalid input. Monke smash keyboard in confusion 🍌💥"
+  msg_error "Invalid input."
   exit 1
 fi
