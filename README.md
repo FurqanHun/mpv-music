@@ -57,6 +57,15 @@ A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-
 
 ## Installation
 
+### Supported Systems
+
+* **Linux:** **Native.** The script is built and tested primarily for Linux (GNU tools).
+* **WSL (Windows Subsystem for Linux):** **Fully Supported.** This is the recommended way to run it on Windows. (I haven't tested it, but it should work)
+* **macOS / BSD:** ⚠️ **Experimental.**
+    * **The Issue:** These systems use **BSD variants** of standard tools (`sed`, `find`, `readlink`), which differ from the **GNU versions** used in this script.
+    * **The Fix:** You may need to install GNU tools (e.g., `coreutils`, `findutils`, `gnu-sed`) and ensure they are in your PATH. On macOS, this is done via Homebrew. Or modify the script to use BSD tooling :)
+* **Windows (Native/Git Bash):** ❌ **Not Supported.** Native path handling (`C:\` vs `/`) prevents this from working. Please use WSL.
+
 ### Option 1: Quick Install (Recommended)
 
 Run this command to install the latest stable release automatically.  
@@ -70,20 +79,20 @@ curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh
 1. Download the latest `mpv-music` script from the [Releases page](https://github.com/FurqanHun/mpv-music/releases).
 
 2. **Make it executable:**
-    ```bash
-    chmod +x mpv-music
-    ```
+  ```bash
+  chmod +x mpv-music
+  ```
 
 3. **Move to your PATH:**
-    ```bash
-    mkdir -p ~/.local/bin
-    mv mpv-music ~/.local/bin/
-    ```
+  ```bash
+  mkdir -p ~/.local/bin
+  mv mpv-music ~/.local/bin/
+  ```
 
 ### First run (setup):
   ```bash
   mpv-music
-```
+  ```
   _Note: You may want to run `mpv-music --config` to customize your settings and music directories before indexing_
 
   That creates:
