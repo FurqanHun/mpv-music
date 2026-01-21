@@ -57,11 +57,17 @@ A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-
 
 ## Installation
 
-1. **Clone the repo:**
-    ```bash
-    git clone https://github.com/FurqanHun/mpv-music.git
-    cd mpv-music
-    ```
+### Option 1: Quick Install (Recommended)
+
+Run this command to install the latest stable release automatically.  
+It will check dependencies and ask you where to install the script.
+
+```bash
+curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash
+```
+### Option 2: Manual Install
+
+1. Download the latest `mpv-music` script from the [Releases page](https://github.com/FurqanHun/mpv-music/releases).
 
 2. **Make it executable:**
     ```bash
@@ -70,7 +76,8 @@ A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-
 
 3. **Move to your PATH:**
     ```bash
-    mv mpv-music /usr/local/bin/
+    mkdir -p ~/.local/bin
+    mv mpv-music ~/.local/bin/
     ```
 
 4. **First run (setup):**
