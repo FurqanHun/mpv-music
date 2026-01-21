@@ -9,10 +9,17 @@ TARGET_PATH="$1"
 API_URL="https://api.github.com/repos/FurqanHun/mpv-music/releases"
 TEMP_DOWNLOAD="$HOME/.config/mpv-music/mpv-music.new"
 
+# --- Colors & Helpers ---
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+BLUE='\033[0;34m'
 NC='\033[0m'
+
+msg_info()  { echo -e "${BLUE}[INFO]${NC}  $1"; }
+msg_ok()    { echo -e "${GREEN}[OK]${NC}    $1"; }
+msg_warn()  { echo -e "${YELLOW}[WARN]${NC}  $1"; }
+msg_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # --- SELF-DESTRUCT TRAP ---
 # Ensure this script deletes itself regardless of success or failure
@@ -21,10 +28,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "Checking for updates..."
+msg_info "Checking for updates..."
 
 if ! LATEST_JSON=$(curl -sL "$API_URL"); then
-    echo -e "${RED}Error: Failed to check for updates (API request failed).${NC}"
+    msg_error "Failed to check for updates (API request failed)."
     exit 1
 fi
 
@@ -33,7 +40,7 @@ fi
 LATEST_TAG=$(echo "$LATEST_JSON" | jq -r '.[0].tag_name // empty')
 
 if [[ -z "$LATEST_TAG" || "$LATEST_TAG" == "null" ]]; then
-    echo -e "${RED}Error: Could not find a valid tag in the release list.${NC}"
+    msg_error "Could not find a valid tag in the release list."
     exit 1
 fi
 
@@ -45,36 +52,47 @@ else
     CURRENT_VERSION="0.0.0"
 fi
 
+# --- VERSION COMPARISON LOGIC ---
+
 if [[ "$REMOTE_VERSION" == "$CURRENT_VERSION" ]]; then
-    echo -e "${GREEN}You are already using the latest version (v$CURRENT_VERSION).${NC}"
+    msg_ok "You are already using the latest version (v$CURRENT_VERSION)."
     exit 0
 fi
 
-echo -e "${YELLOW}Update found! v$CURRENT_VERSION -> v$REMOTE_VERSION${NC}"
-echo "Fetching release $LATEST_TAG..."
+# Downgrade Prevention
+# Sort versions numerically/semantically.
+# If the smallest (top) version is the REMOTE one, we are already newer.
+SMALLEST_VERSION=$(echo -e "${CURRENT_VERSION}\n${REMOTE_VERSION}" | sort -V | head -n1)
+
+if [[ "$SMALLEST_VERSION" == "$REMOTE_VERSION" ]]; then
+    msg_ok "You are running a newer version (v$CURRENT_VERSION) than the release (v$REMOTE_VERSION)."
+    msg_info "Skipping downgrade."
+    exit 0
+fi
+
+msg_warn "Update found! v$CURRENT_VERSION -> v$REMOTE_VERSION"
+msg_info "Fetching release $LATEST_TAG..."
 
 # Construct the download link using the specific tag
 DOWNLOAD_URL="https://raw.githubusercontent.com/FurqanHun/mpv-music/${LATEST_TAG}/mpv-music"
 
 if ! curl -sL "$DOWNLOAD_URL" -o "$TEMP_DOWNLOAD"; then
-    echo -e "${RED}Error: Failed to download the update.${NC}"
+    msg_error "Failed to download the update."
     exit 1
 fi
 
 chmod +x "$TEMP_DOWNLOAD"
 
 if ! grep -q "bash" "$TEMP_DOWNLOAD"; then
-    echo -e "${RED}Error: Downloaded file seems corrupt.${NC}"
+    msg_error "Downloaded file seems corrupt."
     rm "$TEMP_DOWNLOAD"
     exit 1
 fi
 
-# echo "Replacing $TARGET_PATH..."
 if mv "$TEMP_DOWNLOAD" "$TARGET_PATH"; then
-    echo -e "${GREEN}Update to v$REMOTE_VERSION successful!${NC}"
-    # echo "$TARGET_PATH is now v$NEW_VERSION"
+    msg_ok "Update to v$REMOTE_VERSION successful!"
 else
-    echo -e "${RED}Error: Failed to replace file. Check permissions.${NC}"
+    msg_error "Failed to replace file. Check permissions."
     rm "$TEMP_DOWNLOAD"
     exit 1
 fi
