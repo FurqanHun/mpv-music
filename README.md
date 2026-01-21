@@ -80,15 +80,15 @@ curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh
     mv mpv-music ~/.local/bin/
     ```
 
-4. **First run (setup):**
-    ```bash
-    mpv-music
-    ```
-    _Note: You may want to run `mpv-music --config` to customize your settings and music directories before indexing_
+### First run (setup):
+  ```bash
+  mpv-music
+```
+  _Note: You may want to run `mpv-music --config` to customize your settings and music directories before indexing_
 
-    That creates:
-    - `~/.config/mpv-music/mpv-music.conf`
-    - `~/.config/mpv-music/music_index.json` (your indexed library)
+  That creates:
+  - `~/.config/mpv-music/mpv-music.conf`
+  - `~/.config/mpv-music/music_index.json` (your indexed library)
 
 ---
 
