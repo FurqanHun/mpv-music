@@ -1,4 +1,4 @@
-# mpv-music ![version](https://img.shields.io/badge/version-0.14.1-blue)
+# mpv-music ![version](https://img.shields.io/badge/version-0.14.2-blue)
 A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-rich previews, direct playback, and full config customization.
 
 ---
@@ -175,11 +175,38 @@ If a config file doesn't exist, `mpv-music` will create one at startup. If you w
 ```bash
 # mpv-music configuration
 
+# Music Directories (Space-separated)
 MUSIC_DIRS="$HOME/Music /mnt/media/audio"
-MPV_DEFAULT_ARGS="--loop-playlist=inf --shuffle --no-video --audio-display=no --volume=50"
+
+# --- Visual Customization ---
+# Banner text (displayed at start of track)
+# Uses ANSI escape codes or simple text, which is directly passed to mpv
+BANNER_TEXT='\n╔══  MPV-MUSIC  ══╗\n'
+
+# Status Bar Logic (Complex MPV variables)
+# Uses single quotes to prevent early expansion.
+STATUS_MSG='▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${filename}} • ${time-pos} / ${duration} • (${percent-pos}%)'
+
+# --- MPV Arguments ---
+# Defined as a Bash Array for cleaner formatting and safety.
+MPV_DEFAULT_ARGS=(
+    --loop-playlist=inf
+    --shuffle
+    --no-video
+    --audio-display=no
+    --msg-level=cplayer=warn
+    --display-tags=
+    --no-term-osd-bar
+    "--term-playing-msg=$(tput clear)$BANNER_TEXT"
+    "--term-status-msg=$STATUS_MSG"
+)
+
+# File Extensions
 AUDIO_EXTS="mp3 flac wav m4a aac ogg opus"
 VIDEO_EXTS="mp4 mkv webm avi"
 PLAYLIST_EXTS="m3u m3u8 pls"
+
+# Log Rotation
 LOG_MAX_SIZE_KB=1024
 ```
 

@@ -15,7 +15,18 @@ STATUS_MSG='$MPV_STATUS_MSG_DEFAULT'
 
 # Default MPV arguments (space-separated)
 # These will be used if no other MPV args are passed on the command line.
-# Example: MPV_DEFAULT_ARGS="--loop-playlist=inf --shuffle --no-video --volume=50"
+# Example:
+# MPV_DEFAULT_ARGS=(
+#     --loop-playlist=inf
+#     --shuffle
+#     --no-video
+#     --audio-display=no
+#     --msg-level=cplayer=warn
+#     --display-tags=
+#     --no-term-osd-bar
+#     "--term-playing-msg=\$(tput clear)\$BANNER_TEXT"
+#     "--term-status-msg=\$STATUS_MSG"
+# )
 MPV_DEFAULT_ARGS=(
     $safe_simple_args
     "--term-playing-msg=\$(tput clear)\$BANNER_TEXT"
