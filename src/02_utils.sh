@@ -100,6 +100,13 @@ trap cleanup_temp_files EXIT HUP INT TERM QUIT
 
 # --- Update Trigger Function ---
 invoke_updater() {
+    # Lazy Dependency Check
+    if ! command -v curl &>/dev/null; then
+        msg_error "Cannot update: 'curl' is missing."
+        msg_note "Please install curl to use the update feature."
+        exit 1
+    fi
+
     local updater_url="https://raw.githubusercontent.com/FurqanHun/mpv-music/master/mpv-music-updater"
     local local_updater="$CONFIG_DIR/mpv-music-updater"
     local current_script_path
@@ -107,14 +114,14 @@ invoke_updater() {
     # robustly get the current script path
     current_script_path=$(readlink -f "$0")
 
-    msg_info "Fetching updater..."
+    log_verbose "Fetching updater..."
 
     if curl -sL "$updater_url" -o "$local_updater"; then
         chmod +x "$local_updater"
 
         # Pass control to the updater
         # We use 'exec' so this script process ends and the updater takes over PID
-        msg_info "Launching updater..."
+        log_verbose "Launching updater..."
         exec "$local_updater" "$current_script_path"
     else
         msg_error "Failed to retrieve updater script."

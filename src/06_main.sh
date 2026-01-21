@@ -67,7 +67,7 @@ while [[ $# -gt 0 ]]; do
     --update) invoke_updater;;
     --ext=*) CUSTOM_EXTS="${1#--ext=}"; shift;;
     --refresh-index) build_ext_filter; update_music_index; exit 0;;
-    --reindex) build_ext_filter; msg_info "Forcing a complete rebuild of the music index."; build_music_index; exit 0;;
+    --reindex) build_ext_filter; log_verbose "Forcing a complete rebuild of the music index."; build_music_index; exit 0;;
     -p|--play-all) PLAY_ALL=true; shift;;
     -l|--playlist) CLI_PLAYLIST_MODE=true; shift;;
 

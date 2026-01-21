@@ -146,9 +146,15 @@ build_temp_index() {
     while IFS= read -r file_path; do
         count=$((count + 1))
 
-        # Only show progress in verbose mode for temp index (usually fast)
+        # SMART PROGRESS BAR
         if [[ "$VERBOSE" == true ]]; then
-            printf "\rIndexing: %d/%d (%s)" "$count" "$file_count" "$(basename "$file_path" | cut -c 1-20)..." >&2
+             # Truncate filename to prevent messy wrapping
+             local fname=$(basename "$file_path")
+             if [[ ${#fname} -gt 30 ]]; then fname="${fname:0:27}..."; fi
+             printf "\rIndexing: %d/%d (%s)          " "$count" "$file_count" "$fname" >&2
+        else
+             # Default: Just numbers
+             printf "\rIndexing: %d/%d          " "$count" "$file_count" >&2
         fi
 
         local raw_metadata_output
@@ -195,7 +201,7 @@ build_music_index() {
   local all_music_files=()
   local indexed_dirs_json_array="[]"
 
-  msg_info "Indexing music library for the first time... This may take a while for large collections."
+  log_verbose "Indexing music library for the first time... This may take a while for large collections."
 
   # Populate all_music_files and indexed_dirs_json_array
   for dir_path in "${music_dirs[@]}"; do
@@ -234,7 +240,15 @@ build_music_index() {
 
   for file_path in "${all_music_files[@]}"; do
     count=$((count + 1))
-    printf "\rIndexing: %d/%d (%s)" "$count" "$total" "$(basename "$file_path")" >&2
+
+    # SMART PROGRESS BAR
+    if [[ "$VERBOSE" == true ]]; then
+         local fname=$(basename "$file_path")
+         if [[ ${#fname} -gt 30 ]]; then fname="${fname:0:27}..."; fi
+         printf "\rIndexing: %d/%d (%s)          " "$count" "$total" "$fname" >&2
+    else
+         printf "\rIndexing: %d/%d          " "$count" "$total" >&2
+    fi
 
     local raw_metadata_output
     raw_metadata_output="$(get_audio_metadata "$file_path")"
@@ -281,8 +295,7 @@ build_music_index() {
 
   done
 
-  printf "\n"
-  msg_success "Indexing complete: $total files processed."
+  printf "\rIndexing complete: %d/%d files processed.\n" "$total" "$total" >&2
 
   # --- EFFICIENT JSON ASSEMBLY ---
   # Use jq's --slurp flag to read all the JSON lines and wrap them in an array
@@ -351,8 +364,13 @@ update_music_index() {
   for file_path in "${current_files_on_disk[@]}"; do
     count=$((count + 1))
 
+    # SMART PROGRESS BAR
     if [[ "$VERBOSE" == true ]]; then
-        printf "\rScanning and updating: %d/%d (%s)" "$count" "$total" "$(basename "$file_path")" >&2
+         local fname=$(basename "$file_path")
+         if [[ ${#fname} -gt 30 ]]; then fname="${fname:0:27}..."; fi
+         printf "\rScanning and updating: %d/%d (%s)          " "$count" "$total" "$fname" >&2
+    else
+         printf "\rScanning and updating: %d/%d          " "$count" "$total" >&2
     fi
 
     local current_mtime=$(stat -c %Y "$file_path" 2>/dev/null || echo "")
@@ -422,9 +440,7 @@ update_music_index() {
     fi
 
   done
-
-  if [[ "$VERBOSE" == true ]]; then echo ""; fi
-  log_verbose "Library update complete."
+  printf "\rScanning and updating complete: %d/%d files processed.\n" "$total" "$total" >&2
 
   local current_indexed_dirs_json_array="[]"
   for dir_path in "${music_dirs[@]}"; do
