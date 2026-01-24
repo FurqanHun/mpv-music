@@ -1,1 +1,7 @@
-theme: jekyll-theme-midnight
+title: mpv-music
+remote_theme: flancast90/millidocs-dark
+plugins:
+  - jekyll-remote-theme
+
+description: Terminal music player & library browser
+markdown: kramdown
