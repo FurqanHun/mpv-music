@@ -62,7 +62,8 @@ play_all_music() {
         exit 1
     fi
 
-    mapfile -t FILES < <(jq -r '.tracks[].path' "$MUSIC_INDEX_FILE")
+    # Read paths directly from JSONL stream
+    mapfile -t FILES < <(jq -r '.path' "$MUSIC_INDEX_FILE")
 
     if [[ ${#FILES[@]} -eq 0 ]]; then
         msg_warn "No tracks found in the index."
@@ -82,15 +83,15 @@ interactive_filter() {
     local temp_filter_list
     create_temp_file temp_filter_list
 
-    # OPTIMIZATION: Pre-calculate counts and samples for all tags in a single jq pass.
-    # This avoids calling jq repeatedly inside the fzf preview command.
-    jq -r --arg key "$filter_key" '
-        [.tracks[] | select(.[$key] != null and .[$key] != "" and .[$key] != "Playlist")] |
+    # OPTIMIZATION: Pre-calculate counts and samples.
+    # slurtp because group_by requires an array.
+    jq -rs --arg key "$filter_key" '
+        map(select(.[$key] != null and .[$key] != "" and .[$key] != "Playlist")) |
         group_by(.[$key]) | .[] |
         [
-            .[0][$key],                           # Field 1: Tag value (e.g., "Rock")
-            length,                               # Field 2: Track count for this tag
-            ([.[0:5][].title] | join(" | "))      # Field 3: Sample list for preview
+            .[0][$key],                           # Field 1: Tag value
+            length,                               # Field 2: Track count
+            ([.[0:5][].title] | join(" | "))      # Field 3: Sample list
         ] | @tsv
     ' "$INDEX_TO_USE" | sort -f > "$temp_filter_list"
 
@@ -115,18 +116,19 @@ interactive_filter() {
 
 # --- Modes: Functions ---
 run_dir_mode() {
-    if [[ ! -f "$INDEX_TO_USE" || ! -s "$INDEX_TO_USE" ]]; then #
+    if [[ ! -f "$INDEX_TO_USE" || ! -s "$INDEX_TO_USE" ]]; then
         msg_error "Index file is missing or empty. Cannot proceed."
-        exit 1 #
+        exit 1
     fi
 
     local temp_folder_list
     create_temp_file temp_folder_list
 
-    # OPTIMIZATION: Use a single jq command to group tracks by directory,
-    # count them, and create a preview list. This is much faster than the shell loop.
-    jq -r '
-        .tracks | group_by(.path | split("/")[:-1] | join("/")) | .[] |
+    # OPTIMIZATION: Group tracks by directory.
+    # slurp and map() cuz group_by needs an array.
+    jq -rs '
+        map(select(.path != null)) |
+        group_by(.path | split("/")[:-1] | join("/")) | .[] |
         (.[0].path | split("/")[:-1] | join("/")) as $dir_path |
         [
             ($dir_path | split("/") | .[-1]), # Field 1: Directory base name
@@ -136,7 +138,7 @@ run_dir_mode() {
         ] | @tsv
     ' "$INDEX_TO_USE" > "$temp_folder_list"
 
-    if [[ ! -s "$temp_folder_list" ]]; then #
+    if [[ ! -s "$temp_folder_list" ]]; then
         msg_warn "No playable music folders found in the selection. Please check your source and try again."
         exit 1
     fi
@@ -157,12 +159,11 @@ run_dir_mode() {
     mapfile -t FOLDERS <<< "$SELECTED"
     log_verbose "Selected ${#FOLDERS[@]} folder(s)."
 
-    local FILES=() #
+    local FILES=()
     for DIR in "${FOLDERS[@]}"; do
-        # Use jq to find all tracks whose paths start with the selected directory's path
         local TRACK_PATHS
-        TRACK_PATHS=$(jq -r --arg dir_prefix "${DIR}/" '.tracks[] | select(.path | startswith($dir_prefix)) | .path' "$INDEX_TO_USE")
-        while IFS= read -r TRACK_FILE; do #
+        TRACK_PATHS=$(jq -r --arg dir_prefix "${DIR}/" 'select(.path | startswith($dir_prefix)) | .path' "$INDEX_TO_USE")
+        while IFS= read -r TRACK_FILE; do
             [[ -n "$TRACK_FILE" ]] && FILES+=("$TRACK_FILE")
         done <<< "$TRACK_PATHS"
     done
@@ -170,11 +171,11 @@ run_dir_mode() {
     [[ ${#FILES[@]} -eq 0 ]] && msg_warn "No music found in those folders." && exit 1
 
     msg_success "Playing ${#FILES[@]} file(s)..."
-    mpv "${MPV_ARGS[@]}" "${FILES[@]}" #
+    mpv "${MPV_ARGS[@]}" "${FILES[@]}"
 }
 
 run_track_mode() {
-    if [[ ! -f "$INDEX_TO_USE" || ! -s "$INDEX_TO_USE" ]]; then #
+    if [[ ! -f "$INDEX_TO_USE" || ! -s "$INDEX_TO_USE" ]]; then
         msg_error "Index file is missing or empty. Cannot proceed."
         exit 1
     fi
@@ -182,9 +183,8 @@ run_track_mode() {
     local temp_track_list
     create_temp_file temp_track_list
 
-    # OPTIMIZATION: Create the full data line for fzf in a single jq call.
-    jq -r '.tracks[] |
-      select(.artist != "Playlist") | #
+    # OPTIMIZATION: Create fzf list.
+    jq -r 'select(.artist != "Playlist") |
       [
           (if .media_type == "video" then "🎬 " else "🎵 " end) + (.title // "[NO TITLE]"), # Field 1
           .title // "[NO TITLE]",    # Field 2
@@ -215,14 +215,13 @@ run_playlist_mode() {
     local temp_playlist_list
     create_temp_file temp_playlist_list
 
-    # MODIFICATION: Changed the output to be Tab-Separated Values (@tsv) for consistency.
-    jq -r '.tracks[] | select(.artist == "Playlist") |
+    jq -r 'select(.artist == "Playlist") |
       [
           "📜 " + .title, # Field 1: Display name with icon
           .path          # Field 2: The file path
       ] | @tsv' "$INDEX_TO_USE" > "$temp_playlist_list"
 
-    if [[ ! -s "$temp_playlist_list" ]]; then #
+    if [[ ! -s "$temp_playlist_list" ]]; then
         msg_warn "No playlists found in the index."
         msg_note "Try running --reindex to add them."
         exit 1
@@ -278,10 +277,13 @@ run_tag_mode() {
 
     # Create a temporary index with tracks matching ANY of the selected values
     create_temp_file filtered_index_file
-    jq --arg key "$filter_key" --argjson values "$jq_values_array" \
-        '{tracks: [.tracks[] | select(.[$key] as $k | $values | index($k))]}' "$INDEX_TO_USE" > "$filtered_index_file"
 
-    track_count=$(jq '.tracks | length' "$filtered_index_file")
+    # stream filter to a temporary JSONL file.
+    jq -c --arg key "$filter_key" --argjson values "$jq_values_array" \
+        'select(.[$key] as $k | $values | index($k))' "$INDEX_TO_USE" > "$filtered_index_file"
+
+    # wc -l because it is a file of lines, not a JSON array
+    track_count=$(wc -l < "$filtered_index_file")
 
     if [[ "$track_count" -eq 0 ]]; then
         msg_warn "No tracks found matching that filter."
@@ -296,13 +298,13 @@ run_tag_mode() {
 
     case "$PLAY_CHOICE" in
         1) # Play All
-            mapfile -t FILES < <(jq -r '.tracks[].path' "$filtered_index_file")
+            mapfile -t FILES < <(jq -r '.path' "$filtered_index_file")
             msg_success "Playing all..."
             mpv "${MPV_ARGS[@]}" "${FILES[@]}"
             ;;
-        2) # Select Individual - FIXED DELIMITER
+        2) # Select Individual
             create_temp_file temp_track_list
-            jq -r '.tracks[] |
+            jq -r '
                   [
                       (if .media_type == "video" then "🎬 " else "🎵 " end) + (.title // "[NO TITLE]"),
                       .title // "[NO TITLE]",

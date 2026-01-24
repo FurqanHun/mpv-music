@@ -158,40 +158,60 @@ fi
 
 # --- Handle CLI Filtering if active ---
 if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
-    apply_filter() {
-        local mode="$1" key="$2"
-        shift 2
+
+    # apply_cli_filter now works on FILES, not strings.
+    # it reads $file_to_filter, applies jq logic, and overwrites the file with results.
+    apply_cli_filter() {
+        local file_to_filter="$1"
+        local mode="$2"
+        local key="$3"
+        shift 3
         local -a values=("$@")
+
         local jq_values_array
         jq_values_array=$(printf '%s\n' "${values[@]}" | jq -R . | jq -s .)
 
         local jq_filter
         if [[ "$mode" == "exact" ]]; then
-            # Case-insensitive WHOLE WORD match (e.g., finds "Rock" in "Alternative Rock")
+            # Case-insensitive WHOLE WORD match
             jq_filter='($values | join("|")) as $regex | select(.[$key] | test("\\b(" + $regex + ")\\b"; "i"))'
         else # "contains"
             # Case-insensitive CONTAINS match
             jq_filter='($values | join("|")) as $regex | select(.[$key] | test($regex; "i"))'
         fi
 
-        # Apply the filter to the .tracks array and reconstruct the main object
-        jq --arg key "$key" --argjson values "$jq_values_array" \
-            "{tracks: [.tracks[] | $jq_filter]}"
+        local temp_out
+        create_temp_file temp_out
+
+        # Apply filter stream -> temp
+        jq -c --arg key "$key" --argjson values "$jq_values_array" \
+            "$jq_filter" "$file_to_filter" > "$temp_out"
+
+        # Move back to original file path (update in place)
+        mv "$temp_out" "$file_to_filter"
     }
 
     # --- Stage 1: Attempt an Exact (Whole Word) Match ---
     log_verbose "Trying smart match..."
 
-    final_filtered_json=$(cat "$MUSIC_INDEX_FILE")
-    if [[ ${#GENRE_FILTERS[@]} -gt 0 ]]; then final_filtered_json=$(echo "$final_filtered_json" | apply_filter "exact" "genre" "${GENRE_FILTERS[@]}"); fi
-    if [[ ${#ARTIST_FILTERS[@]} -gt 0 ]]; then final_filtered_json=$(echo "$final_filtered_json" | apply_filter "exact" "artist" "${ARTIST_FILTERS[@]}"); fi
-    if [[ ${#ALBUM_FILTERS[@]} -gt 0 ]]; then final_filtered_json=$(echo "$final_filtered_json" | apply_filter "exact" "album" "${ALBUM_FILTERS[@]}"); fi
-    if [[ ${#TITLE_FILTERS[@]} -gt 0 ]]; then final_filtered_json=$(echo "$final_filtered_json" | apply_filter "exact" "title" "${TITLE_FILTERS[@]}"); fi
+    # Create a working copy of the index so we don't destroy the original
+    create_temp_file working_subset
+    cp "$MUSIC_INDEX_FILE" "$working_subset"
 
-    track_count=$(echo "$final_filtered_json" | jq '.tracks | length')
+    if [[ ${#GENRE_FILTERS[@]} -gt 0 ]]; then apply_cli_filter "$working_subset" "exact" "genre" "${GENRE_FILTERS[@]}"; fi
+    if [[ ${#ARTIST_FILTERS[@]} -gt 0 ]]; then apply_cli_filter "$working_subset" "exact" "artist" "${ARTIST_FILTERS[@]}"; fi
+    if [[ ${#ALBUM_FILTERS[@]} -gt 0 ]]; then apply_cli_filter "$working_subset" "exact" "album" "${ALBUM_FILTERS[@]}"; fi
+    if [[ ${#TITLE_FILTERS[@]} -gt 0 ]]; then apply_cli_filter "$working_subset" "exact" "title" "${TITLE_FILTERS[@]}"; fi
+
+    # wc -l for counting lines
+    track_count=$(wc -l < "$working_subset")
 
     if [[ "$track_count" -eq 0 ]]; then
         log_verbose "No smart match found. Searching for partial matches..."
+
+        # Reset working set to full index
+        cp "$MUSIC_INDEX_FILE" "$working_subset"
+
         active_filter_key=""
         active_filter_values=()
 
@@ -206,23 +226,32 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
         fi
 
         if [[ -n "$active_filter_key" ]]; then
-            contains_match_json=$(cat "$MUSIC_INDEX_FILE" | apply_filter "contains" "$active_filter_key" "${active_filter_values[@]}")
-            mapfile -t clarification_options < <(echo "$contains_match_json" | jq -r --arg key "$active_filter_key" '.tracks[].[$key]' | sort -fu)
+            # Apply "contains" filter to the working subset
+            apply_cli_filter "$working_subset" "contains" "$active_filter_key" "${active_filter_values[@]}"
+
+            # Check for ambiguity by looking at the filtered results
+            mapfile -t clarification_options < <(jq -r --arg key "$active_filter_key" '.[$key]' "$working_subset" | sort -fu)
 
             if [[ ${#clarification_options[@]} -eq 1 ]]; then
                 log_verbose "Found one likely match: '${clarification_options[0]}'"
-                final_filtered_json=$(cat "$MUSIC_INDEX_FILE" | apply_filter "exact" "$active_filter_key" "${clarification_options[0]}")
+                # We already filtered by "contains", but let's be strict if needed.
+                # the "contains" result is already in working_subset.
+                cp "$MUSIC_INDEX_FILE" "$working_subset"
+                apply_cli_filter "$working_subset" "exact" "$active_filter_key" "${clarification_options[0]}"
+
             elif [[ ${#clarification_options[@]} -gt 1 ]]; then
                 mapfile -t clarified_values < <(printf '%s\n' "${clarification_options[@]}" | fzf --multi --prompt="Which ${active_filter_key} did you mean? ")
                 if [[ ${#clarified_values[@]} -gt 0 ]]; then
-                    final_filtered_json=$(cat "$MUSIC_INDEX_FILE" | apply_filter "exact" "$active_filter_key" "${clarified_values[@]}")
+                    # Reset and re-apply exact on specific value
+                    cp "$MUSIC_INDEX_FILE" "$working_subset"
+                    apply_cli_filter "$working_subset" "exact" "$active_filter_key" "${clarified_values[@]}"
                 fi
             fi
         fi
     fi
 
     # --- Stage 3: Play Results or Ask for Next Action ---
-    track_count=$(echo "$final_filtered_json" | jq '.tracks | length')
+    track_count=$(wc -l < "$working_subset")
 
     if [[ "$track_count" -eq 0 ]]; then
         msg_error "No matching tracks found."
@@ -233,7 +262,7 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
 
     if [[ "$PLAY_ALL" == true || "$track_count" -eq 1 ]]; then
         # If --play-all is used OR if there's only one result, play directly
-        mapfile -t FILES < <(echo "$final_filtered_json" | jq -r '.tracks[].path')
+        mapfile -t FILES < <(jq -r '.path' "$working_subset")
         log_verbose "🎶 Playing all ${#FILES[@]} track(s)..."
         mpv "${MPV_ARGS[@]}" "${FILES[@]}"
     else
@@ -245,13 +274,13 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
 
         case "$PLAY_CHOICE" in
             1)
-                mapfile -t FILES < <(echo "$final_filtered_json" | jq -r '.tracks[].path')
+                mapfile -t FILES < <(jq -r '.path' "$working_subset")
                 log_verbose "🎶 Loading all ${#FILES[@]} track(s)..."
                 mpv "${MPV_ARGS[@]}" "${FILES[@]}"
                 ;;
-            2) # FIXED DELIMITER: Using @tsv instead of pipes
+            2)
                 create_temp_file temp_track_list
-                echo "$final_filtered_json" | jq -r '.tracks[] |
+                jq -r '
                         [
                             (if .media_type == "video" then "🎬 " else "🎵 " end) + (.title // "[NO TITLE]"),
                             .title // "[NO TITLE]",
@@ -260,7 +289,7 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
                             .genre // "[NO GENRE]",
                             .media_type // "UNKNOWN",
                             .path
-                        ] | @tsv' > "$temp_track_list"
+                        ] | @tsv' "$working_subset" > "$temp_track_list"
 
                 SELECTED=$(cat "$temp_track_list" | fzf --multi \
                     --prompt="🎵 Pick your filtered tracks (TAB to multi-select): " \

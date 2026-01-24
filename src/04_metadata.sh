@@ -132,7 +132,7 @@ build_temp_index() {
     if [[ $file_count -eq 0 ]]; then
         msg_warn "No music files found in '$custom_dir'."
         # Create an empty index so downstream commands don't fail
-        echo '{"tracks": []}' > "$temp_index_ref"
+        : > "$temp_index_ref"
         return 1
     fi
 
@@ -188,7 +188,8 @@ build_temp_index() {
     done < "$temp_files_list"
 
     if [[ "$VERBOSE" == true ]]; then echo ""; fi # Newline if we printed progress
-    jq -s '{tracks: .}' "$temp_json_lines" > "$temp_index_ref"
+
+    mv "$temp_json_lines" "$temp_index_ref"
 
     log_verbose "Temporary index created at '$temp_index_ref'."
 }
@@ -224,10 +225,13 @@ build_music_index() {
     fi
   done
 
+  # save directory state to its own file
+  echo "$indexed_dirs_json_array" > "$DIRS_STATE_FILE"
+
   if [[ ${#all_music_files[@]} -eq 0 ]]; then
     msg_warn "No music files found in configured directories. Index will be empty."
-    # Even if no tracks, we should save the dir info
-    jq -n --argjson dirs "$indexed_dirs_json_array" '{indexed_directories: $dirs, tracks: []}' > "$MUSIC_INDEX_FILE"
+    # make an empty file
+    : > "$MUSIC_INDEX_FILE"
     return 0
   fi
 
@@ -298,17 +302,18 @@ build_music_index() {
   printf "\rIndexing complete: %d/%d files processed.\n" "$total" "$total" >&2
 
   # --- EFFICIENT JSON ASSEMBLY ---
-  # Use jq's --slurp flag to read all the JSON lines and wrap them in an array
-  local tracks_json_array
-  tracks_json_array=$(jq -s '.' "$temp_json_lines")
-
-  # Write the final JSON object in a single, clean command
-  jq -n \
-    --argjson dirs "$indexed_dirs_json_array" \
-    --argjson tracks "$tracks_json_array" \
-    '{indexed_directories: $dirs, tracks: $tracks}' > "$MUSIC_INDEX_FILE"
+  # Just move the JSONL file to the final location.
+  mv "$temp_json_lines" "$MUSIC_INDEX_FILE"
 
   msg_success "Index saved to $MUSIC_INDEX_FILE"
+
+  # --- CLEANUP LEGACY JSON ---
+    # If we successfully built the new JSONL index, remove the old JSON file.
+    local legacy_index="${MUSIC_INDEX_FILE%.jsonl}.json"
+    if [[ -f "$legacy_index" ]]; then
+        rm "$legacy_index"
+        log_verbose "Removed legacy index file: $(basename "$legacy_index")"
+    fi
 }
 
 # --- Music Library Update Function ---
@@ -318,21 +323,17 @@ update_music_index() {
   local ext_filter=("${EXT_FILTER[@]}")
   local current_files_on_disk=()
   declare -A old_index_map
-  local old_index_json_string
+  # local old_index_json_string (Removed, no longer reading whole file into string)
 
   log_verbose "Updating music library index..."
 
   if [[ -f "$MUSIC_INDEX_FILE" ]]; then
-    old_index_json_string=$(cat "$MUSIC_INDEX_FILE")
-    if ! echo "$old_index_json_string" | jq -e '.tracks | arrays' &>/dev/null; then
-        msg_warn "Index file '$MUSIC_INDEX_FILE' is invalid or missing/corrupted 'tracks' array. Rebuilding index."
-        build_music_index
-        return 0
-    fi
-
-    while IFS=$'\t' read -r path json_obj; do
-        old_index_map["$(echo "$path" | tr -d '\n\r')"]="$json_obj"
-    done < <(echo "$old_index_json_string" | jq -c '.tracks[] | "\(.path)\t\(.)"')
+    # Read line-by-line to build the map. Fast and low memory.
+    while IFS= read -r line; do
+        # Extract path safely using jq
+        local p=$(echo "$line" | jq -r .path)
+        old_index_map["$p"]="$line"
+    done < "$MUSIC_INDEX_FILE"
   else
     msg_info "Index file not found. Building index for the first time."
     build_music_index
@@ -349,8 +350,9 @@ update_music_index() {
 
   if [[ ${#current_files_on_disk[@]} -eq 0 ]]; then
     msg_warn "No music files found on disk during update scan. Index will be empty."
-    local current_indexed_dirs=$(echo "$old_index_json_string" | jq -c '.indexed_directories // []')
-    echo "{\"indexed_directories\": $(echo "$current_indexed_dirs" | jq -c .), \"tracks\": []}" | jq . > "$MUSIC_INDEX_FILE"
+    # Clear index, save empty state
+    : > "$MUSIC_INDEX_FILE"
+    echo "[]" > "$DIRS_STATE_FILE"
     return 0
   fi
 
@@ -453,12 +455,16 @@ update_music_index() {
   done
 
   # --- OPTIMIZATION: EFFICIENT JSON ASSEMBLY ---
-  # Slurp the line-delimited JSON from our temp file to create the final tracks array.
-  # Then, construct the final JSON object in a single, clean command.
-  jq -n \
-    --argjson dirs "$current_indexed_dirs_json_array" \
-    --slurpfile tracks "$new_index_lines" \
-    '{indexed_directories: $dirs, tracks: $tracks}' > "$MUSIC_INDEX_FILE"
+  # Save the state separate from tracks
+  echo "$current_indexed_dirs_json_array" > "$DIRS_STATE_FILE"
+  mv "$new_index_lines" "$MUSIC_INDEX_FILE"
 
   msg_success "Index updated and saved to $MUSIC_INDEX_FILE"
+
+  # --- CLEANUP LEGACY JSON ---
+    local legacy_index="${MUSIC_INDEX_FILE%.jsonl}.json"
+    if [[ -f "$legacy_index" ]]; then
+        rm "$legacy_index"
+        log_verbose "Removed legacy index file: $(basename "$legacy_index")"
+    fi
 }
