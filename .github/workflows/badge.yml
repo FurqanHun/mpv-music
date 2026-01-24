@@ -1,11 +1,13 @@
 name: Update Version Badge
 
-# Trigger only when a new tag is pushed or manually
 on:
   push:
     tags:
       - "*"
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -14,9 +16,8 @@ jobs:
       - uses: actions/checkout@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0 # fetch all commits/tags
+          fetch-depth: 0
 
-      # Get the tag version if triggered by a tag
       - name: Get tag version
         run: |
           echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
