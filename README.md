@@ -1,5 +1,3 @@
-<link rel="stylesheet" href="{{ '/assets/css/custom.scss' | relative_url }}">
-
 # mpv-music ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/FurqanHun/mpv-music?include_prereleases&color=blue&label=version)
 
 **mpv-music** – a blazing-fast **terminal music player** and **library browser** built on **mpv**.  
