@@ -1,7 +1,9 @@
 # --- Configuration ---
 CONFIG_DIR="$HOME/.config/mpv-music"
 CONFIG_FILE="$CONFIG_DIR/mpv-music.conf"
-MUSIC_INDEX_FILE="$CONFIG_DIR/music_index.json"
+MUSIC_INDEX_FILE="$CONFIG_DIR/music_index.jsonl"
+# Store directory mtimes separately (cuz jsonl dont have a header object)
+DIRS_STATE_FILE="$CONFIG_DIR/dirs_state.json"
 LOG_FILE="$CONFIG_DIR/mpv-music.log"
 
 # Default values (will be overridden by config file if it exists)

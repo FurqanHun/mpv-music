@@ -8,6 +8,7 @@ TARGET_PATH="$1"
 # REPO_BASE="https://raw.githubusercontent.com/FurqanHun/mpv-music/master"
 API_URL="https://api.github.com/repos/FurqanHun/mpv-music/releases"
 TEMP_DOWNLOAD="$HOME/.config/mpv-music/mpv-music.new"
+CONFIG_DIR="$HOME/.config/mpv-music"
 
 # --- Colors & Helpers ---
 GREEN='\033[0;32m'
@@ -91,6 +92,16 @@ fi
 
 if mv "$TEMP_DOWNLOAD" "$TARGET_PATH"; then
     msg_ok "Update to v$REMOTE_VERSION successful!"
+
+    # --- MIGRATION CHECK (JSON -> JSONL) ---
+        # Check if the OLD index format exists.
+        if [[ -f "$CONFIG_DIR/music_index.json" ]]; then
+            echo ""
+            msg_warn "Legacy database format detected (.json)."
+            msg_warn "v0.15.0 update introduced a faster engine (.jsonl)."
+            echo -e "${YELLOW}Please run the following command to migrate your library:${NC}"
+            echo -e "\n    ${GREEN}mpv-music --reindex${NC}\n"
+        fi
 else
     msg_error "Failed to replace file. Check permissions."
     rm "$TEMP_DOWNLOAD"
