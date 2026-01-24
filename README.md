@@ -17,7 +17,7 @@ A blazing-fast MPV wrapper for music playback, featuring fuzzy search, metadata-
 
 ## Features
 
-* **Blazing-Fast Indexed Searching:** Automatically indexes your music library into a JSON file for lightning-fast search using `fzf`. (If the `music_index.json` doesn't exist, else load the existing index.)
+* **Blazing-Fast Indexed Searching:** Automatically indexes your music library into a JSONL (JSON Lines) file for lightning-fast search using `fzf`. (If the `music_index.jsonl` doesn't exist, else load the existing index.)
 * **Rich Metadata Previews:** In track mode, view song title, artist, album, and genre directly in the `fzf` preview window.
 * **Interactive Selection (fzf) -- Two Playback Modes:**
   * **Directory Mode:** Navigate folders with clean names instead of full paths.
@@ -97,7 +97,8 @@ curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh
 
   That creates:
   - `~/.config/mpv-music/mpv-music.conf`
-  - `~/.config/mpv-music/music_index.json` (your indexed library)
+  - `~/.config/mpv-music/music_index.jsonl` (your indexed library)
+  - ~/.config/mpv-music/dirs_state.json (directory state cache)
 
 ---
 
@@ -160,13 +161,15 @@ mpv-music --verbose --debug         # run with full logging enabled
 Your music library is indexed to:
 
 ```
-~/.config/mpv-music/music_index.json
+~/.config/mpv-music/music_index.jsonl
 ```
 
 ### Why?
 
-Searching the filesystem with `find` every time is **slow af**, specially if you have a large music collection. So `mpv-music` caches an index for:
+Searching the filesystem with `find` every time is **slow af**, specially if you have a large music collection. So `mpv-music caches` an index using JSONL (JSON Lines) for:
+
 - fast filtering
+- append updates instantly
 - metadata previews
 - offline-friendly behavior (may introduce caching for URLs in future)
 
@@ -238,7 +241,10 @@ This project is developed using a modular source structure.
 
 ## License
 
-MIT License — do whatever the hell you want.
-See [LICENSE](LICENSE) for formal stuff.
+MIT License — See [LICENSE](LICENSE).
 
 ---
+
+GenAI Disclosure
+
+Generative AI (specifically Google Gemini) was and is used for maintenance and development as an assistive tool. Note that this is not a project that's super critical or important.
