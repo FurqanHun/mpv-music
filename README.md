@@ -1,7 +1,5 @@
 # mpv-music
-
-<img src="https://img.shields.io/github/v/release/FurqanHun/mpv-music?include_prereleases&color=blue&label=version" alt="version">
-
+![version](assets/version.svg)
 
 **mpv-music** – a blazing-fast **terminal music player** and **library browser** built on **mpv**.  
 Provides instant playback, fuzzy searching (fzf), metadata-rich previews, and fully configurable CLI controls — no background daemon needed.

@@ -1,0 +1,33 @@
+name: Update Version Badge
+
+# Trigger only when a new tag is pushed
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get tag version
+        run: |
+          echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Create SVG badge
+        run: |
+          mkdir -p assets
+          echo "<svg xmlns='http://www.w3.org/2000/svg' width='120' height='20'>
+            <rect width='120' height='20' fill='#555'/>
+            <text x='60' y='14' fill='#fff' font-family='Verdana' font-size='11' text-anchor='middle'>${TAG_NAME}</text>
+          </svg>" > assets/version.svg
+
+      - name: Commit and push badge
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add assets/version.svg
+          git commit -m "Update version badge to ${TAG_NAME}" || echo "No changes"
+          git push
