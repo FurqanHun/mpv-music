@@ -20,7 +20,17 @@ jobs:
 
       - name: Get tag version
         run: |
-          echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          git fetch --tags --force
+
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            # If triggered by a tag push, use that tag
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            # If triggered manually, find the latest tag. Default to 'latest' if none found.
+            VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "latest")
+          fi
+
+          echo "TAG_NAME=$VERSION" >> $GITHUB_ENV
 
       - name: Create SVG badge
         run: |
