@@ -1,6 +1,6 @@
 name: Update Version Badge
 
-# Trigger only when a new tag is pushed
+# Trigger only when a new tag is pushed or manually
 on:
   push:
     tags:
@@ -12,7 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # fetch all commits/tags
 
+      # Get the tag version if triggered by a tag
       - name: Get tag version
         run: |
           echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
@@ -31,4 +35,4 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add assets/version.svg
           git commit -m "Update version badge to ${TAG_NAME}" || echo "No changes"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/FurqanHun/mpv-music.git HEAD:master
+          git push origin HEAD:master
