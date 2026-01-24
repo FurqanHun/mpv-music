@@ -245,6 +245,6 @@ MIT License — See [LICENSE](LICENSE).
 
 ---
 
-GenAI Disclosure
+## GenAI Disclosure
 
 Generative AI (specifically Google Gemini) was and is used for maintenance and development as an assistive tool. Note that this is not a project that's super critical or important.
