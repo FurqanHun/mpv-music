@@ -31,4 +31,4 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add assets/version.svg
           git commit -m "Update version badge to ${TAG_NAME}" || echo "No changes"
-          git push
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/FurqanHun/mpv-music.git HEAD:master
