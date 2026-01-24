@@ -17,7 +17,9 @@ In short, it focuses on library indexing for super-fast access to your music col
 * [Usage](#usage)
 * [Indexing](#indexing)
 * [Configuration](#configuration)
+* [Development](#development)
 * [License](#license)
+* [GenAI Disclosure](#genai-disclosure)
 
 ---
 
@@ -254,3 +256,5 @@ MIT License — See [LICENSE](LICENSE).
 ## GenAI Disclosure
 
 Generative AI (specifically Google Gemini) was and is used for maintenance and development as an assistive tool. Note that this is not a project that's super critical or important.
+
+---
