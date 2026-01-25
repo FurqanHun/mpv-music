@@ -96,22 +96,6 @@ for arg in "$@"; do
       show_help
       exit 0
       ;;
-    -v|--version)
-      echo "mpv-music v$VERSION"
-      exit 0
-      ;;
-    --config|--config=*)
-      if [[ "$arg" == "--config="* ]]; then
-        EDITOR="${arg#--config=}"
-      else
-        if command -v nano &>/dev/null; then EDITOR="nano"
-        elif command -v vi &>/dev/null; then EDITOR="vi"
-        else msg_error "Neither nano nor vi found."; exit 1
-        fi
-      fi
-      "$EDITOR" "$CONFIG_FILE"
-      exit 0
-      ;;
   esac
 done
 
@@ -151,7 +135,6 @@ while [[ $# -gt 0 ]]; do
     -V|--verbose) VERBOSE=true; shift;;
     --debug) DEBUG=true; shift;;
     --video-ok) VIDEO_OK=true; shift;;
-    --update) invoke_updater;;
     --ext=*) CUSTOM_EXTS="${1#--ext=}"; shift;;
     --refresh-index) build_ext_filter; update_music_index; exit 0;;
     --reindex) build_ext_filter; log_verbose "Forcing a complete rebuild of the music index."; build_music_index; exit 0;;
