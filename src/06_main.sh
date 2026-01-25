@@ -23,6 +23,10 @@ handle_direct_play() {
       # yt-dlp now mandates a JS runtime for YouTube.
       # Order of Preference: Deno > Node > QuickJS > Bun
       if [[ "$target" =~ (youtube\.com|youtu\.be) ]]; then
+          if [[ "$VIDEO_OK" == false ]]; then
+              MPV_ARGS+=("--ytdl-format=bestaudio/best")
+          fi
+
          log_verbose "YouTube URL detected. Checking for JS runtimes..."
 
          if command -v deno &>/dev/null; then
