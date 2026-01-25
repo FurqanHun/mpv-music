@@ -13,7 +13,7 @@ MUSIC_DIRS_DEFAULT=("$HOME/Music")
 BANNER="\n╔══  MPV-MUSIC  ══╗\n"
 
 # MPV_ARGS_DEFAULT=(--loop-playlist=inf --shuffle --no-video --audio-display=no --msg-level=cplayer=warn --display-tags= "--term-playing-msg='\${BANNER}'" "--term-status-msg='▶ \${?metadata/artist:\${metadata/artist} - }\${?metadata/title:\${metadata/title}}\${!metadata/title:\${filename}} • \${time-pos} / \${duration} • (\${percent-pos}%)'")
-MPV_STATUS_MSG_DEFAULT='▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${filename}} • ${time-pos} / ${duration} • (${percent-pos}%)'
+MPV_STATUS_MSG_DEFAULT='▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${media-title}} • ${time-pos} / ${duration} • (${percent-pos}%)'
 MPV_ARGS_SIMPLE=(
     --loop-playlist=inf
     --shuffle

@@ -12,6 +12,52 @@ CLI_FILTER_ACTIVE=false
 PLAY_ALL=false
 CLI_PLAYLIST_MODE=false
 
+# --- Helper Function: Handle Direct Play ---
+handle_direct_play() {
+  local target="$1"
+
+  if [[ "$target" =~ ^https?://|^ftp://|^yt-dlp:// ]]; then
+      msg_info "Resolving stream..."
+
+      # --- YouTube JS Runtime Auto-Config ---
+      # yt-dlp now mandates a JS runtime for YouTube.
+      # Order of Preference: Deno > Node > QuickJS > Bun
+      if [[ "$target" =~ (youtube\.com|youtu\.be) ]]; then
+         log_verbose "YouTube URL detected. Checking for JS runtimes..."
+
+         if command -v deno &>/dev/null; then
+            log_verbose "Deno found (yt-dlp default)."
+
+         elif command -v node &>/dev/null; then
+            log_verbose "Using Node.js fallback."
+            MPV_ARGS+=("--ytdl-raw-options=js-runtimes=node")
+
+         elif command -v qjs &>/dev/null || command -v quickjs &>/dev/null; then
+
+            log_verbose "Using QuickJS fallback."
+            MPV_ARGS+=("--ytdl-raw-options=js-runtimes=quickjs")
+
+         elif command -v bun &>/dev/null; then
+            log_verbose "Using Bun fallback."
+            MPV_ARGS+=("--ytdl-raw-options=js-runtimes=bun")
+
+         else
+            echo ""
+            msg_warn "No supported JS runtime found (Deno, Node, QuickJS, Bun)!"
+            msg_warn "YouTube playback requires a JS runtime to bypass new anti-bot protections."
+            msg_warn "Playback will likely fail with HTTP 403 Forbidden."
+            msg_note "Please install 'deno' (recommended) or 'nodejs'."
+            echo ""
+         fi
+      fi
+  else
+      log_verbose "Playing local file: $target"
+  fi
+
+  log_verbose "▶️ Playing: $target"
+  mpv "${MPV_ARGS[@]}" "$target"
+  exit 0
+}
 
 # --- Early Argument Handling ---
 for arg in "$@"; do
@@ -151,9 +197,7 @@ if [[ ${#MPV_ARGS[@]} -eq 0 ]]; then
 fi
 
 if [[ -n "$DIRECT_PLAY_TARGET" ]]; then
-  log_verbose "▶️ Playing: $DIRECT_PLAY_TARGET"
-  mpv "${MPV_ARGS[@]}" "$DIRECT_PLAY_TARGET"
-  exit 0
+  handle_direct_play "$DIRECT_PLAY_TARGET"
 fi
 
 # --- Handle --play-all without other filters ---
