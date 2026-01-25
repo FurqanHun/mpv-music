@@ -17,11 +17,15 @@ handle_direct_play() {
   local target="$1"
   local has_url=false
   local has_youtube=false
+  local ytdl_opts=""
 
   # Scan primary target
   if [[ "$target" =~ ^https?://|^ftp://|^yt-dlp:// ]]; then
       has_url=true
       if [[ "$target" =~ (youtube\.com|youtu\.be) ]]; then has_youtube=true; fi
+      # Force playlist if 'list=' is present
+      # "yes-playlist=" is required by mpv for boolean flags
+      if [[ "$target" == *"list="* ]]; then ytdl_opts+="yes-playlist=,"; fi
   fi
 
   # Scan other args in case user passed multiple URLs
@@ -29,12 +33,13 @@ handle_direct_play() {
       if [[ "$arg" =~ ^https?://|^ftp://|^yt-dlp:// ]]; then
           has_url=true
           if [[ "$arg" =~ (youtube\.com|youtu\.be) ]]; then has_youtube=true; fi
+          if [[ "$arg" == *"list="* ]]; then ytdl_opts+="yes-playlist=,"; fi
       fi
   done
 
   if [[ "$has_url" == true ]]; then
       msg_info "Resolving stream..."
-      # MPV_ARGS+=("--msg-level=ytdl_hook=info")
+      MPV_ARGS+=("--msg-level=ytdl_hook=info")
   else
       log_verbose "Playing local file: $target"
   fi
@@ -53,15 +58,15 @@ handle_direct_play() {
 
       elif command -v node &>/dev/null; then
          log_verbose "Using Node.js fallback."
-         MPV_ARGS+=("--ytdl-raw-options=js-runtimes=node")
+         ytdl_opts+="js-runtimes=node,"
 
       elif command -v qjs &>/dev/null || command -v quickjs &>/dev/null; then
          log_verbose "Using QuickJS fallback."
-         MPV_ARGS+=("--ytdl-raw-options=js-runtimes=quickjs")
+         ytdl_opts+="js-runtimes=quickjs,"
 
       elif command -v bun &>/dev/null; then
          log_verbose "Using Bun fallback."
-         MPV_ARGS+=("--ytdl-raw-options=js-runtimes=bun")
+         ytdl_opts+="js-runtimes=bun,"
 
       else
          echo ""
@@ -71,6 +76,12 @@ handle_direct_play() {
          msg_note "Please install 'deno' (recommended) or 'nodejs'."
          echo ""
       fi
+  fi
+
+  # Apply accumulated ytdl options (JS runtime + Playlist fix)
+  if [[ -n "$ytdl_opts" ]]; then
+      # Remove trailing comma
+      MPV_ARGS+=("--ytdl-raw-options=${ytdl_opts%,}")
   fi
 
   log_verbose "Playing: $target"

@@ -2,7 +2,7 @@
 # File: build.sh
 
 OUTPUT="mpv-music"
-VERSION="0.16.0"
+VERSION="0.16.1"
 
 echo "Building mpv-music (v$VERSION)..."
 
