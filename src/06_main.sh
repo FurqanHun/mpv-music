@@ -37,7 +37,6 @@ handle_direct_play() {
             MPV_ARGS+=("--ytdl-raw-options=js-runtimes=node")
 
          elif command -v qjs &>/dev/null || command -v quickjs &>/dev/null; then
-
             log_verbose "Using QuickJS fallback."
             MPV_ARGS+=("--ytdl-raw-options=js-runtimes=quickjs")
 
@@ -58,7 +57,7 @@ handle_direct_play() {
       log_verbose "Playing local file: $target"
   fi
 
-  log_verbose "▶️ Playing: $target"
+  log_verbose "Playing: $target"
   mpv "${MPV_ARGS[@]}" "$target"
   exit 0
 }
@@ -375,10 +374,11 @@ echo "2) Pick individual tracks"
 echo "3) Play a saved playlist"
 echo "4) Filter by Tag..."
 echo "5) Play All Music"
+echo "6) Play URL (YouTube/Stream)"
 # read -rp "Enter choice [1/2]: " MODE
 # Use -t with a very long timeout instead of blocking read
 # This allows the SIGINT to be caught by our trap
-read -t 31536000 -rp "Enter choice [1/2/3/4/5]: " MODE || {
+read -t 31536000 -rp "Enter choice [1/2/3/4/5/6]: " MODE || {
     echo -e "\nRead interrupted. Exiting."
     exit 1
 }
@@ -397,6 +397,16 @@ elif [[ "$MODE" == "4" ]]; then
 
 elif [[ "$MODE" == "5" ]]; then
     run_play_all_mode
+
+elif [[ "$MODE" == "6" ]]; then
+    echo ""
+    read -rp "Paste URL: " USER_URL
+    if [[ -n "$USER_URL" ]]; then
+        handle_direct_play "$USER_URL"
+    else
+        msg_error "No URL provided."
+        exit 1
+    fi
 
 else
   msg_error "Invalid input."
