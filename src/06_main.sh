@@ -379,6 +379,8 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
                 ;;
             2)
                 create_temp_file temp_track_list
+
+                # we add line no for security
                 jq -r '
                         [
                             (if .media_type == "video" then "🎬 " else "🎵 " end) + (.title // "[NO TITLE]"),
@@ -388,17 +390,31 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
                             .genre // "[NO GENRE]",
                             .media_type // "UNKNOWN",
                             .path
-                        ] | @tsv' "$working_subset" > "$temp_track_list"
+                        ] | @tsv' "$working_subset" | nl -w1 -s$'\t' > "$temp_track_list"
 
                 SELECTED=$(cat "$temp_track_list" | fzf --multi \
-                    --prompt="🎵 Pick your filtered tracks (TAB to multi-select): " \
+                    --prompt="🎵 Pick filtered tracks: " \
                     --delimiter="\t" \
-                    --with-nth=1 \
-                    --preview='echo -e "\033[1;36mTitle:\033[0m {2}\n\033[1;33mArtist:\033[0m {3}\n\033[1;32mAlbum:\033[0m {4}\n\033[1;35mGenre:\033[0m {5}\n\033[1;34mType:\033[0m {6}"' \
-                    --preview-window=top:5 | awk -F'\t' '{print $NF}')
+                    --with-nth=2 \
+                    --preview="
+                        RAW=\$(sed -n {1}p '$temp_track_list');
+                        # Capture visual col in dummy var so others align correctly
+                        IFS=\$'\t' read -r _ visual title artist album genre type path <<< \"\$RAW\";
+                        echo -e \"\033[1;36mTitle:\033[0m \${title}\";
+                        echo -e \"\033[1;33mArtist:\033[0m \${artist}\";
+                        echo -e \"\033[1;32mAlbum:\033[0m \${album}\";
+                        echo -e \"\033[1;35mGenre:\033[0m \${genre}\";
+                        echo -e \"\033[1;34mPath:\033[0m \${path}\";
+                    " \
+                    --preview-window=top:6 | awk -F'\t' '{print $NF}') || true
 
-                [[ -z "$SELECTED" ]] && msg_warn "No tracks picked." && exit 1
+                if [[ -z "$SELECTED" ]]; then
+                    msg_warn "No tracks picked."
+                    exit 1
+                fi
+
                 mapfile -t FILES <<< "$SELECTED"
+
                 log_verbose "🎶 Selected ${#FILES[@]} track(s)."
                 mpv "${MPV_ARGS[@]}" "${FILES[@]}"
                 ;;

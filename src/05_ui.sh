@@ -83,35 +83,56 @@ interactive_filter() {
     local temp_filter_list
     create_temp_file temp_filter_list
 
-    # OPTIMIZATION: Pre-calculate counts and samples.
-    # slurtp because group_by requires an array.
-    jq -rs --arg key "$filter_key" '
+    local icon=""
+    case "$filter_key" in
+        "genre")  icon="🎶 " ;;
+        "artist") icon="🎤 " ;;
+        "album")  icon="💿 " ;;
+    esac
+
+    # GENERATE LIST
+    # Col 1: ID
+    # Col 2: Visual Tag (Icon + Name) this is what we see in the list.
+    # Col 3: Raw Tag (Name Only)     what we return to the script.
+    # Col 4: Count                   hidden from list, shown in preview.
+    # Col 5: Samples                 hidden from list, shown in preview.
+    jq -rs --arg key "$filter_key" --arg icon "$icon" '
         map(select(.[$key] != null and .[$key] != "" and .[$key] != "Playlist")) |
-        group_by(.[$key]) | .[] |
+        map({
+            tag: (.[$key] | tostring | gsub("[,/]"; ",") | split(",") | .[] | sub("^\\s+";"") | sub("\\s+$";"")),
+            track: .
+        }) |
+        group_by(.tag) | .[] |
         [
-            .[0][$key],                           # Field 1: Tag value
-            length,                               # Field 2: Track count
-            ([.[0:5][].title] | join(" | "))      # Field 3: Sample list
+            ($icon + .[0].tag),                           # Field 2: Visual
+            .[0].tag,                                     # Field 3: Raw
+            length,                                       # Field 4: Count
+            ([.[0:5][] | .track.title] | join(" | "))     # Field 5: Samples
         ] | @tsv
-    ' "$INDEX_TO_USE" | sort -f > "$temp_filter_list"
+    ' "$INDEX_TO_USE" | sort -f | nl -w1 -s$'\t' > "$temp_filter_list"
 
-    # OPTIMIZATION: Preview now uses fzf's fast internal substitutions.
+    # SELECT
     local selected_lines
-    selected_lines=$(cat "$temp_filter_list" | \
-        fzf --multi \
-            --delimiter="\t" \
-            --with-nth=1 \
-            --prompt="$fzf_prompt" \
-            --preview='echo -e "\033[1;36mTag:\033[0m {1}\n\033[1;33mTracks:\033[0m {2}\n\033[1;32mSample:\033[0m {3}"' \
-            --preview-window=top:5)
+        selected_lines=$(cat "$temp_filter_list" | \
+            fzf --multi \
+                --delimiter="\t" \
+                --with-nth=2 \
+                --prompt="$fzf_prompt" \
+                --preview="
+                    RAW=\$(sed -n {1}p '$temp_filter_list');
+                    IFS=\$'\t' read -r _ visual raw count samples <<< \"\$RAW\";
+                    echo -e \"\033[1;36mTag:\033[0m \${raw}\";
+                    echo -e \"\033[1;33mTracks:\033[0m \${count}\";
+                    echo -e \"\033[1;32mSamples:\033[0m \${samples}\";
+                " \
+                --preview-window=top:5) || true  # <--- Added || true
 
-    if [[ -z "$selected_lines" ]]; then
-        msg_warn "No selection made. Exiting."
-        exit 1
-    fi
+        if [[ -z "$selected_lines" ]]; then
+            msg_warn "No selection made. Exiting."
+            exit 1
+        fi
 
-    # Output only the tag value (the first column)
-    echo "$selected_lines" | cut -d$'\t' -f1
+        echo "$selected_lines" | cut -d$'\t' -f3
 }
 
 # --- Modes: Functions ---
@@ -131,38 +152,53 @@ run_dir_mode() {
         group_by(.path | split("/")[:-1] | join("/")) | .[] |
         (.[0].path | split("/")[:-1] | join("/")) as $dir_path |
         [
-            ($dir_path | split("/") | .[-1]), # Field 1: Directory base name
-            $dir_path,                        # Field 2: Full directory path
-            length,                           # Field 3: Number of tracks in dir
-            ([.[0:5][].title] | join(", "))    # Field 4: Sample track list
+            "📁 " + ($dir_path | split("/") | .[-1]), # Field 2: Visual (Has Emoji)
+            $dir_path,                                # Field 3: Full Path (Clean)
+            length,                                   # Field 4: Count
+            ([.[0:5][].title] | join(", "))           # Field 5: Samples
         ] | @tsv
-    ' "$INDEX_TO_USE" > "$temp_folder_list"
+    ' "$INDEX_TO_USE" | nl -w1 -s$'\t' > "$temp_folder_list"
 
     if [[ ! -s "$temp_folder_list" ]]; then
-        msg_warn "No playable music folders found in the selection. Please check your source and try again."
+        msg_warn "No playable music folders found in the selection."
         exit 1
     fi
 
-    # OPTIMIZATION: The preview now uses fzf's internal field substitution,
-    # which is instantaneous and avoids calling external commands.
     local SELECTED
     SELECTED=$(cat "$temp_folder_list" | fzf --multi \
         --delimiter="\t" \
-        --with-nth=1 \
+        --with-nth=2 \
         --prompt="📁 Pick folder(s) (TAB to multi-select): " \
-        --preview='echo -e "Folder: {1}\nPath: {2}\nTracks: {3}\nSample: {4}"' \
-        --preview-window=top:6 | cut -d$'\t' -f2) || {
+        --preview="
+            RAW=\$(sed -n {1}p '$temp_folder_list');
+
+            # We read 'visual' but we IGNORE it for the echo.
+            # We use 'path' to get the clean name.
+            IFS=\$'\t' read -r _ visual path count samples <<< \"\$RAW\";
+
+            # CLEAN NAME: Strip path to just the folder name
+            CLEAN_NAME=\"\${path##*/}\";
+
+            echo -e \"\033[1;36mFolder:\033[0m \${CLEAN_NAME}\";
+            echo -e \"\033[1;34mPath:\033[0m \${path}\";
+            echo -e \"\033[1;33mTracks:\033[0m \${count}\";
+            echo -e \"\033[1;32mSample:\033[0m \${samples}\";
+        " \
+        --preview-window=top:6) || {
         msg_warn "No folders picked."
         exit 1
     }
 
     [[ -z "$SELECTED" ]] && msg_warn "No folders picked." && exit 1
-    mapfile -t FOLDERS <<< "$SELECTED"
+
+    # Extract Paths (Column 3)
+    mapfile -t FOLDERS < <(echo "$SELECTED" | cut -d$'\t' -f3)
     log_verbose "Selected ${#FOLDERS[@]} folder(s)."
 
     local FILES=()
     for DIR in "${FOLDERS[@]}"; do
         local TRACK_PATHS
+        # Use jq to find files in this dir.
         TRACK_PATHS=$(jq -r --arg dir_prefix "${DIR}/" 'select(.path | startswith($dir_prefix)) | .path' "$INDEX_TO_USE")
         while IFS= read -r TRACK_FILE; do
             [[ -n "$TRACK_FILE" ]] && FILES+=("$TRACK_FILE")
@@ -184,28 +220,39 @@ run_track_mode() {
     local temp_track_list
     create_temp_file temp_track_list
 
-    # OPTIMIZATION: Create fzf list.
+    # LINE NUMBERS
     jq -r 'select(.media_type != "playlist") |
       [
-          (if .media_type == "video" then "🎬 " else "🎵 " end) + (.title // "[NO TITLE]"), # Field 1
-          .title // "[NO TITLE]",    # Field 2
-          .artist // "[NO ARTIST]",  # Field 3
-          .album // "[NO ALBUM]",    # Field 4
-          .genre // "[NO GENRE]",    # Field 5
-          .media_type // "UNKNOWN",  # Field 6
-          .path                      # Field 7 (The final value we need)
-      ] | @tsv' "$INDEX_TO_USE" > "$temp_track_list"
+          (if .media_type == "video" then "🎬 " else "🎵 " end) + (.title // "[NO TITLE]"),
+          .title // "[NO TITLE]",
+          .artist // "[NO ARTIST]",
+          .album // "[NO ALBUM]",
+          .genre // "[NO GENRE]",
+          .media_type // "UNKNOWN",
+          .path
+      ] | @tsv' "$INDEX_TO_USE" | nl -w1 -s$'\t' > "$temp_track_list"
 
-    # OPTIMIZATION: Use fzf to parse the columns passed to it.
     local SELECTED
     SELECTED=$(cat "$temp_track_list" | fzf --multi \
       --prompt="🎵 Pick your tracks (TAB to multi-select): " \
       --delimiter="\t" \
-      --with-nth=1 \
-      --preview='echo -e "\033[1;36mTitle:\033[0m {2}\n\033[1;33mArtist:\033[0m {3}\n\033[1;32mAlbum:\033[0m {4}\n\033[1;35mGenre:\033[0m {5}\n\033[1;34mType:\033[0m {6}"' \
-      --preview-window=top:6 | awk -F'\t' '{print $NF}')
+      --with-nth=2 \
+      --preview="
+          RAW=\$(sed -n {1}p '$temp_track_list');
+          IFS=\$'\t' read -r _ visual title artist album genre type path <<< \"\$RAW\";
+          echo -e \"\033[1;36mTitle:\033[0m \${title}\";
+          echo -e \"\033[1;33mArtist:\033[0m \${artist}\";
+          echo -e \"\033[1;32mAlbum:\033[0m \${album}\";
+          echo -e \"\033[1;35mGenre:\033[0m \${genre}\";
+          echo -e \"\033[1;34mPath:\033[0m \${path}\";
+      " \
+      --preview-window=top:6 | awk -F'\t' '{print $NF}') || true
 
-    [[ -z "$SELECTED" ]] && msg_warn "No tracks picked." && exit 1
+    if [[ -z "$SELECTED" ]]; then
+        msg_warn "No tracks picked."
+        exit 1
+    fi
+
     mapfile -t FILES <<< "$SELECTED"
 
     msg_success "Playing ${#FILES[@]} track(s)..."
@@ -218,32 +265,41 @@ run_playlist_mode() {
 
     jq -r 'select(.media_type == "playlist") |
       [
-          "📜 " + .title, # Field 1: Display name with icon
-          .path          # Field 2: The file path
-      ] | @tsv' "$INDEX_TO_USE" > "$temp_playlist_list"
+          "📜 " + (.title // (.path | split("/") | .[-1])),
+          .path
+      ] | @tsv' "$INDEX_TO_USE" | nl -w1 -s$'\t' > "$temp_playlist_list"
 
     if [[ ! -s "$temp_playlist_list" ]]; then
         msg_warn "No playlists found in the index."
-        msg_note "Try running --reindex to add them."
-        exit 1
+        return
     fi
 
-    local SELECTED_PATHS
-    SELECTED_PATHS=$(cat "$temp_playlist_list" | fzf --multi \
+    local SELECTED
+    SELECTED=$(cat "$temp_playlist_list" | fzf --multi \
         --delimiter="\t" \
-        --with-nth=1 \
-        --prompt="📜 Pick playlist(s) (TAB to multi-select): " \
-        --preview-window=top:5 \
-        --preview='cat {2}') || {
-        msg_warn "No playlist picked."
-        exit 1
-    }
+        --with-nth=2 \
+        --prompt="📜 Select playlist(s) (TAB to multi-select): " \
+        --preview="
+            RAW=\$(sed -n {1}p '$temp_playlist_list');
+            IFS=\$'\t' read -r _ title path <<< \"\$RAW\";
 
-    [[ -z "$SELECTED_PATHS" ]] && msg_warn "No playlists picked." && exit 1
-    mapfile -t FILES < <(echo "$SELECTED_PATHS" | cut -d$'\t' -f2)
+            # REMOVE EMOJI: Strip everything up to the first space
+            CLEAN_TITLE=\"\${title#* }\";
 
-    msg_success "Loading ${#FILES[@]} playlist(s)..."
-    mpv "${MPV_ARGS[@]}" "${FILES[@]}"
+            echo -e \"\033[1;34mPlaylist:\033[0m \${CLEAN_TITLE}\";
+            if [[ -f \"\$path\" ]]; then
+                echo -e \"\033[1;33mContents (Top 10):\033[0m\";
+                head -n 10 \"\$path\";
+            else
+                echo -e \"\033[1;31mError: File not found.\033[0m\";
+            fi
+        " \
+        --preview-window=top:10 | cut -d$'\t' -f3) || true
+
+    [[ -z "$SELECTED" ]] && msg_warn "No playlist picked." && return
+
+    mapfile -t PLAYLISTS <<< "$SELECTED"
+    mpv "${MPV_ARGS[@]}" "${PLAYLISTS[@]}"
 }
 
 run_tag_mode() {
@@ -267,7 +323,7 @@ run_tag_mode() {
     selected_filter_values_str=$(interactive_filter "$filter_key" "$fzf_prompt")
     mapfile -t selected_values_array <<< "$selected_filter_values_str"
 
-    # Create a JSON array (e.g., ["Rock", "Electronic"]) for jq
+    # Create a JSON array
     jq_values_array=$(printf '%s\n' "${selected_values_array[@]}" | jq -R . | jq -s .)
 
     log_verbose "Filtering by $filter_key: ${selected_values_array[*]}..."
@@ -275,9 +331,22 @@ run_tag_mode() {
     # Create a temporary index with tracks matching ANY of the selected values
     create_temp_file filtered_index_file
 
-    # stream filter to a temporary JSONL file.
-    jq -c --arg key "$filter_key" --argjson values "$jq_values_array" \
-        'select(.[$key] as $k | $values | index($k))' "$INDEX_TO_USE" > "$filtered_index_file"
+# stream filter to a temporary JSONL file.
+    # LOGIC:
+    # 1. Turn "Rock, Pop" into ["Rock", "Pop"]
+    # 2. Check if the User's Selection is EXACTLY inside that list.
+    jq -c --arg key "$filter_key" --argjson values "$jq_values_array" '
+        select(
+            # 1. CLEAN & SPLIT the track tags
+            (.[$key] // "" | tostring | gsub("[,/]"; ",") | split(",") | map(sub("^\\s+";"") | sub("\\s+$";""))) as $track_tags |
+
+            # 2. EXACT MATCH CHECK
+            # We check if ANY of the user selections ($values) exist strictly inside $track_tags
+            # index($v) returns a number (found) or null (not found).
+            # In jq, numbers are truthy, null is falsy.
+            $values | any( . as $v | ($track_tags | index($v)) )
+        )
+    ' "$INDEX_TO_USE" > "$filtered_index_file"
 
     # wc -l because it is a file of lines, not a JSON array
     track_count=$(wc -l < "$filtered_index_file")
@@ -301,6 +370,8 @@ run_tag_mode() {
             ;;
         2) # Select Individual
             create_temp_file temp_track_list
+
+            # line number here too
             jq -r '
                   [
                       (if .media_type == "video" then "🎬 " else "🎵 " end) + (.title // "[NO TITLE]"),
@@ -310,14 +381,23 @@ run_tag_mode() {
                       .genre // "[NO GENRE]",
                       .media_type // "UNKNOWN",
                       .path
-                  ] | @tsv' "$filtered_index_file" > "$temp_track_list"
+                  ] | @tsv' "$filtered_index_file" | nl -w1 -s$'\t' > "$temp_track_list"
 
+            # safe preview
             SELECTED=$(cat "$temp_track_list" | fzf --multi \
               --prompt="🎵 Pick your filtered tracks (TAB to multi-select): " \
               --delimiter="\t" \
-              --with-nth=1 \
-              --preview='echo -e "\033[1;36mTitle:\033[0m {2}\n\033[1;33mArtist:\033[0m {3}\n\033[1;32mAlbum:\033[0m {4}\n\033[1;35mGenre:\033[0m {5}\n\033[1;34mType:\033[0m {6}"' \
-              --preview-window=top:5 | awk -F'\t' '{print $NF}')
+              --with-nth=2 \
+              --preview="
+                  RAW=\$(sed -n {1}p '$temp_track_list');
+                  IFS=\$'\t' read -r _ display title artist album genre type path <<< \"\$RAW\";
+                  echo -e \"\033[1;36mTitle:\033[0m \${title}\";
+                  echo -e \"\033[1;33mArtist:\033[0m \${artist}\";
+                  echo -e \"\033[1;32mAlbum:\033[0m \${album}\";
+                  echo -e \"\033[1;35mGenre:\033[0m \${genre}\";
+                  echo -e \"\033[1;34mType:\033[0m \${type}\";
+              " \
+              --preview-window=top:6 | awk -F'\t' '{print $NF}')
 
             [[ -z "$SELECTED" ]] && msg_warn "No tracks picked." && exit 1
             mapfile -t FILES <<< "$SELECTED"
