@@ -212,7 +212,7 @@ build_music_index() {
     if [[ -d "$dir_path" ]]; then
       # Fix for newline: Ensure dir_path is trimmed before passing to jq
       local trimmed_dir_path
-      trimmed_dir_path=$(echo "$dir_path" | tr -d '\n\r')
+      trimmed_dir_path="$dir_path"
       local dir_mtime
       dir_mtime=$(get_mtime "$dir_path" || echo "")
       local dir_json
@@ -276,7 +276,7 @@ build_music_index() {
     local size
     size=$(get_size "$file_path" || echo "")
     local trimmed_file_path
-    trimmed_file_path=$(echo "$file_path" | tr -d '\n\r')
+    trimmed_file_path="$file_path"
     local file_ext="${file_path##*.}"
     file_ext="${file_ext,,}" # Convert to lowercase
     local media_type="UNKNOWN"
@@ -383,7 +383,7 @@ update_music_index() {
     local current_mtime=$(get_mtime "$file_path" || echo "")
     local current_size=$(get_size "$file_path" || echo "")
     local track_json_to_add
-    local trimmed_file_path=$(echo "$file_path" | tr -d '\n\r')
+    local trimmed_file_path="$file_path"
 
     if [[ -n "${old_index_map[$trimmed_file_path]+x}" ]]; then
       local old_track_json="${old_index_map[$trimmed_file_path]}"
@@ -456,7 +456,7 @@ update_music_index() {
   local current_indexed_dirs_json_array="[]"
   for dir_path in "${music_dirs[@]}"; do
     if [[ -d "$dir_path" ]]; then
-      local trimmed_dir_path=$(echo "$dir_path" | tr -d '\n\r')
+      local trimmed_dir_path="$dir_path"
       local dir_mtime=$(get_mtime "$dir_path" || echo "")
       local dir_json=$(jq -n --arg path "$trimmed_dir_path" --arg mtime "$dir_mtime" '{path: $path, mtime: $mtime}')
       current_indexed_dirs_json_array=$(echo "$current_indexed_dirs_json_array" | jq --argjson new_dir "$dir_json" '. + [$new_dir]')

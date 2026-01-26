@@ -361,9 +361,8 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
 
     if [[ "$PLAY_ALL" == true || "$track_count" -eq 1 ]]; then
         # If --play-all is used OR if there's only one result, play directly
-        mapfile -t FILES < <(jq -r '.path' "$working_subset")
-        log_verbose "🎶 Playing all ${#FILES[@]} track(s)..."
-        mpv "${MPV_ARGS[@]}" "${FILES[@]}"
+        msg_success "Playing $track_count track(s)..."
+        jq -r '.path' "$working_subset" | mpv "${MPV_ARGS[@]}" --playlist=-
     else
         # Otherwise, ask the user what to do
         echo "What's next?"
@@ -373,9 +372,8 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
 
         case "$PLAY_CHOICE" in
             1)
-                mapfile -t FILES < <(jq -r '.path' "$working_subset")
-                log_verbose "🎶 Loading all ${#FILES[@]} track(s)..."
-                mpv "${MPV_ARGS[@]}" "${FILES[@]}"
+                msg_success "Streaming all tracks to MPV..."
+                jq -r '.path' "$working_subset" | mpv "${MPV_ARGS[@]}" --playlist=-
                 ;;
             2)
                 create_temp_file temp_track_list

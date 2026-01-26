@@ -154,8 +154,13 @@ if ! command -v mediainfo &>/dev/null; then
   msg_note "Install mediainfo (e.g., sudo apt install mediainfo or brew install mediainfo)."
 fi
 
-if ! command -v find &>/dev/null || ! find --version 2>&1 | grep -q 'GNU findutils'; then
-  msg_error "GNU find is required. Your system might be using BSD find."
-  msg_note "Please install GNU findutils!"
-  exit 1
+if ! command -v find &>/dev/null; then
+    msg_error "'find' command is missing."
+    exit 1
+fi
+
+if ! find . -maxdepth 0 -print0 &>/dev/null; then
+    msg_error "Your 'find' command does not support -print0."
+    msg_note "mpv-music requires GNU find or a compatible version for safety."
+    exit 1
 fi
