@@ -156,6 +156,7 @@ run_dir_mode() {
         exit 1
     }
 
+    [[ -z "$SELECTED" ]] && msg_warn "No folders picked." && exit 1
     mapfile -t FOLDERS <<< "$SELECTED"
     log_verbose "Selected ${#FOLDERS[@]} folder(s)."
 
@@ -238,6 +239,7 @@ run_playlist_mode() {
         exit 1
     }
 
+    [[ -z "$SELECTED_PATHS" ]] && msg_warn "No playlists picked." && exit 1
     mapfile -t FILES < <(echo "$SELECTED_PATHS" | cut -d$'\t' -f2)
 
     if [[ ${#FILES[@]} -eq 0 ]]; then

@@ -79,7 +79,7 @@ create_temp_file() {
 cleanup_temp_files() {
     trap '' HUP INT TERM QUIT  # Ignore signals during cleanup
     log_debug "\n--- Cleanup triggered ---"
-  if [[ ${#TEMP_FILES[@]} -gt 0 ]]; then # Ignore signals during cleanup
+  if [[ ${#TEMP_FILES[@]} -gt 0 ]]; then
     log_debug "Cleaning up ${#TEMP_FILES[@]} temporary files..."
     for tmp_file in "${TEMP_FILES[@]}"; do
       if [[ -f "$tmp_file" ]]; then
