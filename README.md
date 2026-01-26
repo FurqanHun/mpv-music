@@ -1,8 +1,8 @@
 # mpv-music
 ![version](assets/version.svg)
 
-**mpv-music** – a blazing-fast **terminal music player** and **library browser** built on **mpv**.  
-Provides instant playback, fuzzy searching (fzf), metadata-rich previews, and fully configurable CLI controls — no background daemon needed.
+**mpv-music** is a blazing-fast terminal music player and library browser built on mpv.  
+Provides instant playback, fuzzy searching (fzf), metadata-rich previews, and fully configurable CLI controls with no background daemon needed.
 
 In short, it focuses on library indexing for super-fast access to your music collection with a clean terminal UI, passing your selection to mpv with config-defined arguments.
 
@@ -25,41 +25,44 @@ In short, it focuses on library indexing for super-fast access to your music col
 
 ## Features
 
-* **Blazing-Fast Indexed Searching:** Automatically indexes your music library into a JSONL (JSON Lines) file for lightning-fast search using `fzf`. (If the `music_index.jsonl` doesn't exist, else load the existing index.)
-* **Rich Metadata Previews:** In track mode, view song title, artist, album, and genre directly in the `fzf` preview window.
-* **Interactive Selection (fzf) -- Two Playback Modes:**
+* **Blazing-Fast Indexed Searching:** Automatically indexes your music library into a JSONL (JSON Lines) file for lightning-fast search using fzf. If the index does not exist, it will be created on first run.
+* **Rich Metadata Previews:** View song title, artist, album, and genre directly in the fzf preview window.
+* **Interactive Selection with Multiple Modes:**
   * **Directory Mode:** Navigate folders with clean names instead of full paths.
   * **Track Mode:** Fuzzy-search individual tracks with metadata previews.
-  * **Playlist Mode:** Find and play your saved `.m3u` or `.pls` playlists.
+  * **Playlist Mode:** Find and play your saved .m3u or .pls playlists.
   * **Tag Filter Mode:** Drill down by genre, artist, album, or title interactively.
   * **Play All:** Instantly play your entire indexed library.
-* **Direct File/URL Playback:** Instantly play local audio/video files or URLs (e.g., YouTube) without going through the menu.
-* **Configurable File Types:** Support for both audio and video extensions — easily tweakable.
-* **Custom MPV Flags:** Pass `mpv` flags directly or set defaults in the config.
-* **Video Toggle:** `--video-ok` lets you include videos in your library without playing visuals unless you want to.
-* **CLI Filtering & Power Features:**
-  * Now supports flags like `--genre`, `--artist`, `--album`, `--title`, `--play-all`, `--playlist` for direct access.
-* **Enhanced Logging:**
-  * Verbose/debug modes, log rotation, and configurable log file size.
+  * **URL Mode:** Paste YouTube or stream URLs directly from the menu.
+* **Direct File/URL Playback:** Instantly play local audio/video files or URLs (YouTube, streams) without going through the menu.
+* **Custom Directory Support:** Pass a folder path to browse and filter only that directory instead of your full library.
+* **CLI Filtering:** Use flags like --genre, --artist, --album, --title for direct filtering. Pass a value or omit it to open an interactive picker.
+* **Smart Matching:** CLI filters attempt exact matches first, then fall back to partial matches with disambiguation.
+* **Configurable File Types:** Support for both audio and video extensions, easily tweakable.
+* **Custom MPV Flags:** Pass mpv flags directly or set defaults in the config.
+* **Video Toggle:** --video-ok lets you include videos in your library scans.
+* **YouTube Auto-Config:** Automatically detects JS runtimes (Deno, Node, QuickJS, Bun) for yt-dlp YouTube playback.
+* **Enhanced Logging:** Verbose/debug modes with log rotation and configurable log file size.
 
 ---
 
 ## Dependencies
 
 #### Required:
-* **`mpv`** – [https://mpv.io](https://mpv.io)
-* **`fzf`** – [https://github.com/junegunn/fzf](https://github.com/junegunn/fzf)
-* **`jq`** – for parsing the index.
-  🧪 `sudo apt install jq` or `brew install jq`
-* **`ffmpeg`** – `ffprobe` is used to extract metadata.
-  🎵 [https://ffmpeg.org](https://ffmpeg.org)
-* **GNU `find`** – not BSD `find`, script checks this at startup.
+* **mpv** - https://mpv.io
+* **fzf** - https://github.com/junegunn/fzf
+* **jq** - for parsing the index.
+  Install: `sudo apt install jq` or `brew install jq`
+* **ffmpeg** - ffprobe is used to extract metadata.
+  https://ffmpeg.org
+* **GNU find** - not BSD find, script checks this at startup.
 
 #### Optional (but recommended):
-* **`yt-dlp`** – for playing URLs.
-  🔗 [https://github.com/yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp)
-* **`mediainfo`** – fallback metadata reader.
-  🧾 `sudo apt install mediainfo` or `brew install mediainfo`
+* **yt-dlp** - for playing URLs.
+  https://github.com/yt-dlp/yt-dlp
+* **mediainfo** - fallback metadata reader.
+  Install: `sudo apt install mediainfo` or `brew install mediainfo`
+* **JS Runtime** - for YouTube playback (Deno, Node.js, QuickJS, or Bun). Deno is recommended.
 
 ---
 
@@ -67,12 +70,10 @@ In short, it focuses on library indexing for super-fast access to your music col
 
 ### Supported Systems
 
-* **Linux:** **Native.** The script is built and tested primarily for Linux (GNU tools).
-* **WSL (Windows Subsystem for Linux):** **Fully Supported.** This is the recommended way to run it on Windows. (I haven't tested it, but it should work)
-* **macOS / BSD:** ⚠️ **Experimental.**
-    * **The Issue:** These systems use **BSD variants** of standard tools (`sed`, `find`, `readlink`), which differ from the **GNU versions** used in this script.
-    * **The Fix:** You may need to install GNU tools (e.g., `coreutils`, `findutils`, `gnu-sed`) and ensure they are in your PATH. On macOS, this is done via Homebrew. Or modify the script to use BSD tooling :)
-* **Windows (Native/Git Bash):** ❌ **Not Supported.** Native path handling (`C:\` vs `/`) prevents this from working. Please use WSL.
+* **Linux:** Native. The script is built and tested primarily for Linux (GNU tools).
+* **WSL (Windows Subsystem for Linux):** Fully Supported. This is the recommended way to run it on Windows.
+* **macOS / BSD:** Experimental. These systems use BSD variants of standard tools (sed, find, readlink), which differ from the GNU versions used in this script. You may need to install GNU tools (coreutils, findutils, gnu-sed) and ensure they are in your PATH.
+* **Windows (Native/Git Bash):** Not Supported. Native path handling (C:\ vs /) prevents this from working. Please use WSL.
 
 ### Option 1: Quick Install (Recommended)
 
@@ -82,31 +83,33 @@ It will check dependencies and ask you where to install the script.
 ```bash
 curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash
 ```
+
 ### Option 2: Manual Install
 
 1. Download the latest `mpv-music` script from the [Releases page](https://github.com/FurqanHun/mpv-music/releases).
 
-2. **Make it executable:**
-  ```bash
-  chmod +x mpv-music
-  ```
+2. Make it executable:
+```bash
+chmod +x mpv-music
+```
 
-3. **Move to your PATH:**
-  ```bash
-  mkdir -p ~/.local/bin
-  mv mpv-music ~/.local/bin/
-  ```
+3. Move to your PATH:
+```bash
+mkdir -p ~/.local/bin
+mv mpv-music ~/.local/bin/
+```
 
 ### First run (setup):
-  ```bash
-  mpv-music
-  ```
-  _Note: You may want to run `mpv-music --config` to customize your settings and music directories before indexing_
+```bash
+mpv-music
+```
 
-  That creates:
-  - `~/.config/mpv-music/mpv-music.conf`
-  - `~/.config/mpv-music/music_index.jsonl` (your indexed library)
-  - ~/.config/mpv-music/dirs_state.json (directory state cache)
+Note: You may want to run `mpv-music --config` to customize your settings and music directories before indexing.
+
+That creates:
+- `~/.config/mpv-music/mpv-music.conf`
+- `~/.config/mpv-music/music_index.jsonl` (your indexed library)
+- `~/.config/mpv-music/dirs_state.json` (directory state cache)
 
 ---
 
@@ -125,41 +128,47 @@ mpv-music [FILTER_FLAGS] [--play-all]
 
 ### Options:
 
-* `-h, --help` → Show the help message and exit
-* `-v, --version` → Show the script's version and exit
-* `--config` → open config file in text editor (nano/vi)
-* `--config=editor` → open config in specified editor
-* `--no-video`, `--volume=50`, etc → any `mpv` flag works
-* `--video-ok` → include video files
-* `--ext=mp3,ogg` → override file extensions
-* `--update` → update the script to the latest version
-* `--reindex` → force rebuild the full index
-* `--refresh-index` → update index without wiping it
-* `-V, --verbose` → Increase verbosity, printing additional information
-* `--debug` → Print detailed debug messages
-* `-g, --genre [val]` → Filter by genre
-* `-a, --artist [val]` → Filter by artist
-* `-b, --album [val]` → Filter by album
-* `-t, --title [val]` → Filter by track title
-* `-p, --play-all` → Play all tracks matching filters
-* `-l, --playlist` → Playlist mode
+| Option | Description |
+|--------|-------------|
+| `-h, --help` | Show the help message and exit |
+| `-v, --version` | Show the script version and exit |
+| `--config` | Open config file in text editor (nano/vi) |
+| `--config=editor` | Open config in specified editor |
+| `--video-ok` | Include video files in scans |
+| `--ext=mp3,ogg` | Override file extensions |
+| `--update` | Update the script to the latest version |
+| `--reindex` | Force rebuild the full index |
+| `--refresh-index` | Update index without wiping it |
+| `-V, --verbose` | Increase verbosity, printing additional information |
+| `--debug` | Print detailed debug messages |
+| `-g, --genre [val]` | Filter by genre. Opens picker if no value given |
+| `-a, --artist [val]` | Filter by artist. Opens picker if no value given |
+| `-b, --album [val]` | Filter by album. Opens picker if no value given |
+| `-t, --title [val]` | Filter by track title |
+| `-p, --play-all` | Play all tracks matching filters directly |
+| `-l, --playlist` | Go directly to playlist mode |
 
-When **both** `--verbose` and `--debug` are enabled together, logs will be saved to `~/.config/mpv-music/mpv-music.log`.
-The log file automatically rotates after reaching the configured size (default: 1024KB/1MB; adjustable via the config file).
+Any mpv flag also works: `--no-video`, `--volume=50`, `--shuffle`, etc.
+
+When both `--verbose` and `--debug` are enabled together, logs will be saved to `~/.config/mpv-music/mpv-music.log`.
+The log file automatically rotates after reaching the configured size (default: 1024KB).
 If `LOG_MAX_SIZE_KB` is set to `0` in your config, log messages will only be displayed and not saved.
 
 ### Examples:
 
 ```bash
-mpv-music                            # full interactive menu
-mpv-music /path/to/music            # interactive in a specific folder
-mpv-music ~/Music/track.flac        # plays file instantly
-mpv-music https://yt.link/video     # plays URL instantly
-mpv-music --genre="Rock" --play-all # play all rock tracks
-mpv-music --artist="Ado"            # fuzzy search by artist
-mpv-music --volume=50 --shuffle     # custom mpv flags
-mpv-music --reindex                 # rebuild the index from scratch
-mpv-music --verbose --debug         # run with full logging enabled
+mpv-music                              # full interactive menu
+mpv-music /path/to/music               # interactive in a specific folder
+mpv-music ~/Music/track.flac           # plays file instantly
+mpv-music "https://youtube.com/watch..." # plays URL instantly
+mpv-music /path/to/folder -a           # pick artist from that folder only
+mpv-music --genre="Rock" --play-all    # play all rock tracks
+mpv-music --artist="Ado"               # fuzzy search by artist
+mpv-music -p -a ado                     # play all tracks by Ado
+mpv-music -g -a "Daft Punk" -p         # pick genre, then play all Daft Punk
+mpv-music --volume=50 --shuffle        # custom mpv flags
+mpv-music --reindex                    # rebuild the index from scratch
+mpv-music --verbose --debug            # run with full logging enabled
 ```
 
 ---
@@ -174,24 +183,25 @@ Your music library is indexed to:
 
 ### Why?
 
-Searching the filesystem with `find` every time is **slow af**, specially if you have a large music collection. So `mpv-music caches` an index using JSONL (JSON Lines) for:
+Searching the filesystem with find every time is slow, especially if you have a large music collection. So mpv-music caches an index using JSONL (JSON Lines) for:
 
-- fast filtering
-- append updates instantly
-- metadata previews
-- offline-friendly behavior (may introduce caching for URLs in future)
+- Fast filtering
+- Instant append updates
+- Metadata previews
+- Offline-friendly behavior
 
 ### Maintaining:
 
-* `--reindex` → Full rebuild
-* `--refresh-index` → Smart update
+* `--reindex` - Full rebuild
+* `--refresh-index` - Smart update (only processes new/modified files)
 
-_Note: You may want to run these flags alongside `--video-ok` to include video files in the index. For example, to include video files in the index, use `mpv-music --video-ok --reindex`._
+Note: Run these flags alongside `--video-ok` to include video files in the index. For example: `mpv-music --video-ok --reindex`
 
 ---
 
 ## Configuration
-If a config file doesn't exist, `mpv-music` will create one at startup. If you want to customize the behavior, edit this:
+
+If a config file does not exist, mpv-music will create one at startup. To customize the behavior, edit:
 
 ```
 ~/.config/mpv-music/mpv-music.conf
@@ -229,11 +239,11 @@ MPV_DEFAULT_ARGS=(
 )
 
 # File Extensions
-AUDIO_EXTS="mp3 flac wav m4a aac ogg opus"
-VIDEO_EXTS="mp4 mkv webm avi"
+AUDIO_EXTS="mp3 flac wav m4a aac ogg opus wma alac aiff amr"
+VIDEO_EXTS="mp4 mkv webm avi mov flv wmv mpeg mpg 3gp ts vob m4v"
 PLAYLIST_EXTS="m3u m3u8 pls"
 
-# Log Rotation
+# Log Rotation (set to 0 to disable file logging)
 LOG_MAX_SIZE_KB=1024
 ```
 
@@ -241,20 +251,26 @@ LOG_MAX_SIZE_KB=1024
 
 ## Development
 
-This project is developed using a modular source structure.
+This project is developed using a modular (more of a faux module) source structure.
 * **Source Code:** Located in `src/`.
+ - 01_vars.sh # contains config vars
+ - 02_utils.sh # utility functions (i.e, logging, updater etc)
+ - 03_config.sh # config file handling and dependency checks
+ - 04_metadata.sh # metadata extraction and index building
+ - 05_ui.sh # fzf UI and selection modes
+ - 06_main.sh # main script logic and argument parsing
 * **Building:** Run `./build.sh` to compile the modules into the final `mpv-music` executable.
+
+_compiling here just means concatenating the source files into a single file (mpv-music) with proper shebang and permissions._
 
 ---
 
 ## License
 
-MIT License — See [LICENSE](LICENSE).
+MIT License. See [LICENSE](LICENSE).
 
 ---
 
 ## GenAI Disclosure
 
-Generative AI (specifically Google Gemini) was and is used for maintenance and development as an assistive tool. Note that this is not a project that's super critical or important.
-
----
+Generative AI (Google Gemini, GitHub Copilot) was and is used for maintenance and development as an assistive tool.
