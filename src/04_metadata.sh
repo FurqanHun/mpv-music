@@ -186,7 +186,7 @@ build_temp_index() {
 
     done
 
-    if [[ "$VERBOSE" == true ]]; then echo ""; fi # Newline if we printed progress
+    echo "" >&2
 
     mv "$temp_json_lines" "$temp_index_ref"
 

@@ -114,20 +114,6 @@ for arg in "$@"; do
     fi
 done
 
-# Logic for handling custom directory vs. default index
-INDEX_TO_USE="$MUSIC_INDEX_FILE" # Default to the main index
-
-if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then
-    build_temp_index "$CUSTOM_MUSIC_DIR" temp_index_file
-    INDEX_TO_USE="$temp_index_file"
-elif [[ "$SKIP_AUTO_INDEX" == false ]]; then
-    # Only auto-build if we aren't about to do it manually in the arg parser
-    if [[ ! -f "$MUSIC_INDEX_FILE" ]]; then
-        msg_info "Index file '$MUSIC_INDEX_FILE' not found. Building index from scratch."
-        build_music_index
-    fi
-fi
-
 # --- Argument Parsing ---
 # Iterate through all arguments to identify direct play target, script options, or mpv flags
 while [[ $# -gt 0 ]]; do
@@ -204,6 +190,22 @@ while [[ $# -gt 0 ]]; do
       MPV_ARGS+=("$1"); shift;;
   esac
 done
+
+# Logic for handling custom directory vs. default index
+INDEX_TO_USE="$MUSIC_INDEX_FILE" # Default to the main index
+
+if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then
+    if ! build_temp_index "$CUSTOM_MUSIC_DIR" temp_index_file; then
+        exit 1
+    fi
+    INDEX_TO_USE="$temp_index_file"
+elif [[ "$SKIP_AUTO_INDEX" == false ]]; then
+    # Only auto-build if we aren't about to do it manually in the arg parser
+    if [[ ! -f "$MUSIC_INDEX_FILE" ]]; then
+        msg_info "Index file '$MUSIC_INDEX_FILE' not found. Building index from scratch."
+        build_music_index
+    fi
+fi
 
 # MERGE DEFAULTS: Always prepend defaults so user args don't wipe them out
 MPV_ARGS=("${MPV_DEFAULT_ARGS_ARRAY[@]}" "${MPV_ARGS[@]}")
