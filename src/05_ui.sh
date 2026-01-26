@@ -242,11 +242,6 @@ run_playlist_mode() {
     [[ -z "$SELECTED_PATHS" ]] && msg_warn "No playlists picked." && exit 1
     mapfile -t FILES < <(echo "$SELECTED_PATHS" | cut -d$'\t' -f2)
 
-    if [[ ${#FILES[@]} -eq 0 ]]; then
-        msg_warn "No playlists picked."
-        exit 1
-    fi
-
     msg_success "Loading ${#FILES[@]} playlist(s)..."
     mpv "${MPV_ARGS[@]}" "${FILES[@]}"
 }
