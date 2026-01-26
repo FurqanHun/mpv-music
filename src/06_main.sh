@@ -195,6 +195,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+rotate_log
+
 # Logic for handling custom directory vs. default index
 
 if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then

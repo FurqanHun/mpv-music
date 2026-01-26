@@ -436,7 +436,7 @@ update_music_index() {
       elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
         media_type="video"
       elif [[ " ${PLAYLIST_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
-      media_type="playlist"
+          media_type="playlist"
       fi
 
       track_json_to_add=$(jq -cn \

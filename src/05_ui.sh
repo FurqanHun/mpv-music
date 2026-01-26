@@ -56,14 +56,14 @@ play_all_music() {
     log_verbose "Getting all tracks from the index..."
 
     # Check if index exists and is not empty
-    if [[ ! -s "$MUSIC_INDEX_FILE" ]]; then
+    if [[ ! -s "$INDEX_TO_USE" ]]; then
         msg_error "Music index is empty or not found. Cannot play all."
         msg_note "Try running --reindex first."
         exit 1
     fi
 
     # Read paths directly from JSONL stream
-    mapfile -t FILES < <(jq -r '.path' "$MUSIC_INDEX_FILE")
+    mapfile -t FILES < <(jq -r '.path' "$INDEX_TO_USE")
 
     if [[ ${#FILES[@]} -eq 0 ]]; then
         msg_warn "No tracks found in the index."
