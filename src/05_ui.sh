@@ -184,7 +184,7 @@ run_track_mode() {
     create_temp_file temp_track_list
 
     # OPTIMIZATION: Create fzf list.
-    jq -r 'select(.artist != "Playlist") |
+    jq -r 'select(.media_type != "playlist") |
       [
           (if .media_type == "video" then "🎬 " else "🎵 " end) + (.title // "[NO TITLE]"), # Field 1
           .title // "[NO TITLE]",    # Field 2
@@ -215,7 +215,7 @@ run_playlist_mode() {
     local temp_playlist_list
     create_temp_file temp_playlist_list
 
-    jq -r 'select(.artist == "Playlist") |
+    jq -r 'select(.media_type == "playlist") |
       [
           "📜 " + .title, # Field 1: Display name with icon
           .path          # Field 2: The file path

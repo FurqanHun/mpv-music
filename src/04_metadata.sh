@@ -114,20 +114,18 @@ build_temp_index() {
     local custom_dir="$1"
     local -n temp_index_ref=$2
     local ext_filter=("${EXT_FILTER[@]}")
-    local temp_files_list
 
     log_verbose "Temporarily indexing files from '$custom_dir' for selection..."
 
     create_temp_file temp_index_ref
-    create_temp_file temp_files_list
 
-    find "$custom_dir" -type f \( "${ext_filter[@]}" \) -print0 | \
+    # Collect files into an array (same pattern as build_music_index)
+    local all_files=()
     while IFS= read -r -d '' file; do
-        echo "$file"
-    done > "$temp_files_list"
+        all_files+=("$file")
+    done < <(find "$custom_dir" -type f \( "${ext_filter[@]}" \) -print0)
 
-    local file_count
-    file_count=$(wc -l < "$temp_files_list")
+    local file_count=${#all_files[@]}
 
     if [[ $file_count -eq 0 ]]; then
         msg_warn "No music files found in '$custom_dir'."
@@ -143,7 +141,7 @@ build_temp_index() {
     # Create another temporary file to hold the line-delimited JSON objects.
     create_temp_file temp_json_lines
 
-    while IFS= read -r file_path; do
+    for file_path in "${all_files[@]}"; do
         count=$((count + 1))
 
         # SMART PROGRESS BAR
@@ -166,7 +164,6 @@ build_temp_index() {
         local album="${metadata_array[2]}"
         local genre="${metadata_array[3]}"
 
-
         local file_ext="${file_path##*.}"
         file_ext="${file_ext,,}"
         local media_type="UNKNOWN"
@@ -174,6 +171,8 @@ build_temp_index() {
             media_type="audio"
         elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
             media_type="video"
+        elif [[ " ${PLAYLIST_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
+            media_type="playlist"
         fi
 
         jq -cn \
@@ -185,7 +184,7 @@ build_temp_index() {
           --arg media_type "$media_type" \
           '{path: $path, title: $title, artist: $artist, album: $album, genre: $genre, media_type: $media_type}' >> "$temp_json_lines"
 
-    done < "$temp_files_list"
+    done
 
     if [[ "$VERBOSE" == true ]]; then echo ""; fi # Newline if we printed progress
 
@@ -283,6 +282,8 @@ build_music_index() {
       media_type="audio"
     elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
       media_type="video"
+    elif [[ " ${PLAYLIST_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
+      media_type="playlist"
     fi
 
     # Append a single, compact JSON line to the temp file for each track
@@ -404,6 +405,8 @@ update_music_index() {
           media_type="audio"
         elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
           media_type="video"
+        elif [[ " ${PLAYLIST_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
+          media_type="playlist"
         fi
 
         track_json_to_add=$(jq -cn \
@@ -428,6 +431,8 @@ update_music_index() {
         media_type="audio"
       elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
         media_type="video"
+      elif [[ " ${PLAYLIST_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
+      media_type="playlist"
       fi
 
       track_json_to_add=$(jq -cn \
