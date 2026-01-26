@@ -1,3 +1,7 @@
+# Cross-platform stat helpers
+get_mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null; }
+get_size() { stat -c %s "$1" 2>/dev/null || stat -f %z "$1" 2>/dev/null; }
+
 # --- Build Extension Filter Function ---
 # Builds the 'find' extension filter based on script settings
 build_ext_filter() {
@@ -210,7 +214,7 @@ build_music_index() {
       local trimmed_dir_path
       trimmed_dir_path=$(echo "$dir_path" | tr -d '\n\r')
       local dir_mtime
-      dir_mtime=$(stat -c %Y "$dir_path" 2>/dev/null || echo "")
+      dir_mtime=$(get_mtime "$dir_path" || echo "")
       local dir_json
       dir_json=$(jq -n --arg path "$trimmed_dir_path" --arg mtime "$dir_mtime" '{path: $path, mtime: $mtime}')
       indexed_dirs_json_array=$(echo "$indexed_dirs_json_array" | jq --argjson new_dir "$dir_json" '. + [$new_dir]')
@@ -268,9 +272,9 @@ build_music_index() {
     local album="${metadata_array[2]}"
     local genre="${metadata_array[3]}"
     local mtime
-    mtime=$(stat -c %Y "$file_path" 2>/dev/null || echo "")
+    mtime=$(get_mtime "$file_path" || echo "")
     local size
-    size=$(stat -c %s "$file_path" 2>/dev/null || echo "")
+    size=$(get_size "$file_path" || echo "")
     local trimmed_file_path
     trimmed_file_path=$(echo "$file_path" | tr -d '\n\r')
     local file_ext="${file_path##*.}"
@@ -376,8 +380,8 @@ update_music_index() {
          printf "\rScanning and updating: %d/%d          " "$count" "$total" >&2
     fi
 
-    local current_mtime=$(stat -c %Y "$file_path" 2>/dev/null || echo "")
-    local current_size=$(stat -c %s "$file_path" 2>/dev/null || echo "")
+    local current_mtime=$(get_mtime "$file_path" || echo "")
+    local current_size=$(get_size "$file_path" || echo "")
     local track_json_to_add
     local trimmed_file_path=$(echo "$file_path" | tr -d '\n\r')
 
@@ -453,7 +457,7 @@ update_music_index() {
   for dir_path in "${music_dirs[@]}"; do
     if [[ -d "$dir_path" ]]; then
       local trimmed_dir_path=$(echo "$dir_path" | tr -d '\n\r')
-      local dir_mtime=$(stat -c %Y "$dir_path" 2>/dev/null || echo "")
+      local dir_mtime=$(get_mtime "$dir_path" || echo "")
       local dir_json=$(jq -n --arg path "$trimmed_dir_path" --arg mtime "$dir_mtime" '{path: $path, mtime: $mtime}')
       current_indexed_dirs_json_array=$(echo "$current_indexed_dirs_json_array" | jq --argjson new_dir "$dir_json" '. + [$new_dir]')
     fi

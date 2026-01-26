@@ -114,6 +114,8 @@ for arg in "$@"; do
     fi
 done
 
+INDEX_TO_USE="$MUSIC_INDEX_FILE" # Default to the main index
+
 # --- Argument Parsing ---
 # Iterate through all arguments to identify direct play target, script options, or mpv flags
 while [[ $# -gt 0 ]]; do
@@ -192,7 +194,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Logic for handling custom directory vs. default index
-INDEX_TO_USE="$MUSIC_INDEX_FILE" # Default to the main index
 
 if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then
     if ! build_temp_index "$CUSTOM_MUSIC_DIR" temp_index_file; then
