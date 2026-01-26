@@ -365,8 +365,8 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
                     --preview='echo -e "\033[1;36mTitle:\033[0m {2}\n\033[1;33mArtist:\033[0m {3}\n\033[1;32mAlbum:\033[0m {4}\n\033[1;35mGenre:\033[0m {5}\n\033[1;34mType:\033[0m {6}"' \
                     --preview-window=top:5 | awk -F'\t' '{print $NF}')
 
+                [[ -z "$SELECTED" ]] && msg_warn "No tracks picked." && exit 1
                 mapfile -t FILES <<< "$SELECTED"
-                [[ ${#FILES[@]} -eq 0 ]] && msg_warn "No tracks picked." && exit 1
                 log_verbose "🎶 Selected ${#FILES[@]} track(s)."
                 mpv "${MPV_ARGS[@]}" "${FILES[@]}"
                 ;;
