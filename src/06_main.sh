@@ -142,7 +142,7 @@ while [[ $# -gt 0 ]]; do
         elif [[ -n "${2:-}" && "$2" != -* ]]; then value="$2"; shift; fi
 
         if [[ -n "$value" ]]; then
-            mapfile -t GENRE_FILTERS < <(echo "$value" | tr ',' '\n' | xargs -n 1)
+            mapfile -t GENRE_FILTERS < <(echo "$value" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
         else
             GENRE_INTERACTIVE=true
         fi
@@ -154,7 +154,7 @@ while [[ $# -gt 0 ]]; do
         elif [[ -n "${2:-}" && "$2" != -* ]]; then value="$2"; shift; fi
 
         if [[ -n "$value" ]]; then
-            mapfile -t ARTIST_FILTERS < <(echo "$value" | tr ',' '\n' | xargs -n 1)
+            mapfile -t ARTIST_FILTERS < <(echo "$value" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
         else
             ARTIST_INTERACTIVE=true
         fi
@@ -166,7 +166,7 @@ while [[ $# -gt 0 ]]; do
         elif [[ -n "${2:-}" && "$2" != -* ]]; then value="$2"; shift; fi
 
         if [[ -n "$value" ]]; then
-            mapfile -t ALBUM_FILTERS < <(echo "$value" | tr ',' '\n' | xargs -n 1)
+            mapfile -t ALBUM_FILTERS < <(echo "$value" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
         else
             ALBUM_INTERACTIVE=true
         fi
@@ -178,7 +178,7 @@ while [[ $# -gt 0 ]]; do
         elif [[ -n "${2:-}" && "$2" != -* ]]; then value="$2"; shift; fi
 
         if [[ -n "$value" ]]; then
-            mapfile -t TITLE_FILTERS < <(echo "$value" | tr ',' '\n' | xargs -n 1)
+            mapfile -t TITLE_FILTERS < <(echo "$value" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$')
         else
             TITLE_INTERACTIVE=true
         fi
@@ -259,9 +259,15 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
         local key="$3"
         shift 3
         local -a values=("$@")
+        local -a escaped_values=()
+
+        # Escape special regex characters: . ^ $ * + ? ( ) [ ] { } | \
+        for val in "${values[@]}"; do
+            escaped_values+=("$(echo "$val" | sed 's/\\/\\\\/g; s/[][(){}^$*+?.|]/\\&/g')")
+        done
 
         local jq_values_array
-        jq_values_array=$(printf '%s\n' "${values[@]}" | jq -R . | jq -s .)
+        jq_values_array=$(printf '%s\n' "${escaped_values[@]}" | jq -R . | jq -s .)
 
         local jq_filter
         if [[ "$mode" == "exact" ]]; then
@@ -332,7 +338,6 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
                 apply_cli_filter "$working_subset" "exact" "$active_filter_key" "${clarification_options[0]}"
 
             elif [[ ${#clarification_options[@]} -gt 1 ]]; then
-                local clarified_str
                 clarified_str=$(printf '%s\n' "${clarification_options[@]}" | fzf --multi --prompt="Which ${active_filter_key} did you mean? ")
                 [[ -z "$clarified_str" ]] && msg_warn "No selection made." && exit 1
                 mapfile -t clarified_values <<< "$clarified_str"
