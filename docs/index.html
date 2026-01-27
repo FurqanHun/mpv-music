@@ -6,6 +6,7 @@
         <meta name="theme-color" content="#101010" />
 
         <title>mpv-music | another mpv wrapper</title>
+
         <meta
             name="description"
             content="mpv-music: Terminal-based music library manager for mpv, also known as 'mpv music' and 'mpvmusic'"
@@ -35,7 +36,6 @@
                 line-height: 1.5;
                 font-size: 16px;
                 overflow-y: scroll;
-            }
 
             .container {
                 max-width: 680px;
@@ -145,6 +145,16 @@
                 padding-top: 1rem;
                 font-size: 0.9rem;
                 color: var(--dim);
+                text-align: center; /* Center footer content */
+            }
+
+            footer h1 {
+                font-size: 1rem;
+                color: #333;
+                margin-bottom: 0.5rem;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                border: none;
             }
 
             @media (max-width: 600px) {
@@ -239,6 +249,7 @@
             </ul>
 
             <footer>
+                <h1>mpv-music</h1>
                 <p>
                     <a
                         href="https://github.com/furqanhun/mpv-music"
