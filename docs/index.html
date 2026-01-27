@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#101010" />
+
+        <title>mpv-music | another mpv wrapper</title>
+        <meta
+            name="description"
+            content="mpv-music: Terminal-based music library manager. Minimal, fast, keyboard-driven."
+        />
+        <meta
+            name="keywords"
+            content="mpv-music, mpv, cli, terminal, music player, linux, bash, fzf"
+        />
+        <link rel="canonical" href="https://furqanhun.github.io/mpv-music/" />
+
+        <style>
+            :root {
+                --bg: #101010;
+                --fg: #eeeeee;
+                --accent: #00ff00;
+                --dim: #666666;
+                --link: #58a6ff;
+                --alert: #ffcc00;
+            }
+
+            body {
+                background-color: var(--bg);
+                color: var(--fg);
+                font-family: "Menlo", "Consolas", "Monaco", monospace;
+                margin: 0;
+                padding: 2rem;
+                line-height: 1.5;
+                font-size: 16px;
+                overflow-y: scroll;
+            }
+
+            .container {
+                max-width: 680px;
+                margin: 0 auto;
+            }
+
+            pre.ascii-art {
+                color: var(--accent);
+                font-size: 12px;
+                line-height: 12px;
+                white-space: pre;
+                overflow: hidden;
+                margin-bottom: 2rem;
+                font-weight: bold;
+                width: 100%;
+            }
+
+            h2 {
+                font-size: 1.2rem;
+                border-bottom: 1px dashed var(--dim);
+                padding-bottom: 0.5rem;
+                margin-top: 2rem;
+                color: var(--accent);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            a {
+                color: var(--fg);
+                text-decoration: underline;
+                text-decoration-color: var(--dim);
+                text-underline-offset: 4px;
+            }
+
+            a:hover {
+                color: var(--accent);
+                text-decoration-color: var(--accent);
+                background-color: #002200;
+            }
+
+            .cmd-block {
+                background: #000;
+                border: 1px solid var(--dim);
+                padding: 1rem;
+                overflow-x: auto;
+                color: var(--accent);
+                margin: 1rem 0 0.5rem 0;
+                user-select: all;
+                position: relative;
+            }
+
+            .cmd-block::before {
+                content: "$ ";
+                color: var(--dim);
+                user-select: none;
+            }
+
+            .release-info {
+                font-size: 0.85rem;
+                color: var(--dim);
+                text-align: right;
+                margin-bottom: 2rem;
+                font-family: monospace;
+            }
+            .release-tag {
+                color: var(--alert);
+                font-weight: bold;
+                text-decoration: none;
+            }
+            .release-tag:hover {
+                background: none;
+                text-decoration: underline;
+            }
+
+            ul {
+                padding-left: 1.2rem;
+                list-style-type: square;
+            }
+
+            li {
+                margin-bottom: 0.5rem;
+            }
+
+            .cursor {
+                display: inline-block;
+                width: 10px;
+                height: 1.2em;
+                background-color: var(--accent);
+                animation: blink 1s step-end infinite;
+                vertical-align: text-bottom;
+                margin-left: 5px;
+            }
+
+            @keyframes blink {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0;
+                }
+            }
+
+            footer {
+                margin-top: 4rem;
+                border-top: 1px solid var(--dim);
+                padding-top: 1rem;
+                font-size: 0.9rem;
+                color: var(--dim);
+            }
+
+            @media (max-width: 600px) {
+                pre.ascii-art {
+                    font-size: 8px;
+                    line-height: 8px;
+                }
+                body {
+                    padding: 1rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <pre class="ascii-art">
+███╗   ███╗██████╗ ██╗   ██╗
+████╗ ████║██╔══██╗██║   ██║
+██╔████╔██║██████╔╝██║   ██║
+██║╚██╔╝██║██╔═══╝ ╚██╗ ██╔╝
+██║ ╚═╝ ██║██║      ╚████╔╝
+╚═╝     ╚═╝╚═╝       ╚═══╝
+
+███╗   ███╗██╗   ██╗███████╗██╗ ██████╗
+████╗ ████║██║   ██║██╔════╝██║██╔════╝
+██╔████╔██║██║   ██║███████╗██║██║
+██║╚██╔╝██║██║   ██║╚════██║██║██║
+██║ ╚═╝ ██║╚██████╔╝███████║██║╚██████╗
+╚═╝     ╚═╝ ╚═════╝ ╚══════╝╚═╝ ╚═════╝
+</pre
+            >
+
+            <p>
+                Music for your terminal.<br />
+                Local library management.<br />
+                Powered by <code>mpv</code>, <code>ffmpeg</code>,
+                <code>fzf</code>, and bash.<span class="cursor"></span>
+            </p>
+
+            <div class="cmd-block">
+                curl -sL
+                https://raw.githubusercontent.com/furqanhun/mpv-music/main/install.sh
+                | bash
+            </div>
+
+            <div class="release-info">
+                Latest Version:
+                <a
+                    id="release-link"
+                    href="https://github.com/furqanhun/mpv-music/releases"
+                    class="release-tag"
+                    >Checking...</a
+                >
+            </div>
+
+            <h2>Why?</h2>
+            <p>
+                Because GUIs are bloated. And it's painful to run
+                <code>find</code> to search for files.
+            </p>
+
+            <h2>Manifesto</h2>
+            <ul>
+                <li>
+                    <strong>Fast:</strong> Written in pure Bash. Starts
+                    instantly.
+                </li>
+                <li>
+                    <strong>Keyboard Driven:</strong> Fuzzy find (fzf)
+                    everything.
+                </li>
+                <li>
+                    <strong>Hybrid:</strong> Plays local files and URLs (those
+                    supported by yt-dlp) seamlessly.
+                </li>
+                <li>
+                    <strong>No Databases:</strong> I mean JSONL is kind of a
+                    Database.
+                </li>
+            </ul>
+
+            <h2>Usage</h2>
+            <p>Run <code>mpv-music</code> to launch the menu, or use args:</p>
+            <ul>
+                <li>
+                    <code>mpv-music -a "Daft Punk"</code> (Filter by artist)
+                </li>
+                <li><code>mpv-music -p</code> (Play all shuffle)</li>
+                <li>
+                    <code>mpv-music https://youtu.be/...</code> (Stream URL)
+                </li>
+            </ul>
+
+            <footer>
+                <p>
+                    <a
+                        href="https://github.com/furqanhun/mpv-music"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        >Source Code</a
+                    >
+                    /
+                    <a
+                        href="https://github.com/furqanhun/mpv-music/blob/main/LICENSE"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        >MIT License</a
+                    >
+                </p>
+                <p>
+                    Maintained by
+                    <a
+                        href="https://github.com/furqanhun"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style="text-decoration: none; color: #fff"
+                        >furqanhun</a
+                    >.
+                </p>
+            </footer>
+        </div>
+
+        <script>
+            // fetch the list of ALL releases (including pre)
+            fetch(
+                "https://api.github.com/repos/furqanhun/mpv-music/releases?per_page=1",
+            )
+                .then((response) => {
+                    if (!response.ok)
+                        throw new Error("Network response was not ok");
+                    return response.json();
+                })
+                .then((data) => {
+                    // we fetched ?per_page=1, data is an array with 1 item (the very latest one)
+                    if (data && data.length > 0) {
+                        const release = data[0];
+                        const tag = release.tag_name;
+                        const url = release.html_url;
+
+                        const linkEl = document.getElementById("release-link");
+                        linkEl.textContent = tag;
+                        linkEl.href = url;
+
+                        if (release.prerelease) linkEl.textContent += " (pre)";
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error fetching release:", error);
+                    document.getElementById("release-link").textContent =
+                        "v0.0.0-trustmebro";
+                });
+        </script>
+    </body>
+</html>
