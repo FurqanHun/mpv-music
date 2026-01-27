@@ -197,6 +197,29 @@ done
 
 rotate_log
 
+# --- CORRUPTION CHECK N Self Heal ---
+if [[ -f "$MUSIC_INDEX_FILE" && "$SKIP_AUTO_INDEX" == false ]]; then
+    if ! validate_index "$MUSIC_INDEX_FILE"; then
+        msg_warn "Index corruption detected. Attempting repair..."
+
+        # Remove the last line (likely incomplete write)
+        log_verbose "Removing last line from index file..."
+        temp_fixed=$(mktemp)
+        head -n -1 "$MUSIC_INDEX_FILE" > "$temp_fixed"
+        mv "$temp_fixed" "$MUSIC_INDEX_FILE"
+
+        # re verify
+        if ! validate_index "$MUSIC_INDEX_FILE"; then
+             msg_warn "Repair failed. Index is deeply corrupted. Rebuilding..."
+             log_verbose "Renaming corrupt index file to ${MUSIC_INDEX_FILE}.corrupt"
+             mv "$MUSIC_INDEX_FILE" "${MUSIC_INDEX_FILE}.corrupt"
+             build_music_index
+        else
+             msg_success "Index healed. Resuming..."
+        fi
+    fi
+fi
+
 # Logic for handling custom directory vs. default index
 
 if [[ -n "$CUSTOM_MUSIC_DIR" ]]; then

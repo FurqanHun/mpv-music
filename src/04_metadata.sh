@@ -477,3 +477,20 @@ update_music_index() {
         log_verbose "Removed legacy index file: $(basename "$legacy_index")"
     fi
 }
+
+# validate_index <index_file>
+# Returns 0 if healthy, 1 if corrupt.
+# FULL SCAN: Reads the whole file to catch errors in the middle.
+validate_index() {
+    local idx="$1"
+    if [[ ! -s "$idx" ]]; then return 1; fi
+
+    # "jq empty" reads the whole stream.
+    # It takes <0.1s for normal libraries.
+    # If ANY line is bad (middle or end), this returns 1.
+    if ! jq -e . "$idx" >/dev/null 2>&1; then
+        return 1
+    fi
+
+    return 0
+}
