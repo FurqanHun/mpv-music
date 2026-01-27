@@ -1,4 +1,4 @@
 theme: jekyll-theme-hacker
 title: mpv-music
-description: "mpv-music: Terminal-based music library manager for mpv, also known as 'mpv music' and 'mpvmusic'"
+description: "A blazing-fast terminal music player and mpv based music library browser with fuzzy search and zero daemons — mpv-music (also known as mpv music / mpvmusic)."
 keywords: "mpv-music, mpv music, terminal music player, mpv wrapper, mpvmusic, library manager, music"
