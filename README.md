@@ -26,6 +26,7 @@ In short, it focuses on library indexing for super-fast access to your music col
 ## Features
 
 * **Blazing-Fast Indexed Searching:** Automatically indexes your music library into a JSONL (JSON Lines) file for lightning-fast search using fzf. If the index does not exist, it will be created on first run.
+* * **Self-Healing Index:** Automatically validates index integrity on startup. It detects corruption (e.g., from power loss), tries to repair by removing the last line, or triggers a smart rebuild to prevent crashes. In a blink of an eye.
 * **Rich Metadata Previews:** View song title, artist, album, and genre directly in the fzf preview window.
 * **Interactive Selection with Multiple Modes:**
   * **Directory Mode:** Navigate folders with clean names instead of full paths.
