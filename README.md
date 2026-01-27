@@ -1,4 +1,4 @@
-# mpv-music
+## mpv-music
 ![version](assets/version.svg)
 
 **mpv-music** is a blazing-fast terminal music player and library browser built on mpv.  
