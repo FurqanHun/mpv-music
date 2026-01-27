@@ -1,1 +1,4 @@
 theme: jekyll-theme-hacker
+title: mpv-music
+description: "mpv-music: Terminal-based music library manager for mpv, also known as 'mpv music' and 'mpvmusic'"
+keywords: "mpv-music, mpv music, terminal music player, mpv wrapper, mpvmusic, library manager, music"
