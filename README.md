@@ -105,7 +105,7 @@ mv mpv-music ~/.local/bin/
 mpv-music
 ```
 
-Note: You may want to run `mpv-music --config` to customize your settings and music directories before indexing.
+Note: Running `mpv-music` for the first time will create the index for `$HOME/Music`, it is **recommended** that you first run it as `mpv-music --config` to customize your settings and music directories before indexing. Unless you only keep your music in `$HOME/Music`.
 
 That creates:
 - `~/.config/mpv-music/mpv-music.conf`
