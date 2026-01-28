@@ -134,3 +134,46 @@ invoke_updater() {
         exit 1
     fi
 }
+
+# validate_index <index_file>
+# Returns 0 if healthy, 1 if corrupt.
+# FULL SCAN: Reads the whole file to catch errors in the middle.
+validate_index() {
+    local idx="$1"
+    if [[ ! -s "$idx" ]]; then return 1; fi
+
+    # "jq empty" reads the whole stream.
+    # It takes <0.1s for normal libraries.
+    # If ANY line is bad (middle or end), this returns 1.
+    if ! jq -e . "$idx" >/dev/null 2>&1; then
+        return 1
+    fi
+
+    return 0
+}
+
+# --- Helper Function: Check & Heal Index ---
+ensure_index_integrity() {
+    # Only run if index exists
+    if [[ -f "$MUSIC_INDEX_FILE" ]]; then
+        # Use validate_index (defined in utils) to check health
+        if ! validate_index "$MUSIC_INDEX_FILE"; then
+            msg_warn "Index corruption detected. Performing surgical repair..."
+
+            temp_healed=$(mktemp)
+            # select: Keep ONLY if it has ALL 8 required fields.
+            jq -c -R 'fromjson? | select(.path and .title and .artist and .album and .genre and .mtime and .size and .media_type)' "$MUSIC_INDEX_FILE" > "$temp_healed"
+
+            if [[ -s "$temp_healed" ]]; then
+                mv "$temp_healed" "$MUSIC_INDEX_FILE"
+                log_verbose "Bad lines removed, calling update_music_index"
+                update_music_index
+                msg_success "Index structure restored."
+            else
+                msg_warn "Index was too damaged to save. Rebuilding..."
+                rm "$temp_healed"
+                build_music_index
+            fi
+        fi
+    fi
+}

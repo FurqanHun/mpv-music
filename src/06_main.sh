@@ -130,7 +130,7 @@ while [[ $# -gt 0 ]]; do
     --debug) DEBUG=true; shift;;
     --video-ok) VIDEO_OK=true; shift;;
     --ext=*) CUSTOM_EXTS="${1#--ext=}"; shift;;
-    --refresh-index) build_ext_filter; update_music_index; exit 0;;
+    --refresh-index) ensure_index_integrity; build_ext_filter; update_music_index; exit 0;;
     --reindex) build_ext_filter; log_verbose "Forcing a complete rebuild of the music index."; build_music_index; exit 0;;
     -p|--play-all) PLAY_ALL=true; shift;;
     -l|--playlist) CLI_PLAYLIST_MODE=true; shift;;
@@ -196,29 +196,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 rotate_log
-
-# --- CORRUPTION CHECK N Self Heal ---
-if [[ -f "$MUSIC_INDEX_FILE" && "$SKIP_AUTO_INDEX" == false ]]; then
-    if ! validate_index "$MUSIC_INDEX_FILE"; then
-        msg_warn "Index corruption detected. Attempting repair..."
-
-        # Remove the last line (likely incomplete write)
-        log_verbose "Removing last line from index file..."
-        temp_fixed=$(mktemp)
-        head -n -1 "$MUSIC_INDEX_FILE" > "$temp_fixed"
-        mv "$temp_fixed" "$MUSIC_INDEX_FILE"
-
-        # re verify
-        if ! validate_index "$MUSIC_INDEX_FILE"; then
-             msg_warn "Repair failed. Index is deeply corrupted. Rebuilding..."
-             log_verbose "Renaming corrupt index file to ${MUSIC_INDEX_FILE}.corrupt"
-             mv "$MUSIC_INDEX_FILE" "${MUSIC_INDEX_FILE}.corrupt"
-             build_music_index
-        else
-             msg_success "Index healed. Resuming..."
-        fi
-    fi
-fi
+ensure_index_integrity
 
 # Logic for handling custom directory vs. default index
 

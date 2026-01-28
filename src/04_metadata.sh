@@ -312,7 +312,7 @@ build_music_index() {
   # Just move the JSONL file to the final location.
   mv "$temp_json_lines" "$MUSIC_INDEX_FILE"
 
-  msg_success "Index saved to $MUSIC_INDEX_FILE"
+  log_verbose "Index saved to $MUSIC_INDEX_FILE"
 
   # --- CLEANUP LEGACY JSON ---
     # If we successfully built the new JSONL index, remove the old JSON file.
@@ -470,7 +470,7 @@ update_music_index() {
   echo "$current_indexed_dirs_json_array" > "$DIRS_STATE_FILE"
   mv "$new_index_lines" "$MUSIC_INDEX_FILE"
 
-  msg_success "Index updated and saved to $MUSIC_INDEX_FILE"
+  log_verbose "Index updated and saved to $MUSIC_INDEX_FILE"
 
   # --- CLEANUP LEGACY JSON ---
     local legacy_index="${MUSIC_INDEX_FILE%.jsonl}.json"
@@ -478,21 +478,4 @@ update_music_index() {
         rm "$legacy_index"
         log_verbose "Removed legacy index file: $(basename "$legacy_index")"
     fi
-}
-
-# validate_index <index_file>
-# Returns 0 if healthy, 1 if corrupt.
-# FULL SCAN: Reads the whole file to catch errors in the middle.
-validate_index() {
-    local idx="$1"
-    if [[ ! -s "$idx" ]]; then return 1; fi
-
-    # "jq empty" reads the whole stream.
-    # It takes <0.1s for normal libraries.
-    # If ANY line is bad (middle or end), this returns 1.
-    if ! jq -e . "$idx" >/dev/null 2>&1; then
-        return 1
-    fi
-
-    return 0
 }
