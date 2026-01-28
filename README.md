@@ -25,7 +25,7 @@ In short, it focuses on library indexing for super-fast access to your music col
 ## Features
 
 * **Blazing-Fast Indexed Searching:** Automatically indexes your music library into a JSONL (JSON Lines) file for lightning-fast search using fzf. If the index does not exist, it will be created on first run.
-* **Self-Healing Index:** Automatically validates index integrity on startup. It detects corruption (e.g., from power loss), tries to repair by removing the last line, or triggers a smart rebuild to prevent crashes. In a blink of an eye.
+* **Self-Healing Index:** Automatically validates index integrity on startup. It detects corruption (e.g., from power loss), surgically repairs broken lines to save your library, or triggers a smart rebuild to prevent crashes. In a blink of an eye.
 * **Rich Metadata Previews:** View song title, artist, album, and genre directly in the fzf preview window.
 * **Interactive Selection with Multiple Modes:**
   * **Directory Mode:** Navigate folders with clean names instead of full paths.
@@ -159,8 +159,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 
 Any mpv flag also works: `--no-video`, `--volume=50`, `--shuffle`, etc.
 
-When both `--verbose` and `--debug` are enabled together, logs will be saved to `~/.config/mpv-music/mpv-music.log`.
-The log file automatically rotates after reaching the configured size (default: 1024KB).
+The log file automatically rotates after reaching the configured size (default: 5120KB).
 If `LOG_MAX_SIZE_KB` is set to `0` in your config, log messages will only be displayed and not saved.
 
 ### Examples:
@@ -256,7 +255,7 @@ VIDEO_EXTS="mp4 mkv webm avi mov flv wmv mpeg mpg 3gp ts vob m4v"
 PLAYLIST_EXTS="m3u m3u8 pls"
 
 # Log Rotation (set to 0 to disable file logging)
-LOG_MAX_SIZE_KB=1024
+LOG_MAX_SIZE_KB=5120
 ```
 
 ---
