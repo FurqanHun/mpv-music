@@ -266,12 +266,12 @@ LOG_MAX_SIZE_KB=1024
 
 This project is developed using a modular (more of a faux module) source structure.
 * **Source Code:** Located in `src/`.
- - `01_vars.sh` contains config vars
- - `02_utils.sh` contains utility functions (i.e, logging, updater etc)
- - `03_config.sh` contains config file handling and dependency checks
- - `04_metadata.sh` contains metadata extraction and index building
- - `05_ui.sh` contains fzf UI and selection modes
- - `06_main.sh` contains main script logic and argument parsing
+  * `01_vars.sh` contains config vars
+  * `02_utils.sh` contains utility functions (i.e, logging, updater etc)
+  * `03_config.sh` contains config file handling and dependency checks
+  * `04_metadata.sh` contains metadata extraction and index building
+  * `05_ui.sh` contains fzf UI and selection modes
+  * `06_main.sh` contains main script logic and argument parsing
 * **Building:** Run `./build.sh` to compile the modules into the final `mpv-music` executable.
 
 > [!NOTE]
