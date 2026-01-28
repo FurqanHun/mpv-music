@@ -9,13 +9,35 @@
 
         <meta
             name="description"
-            content="mpv-music: A blazing-fast terminal-based music library browser for mpv, also known as 'mpv music' and 'mpvmusic'"
+            content="mpv-music: Terminal-based music library manager for mpv, also known as 'mpv music' and 'mpvmusic'"
         />
         <meta
             name="keywords"
             content="mpv-music, mpv, cli, terminal, music player, linux, bash, fzf, terminal music player, mpv wrapper, mpvmusic, library manager, music, mpv music"
         />
         <link rel="canonical" href="https://furqanhun.github.io/mpv-music/" />
+
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                "name": "mpv-music",
+                "operatingSystem": "Linux, Windows (via WSL)",
+                "applicationCategory": "MultimediaApplication",
+                "description": "Open Source terminal-based music library manager for mpv.",
+                "license": "https://github.com/furqanhun/mpv-music/blob/main/LICENSE",
+                "softwareRequirements": "mpv, ffmpeg, fzf, bash",
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "USD"
+                },
+                "author": {
+                    "@type": "Person",
+                    "name": "furqanhun"
+                }
+            }
+        </script>
 
         <style>
             :root {
@@ -36,6 +58,7 @@
                 line-height: 1.5;
                 font-size: 16px;
                 overflow-y: scroll;
+            }
 
             .container {
                 max-width: 680px;
@@ -145,7 +168,7 @@
                 padding-top: 1rem;
                 font-size: 0.9rem;
                 color: var(--dim);
-                text-align: center; /* Center footer content */
+                text-align: center;
             }
 
             footer h1 {
