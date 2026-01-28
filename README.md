@@ -79,6 +79,7 @@ In short, it focuses on library indexing for super-fast access to your music col
 * **WSL (Windows Subsystem for Linux):** Fully Supported. This is the recommended way to run it on Windows.
 * **macOS / BSD:** Experimental. These systems use BSD variants of standard tools (sed, find, readlink), which differ from the GNU versions used in this script. You may need to install GNU tools (coreutils, findutils, gnu-sed) and ensure they are in your PATH.
 * **Windows (Native/Git Bash):** Not Supported.
+
   > [!CAUTION]
   > Native path handling (`C:\` vs `/`) prevents this from working. **Please use WSL.**
 
@@ -273,7 +274,8 @@ This project is developed using a modular (more of a faux module) source structu
  - `06_main.sh` contains main script logic and argument parsing
 * **Building:** Run `./build.sh` to compile the modules into the final `mpv-music` executable.
 
-_compiling here just means concatenating the source files into a single file (mpv-music) with proper shebang and permissions._
+> [!NOTE]
+> Compiling here just means concatenating the source files into a single file (mpv-music) with proper shebang and permissions.
 
 ---
 
