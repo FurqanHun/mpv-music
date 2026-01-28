@@ -86,12 +86,13 @@ handle_direct_play() {
 
   # Apply accumulated ytdl options (JS runtime + Playlist fix)
   if [[ -n "$ytdl_opts" ]]; then
+      log_verbose "Applying yt-dlp options: ${ytdl_opts%,}"
       # Remove trailing comma
       MPV_ARGS+=("--ytdl-raw-options=${ytdl_opts%,}")
   fi
 
-  log_verbose "Playing: $target"
-  mpv "$target" "${MPV_ARGS[@]}"
+  log_verbose "Executing MPV with target: $target"
+  log_debug "MPV Args: ${MPV_ARGS[*]}"
   exit 0
 }
 
@@ -278,6 +279,10 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
             # Case-insensitive CONTAINS match
             jq_filter='($values | join("|")) as $regex | select(.[$key] | test($regex; "i"))'
         fi
+
+        log_debug "Applying Filter ($mode) on '$key'"
+        log_debug "Values: ${values[*]}"
+        log_debug "JQ Query: $jq_filter"
 
         local temp_out
         create_temp_file temp_out

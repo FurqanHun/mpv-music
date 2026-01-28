@@ -73,8 +73,8 @@ VIDEO_EXTS="$VIDEO_EXTS_DEFAULT"
 PLAYLIST_EXTS="$PLAYLIST_EXTS_DEFAULT"
 
 # Max log file size in Kilobytes (KB) before rotating.
-# Default is 1024 (1MB).
-LOG_MAX_SIZE_KB=1024
+# Default is 5120 (5MB).
+LOG_MAX_SIZE_KB=5120
 
 EOF
     log_verbose "Created default config file at $CONFIG_FILE"
@@ -111,11 +111,11 @@ fi
 IFS=' ' read -ra AUDIO_EXTS_ARRAY <<< "$AUDIO_EXTS"
 IFS=' ' read -ra VIDEO_EXTS_ARRAY <<< "$VIDEO_EXTS"
 IFS=' ' read -ra PLAYLIST_EXTS_ARRAY <<< "$PLAYLIST_EXTS"
-LOG_MAX_SIZE_KB="${LOG_MAX_SIZE_KB:-1024}"
+LOG_MAX_SIZE_KB="${LOG_MAX_SIZE_KB:-5120}"
 
 if ! [[ "$LOG_MAX_SIZE_KB" =~ ^[0-9]+$ ]]; then
-    msg_warn "Invalid LOG_MAX_SIZE_KB in config. Using default 1024KB." >&2
-    LOG_MAX_SIZE_KB=1024
+    msg_warn "Invalid LOG_MAX_SIZE_KB in config. Using default 5120KB (5MB)." >&2
+    LOG_MAX_SIZE_KB=5120
 elif [[ "$LOG_MAX_SIZE_KB" -eq 0 ]]; then
     FILE_LOGGING_DISABLED=true
     # This message will only appear if -V is on, which is fine.

@@ -1,17 +1,17 @@
 # --- Log Management ---
 rotate_log() {
-    if [[ "$FILE_LOGGING_DISABLED" == true ]]; then return; fi
-  # Only rotate the log if BOTH flags are enabled
-  if [[ "$VERBOSE" == true && "$DEBUG" == true ]]; then
+  if [[ "$FILE_LOGGING_DISABLED" == true ]]; then return; fi
+
+  # Check size every time
+  if [[ -f "$LOG_FILE" ]]; then
     local max_size_kb="$LOG_MAX_SIZE_KB"
-    if [[ -f "$LOG_FILE" ]]; then
-      local current_size_kb
-      current_size_kb=$(du -k "$LOG_FILE" | cut -f1)
-      if [[ "$current_size_kb" -gt "$max_size_kb" ]]; then
-        mv "$LOG_FILE" "${LOG_FILE}.old"
-        # Use log_debug so this message also gets logged
-        log_debug "Log file rotated. Old log is at ${LOG_FILE}.old"
-      fi
+    local current_size_kb
+    current_size_kb=$(du -k "$LOG_FILE" | cut -f1)
+
+    if [[ "$current_size_kb" -gt "$max_size_kb" ]]; then
+      # wipe it clean
+      : > "$LOG_FILE"
+      log_debug "Log file limit ($max_size_kb KB) reached. File wiped."
     fi
   fi
 }
@@ -25,11 +25,40 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Standardized message helpers
-msg_error()   { echo -e "${RED}[ERROR]${NC} $1" >&2; }
-msg_warn()    { echo -e "${YELLOW}[WARN]${NC}  $1" >&2; }
-msg_success() { echo -e "${GREEN}[OK]${NC}    $1" >&2; }
-msg_info()    { echo -e "${BLUE}[INFO]${NC}  $1" >&2; }
-msg_note()    { echo -e "${CYAN}[NOTE]${NC}  $1" >&2; }
+msg_error() {
+    echo -e "${RED}[ERROR]${NC} $1" >&2
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] $1" >> "$LOG_FILE"
+    fi
+}
+
+msg_warn() {
+    echo -e "${YELLOW}[WARN]${NC}  $1" >&2
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [WARN]  $1" >> "$LOG_FILE"
+    fi
+}
+
+msg_success() {
+    echo -e "${GREEN}[OK]${NC}    $1" >&2
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [OK]    $1" >> "$LOG_FILE"
+    fi
+}
+
+msg_info() {
+    echo -e "${BLUE}[INFO]${NC}  $1" >&2
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [INFO]  $1" >> "$LOG_FILE"
+    fi
+}
+
+msg_note() {
+    echo -e "${CYAN}[NOTE]${NC}  $1" >&2
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [NOTE]  $1" >> "$LOG_FILE"
+    fi
+}
 
 # --- Verbose and Debug Mode ---
 VERBOSE=false
@@ -38,32 +67,33 @@ FILE_LOGGING_DISABLED=false
 
 # Helper function for verbose logging
 log_verbose() {
-    # This outer 'if' ensures the message is printed to the screen if --verbose is on
+    local message="[VERBOSE] $@"
+
+    # Screen Output
     if [[ "$VERBOSE" == true ]]; then
-        local message="[VERBOSE] $@"
-        # This inner 'if' checks if we should ALSO write to the log file
-        if [[ "$DEBUG" == true && "$FILE_LOGGING_DISABLED" == false ]]; then
-            echo -e "$message" | tee -a "$LOG_FILE" >&2
-        else
-            echo -e "$message" >&2
-        fi
+        echo -e "$message" >&2
+    fi
+
+    # File Output (Always log verbose to file unless disabled)
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] $message" >> "$LOG_FILE"
     fi
 }
 
 # Helper function for debug logging
 log_debug() {
-    # This outer 'if' ensures the message is printed to the screen if --debug is on
+    local message="[DEBUG] $@"
+
+    # Screen Output
     if [[ "$DEBUG" == true ]]; then
-        local message="[DEBUG] $@"
-        # This inner 'if' checks if we should ALSO write to the log file
-        if [[ "$VERBOSE" == true && "$FILE_LOGGING_DISABLED" == false ]]; then
-            echo -e "$message" | tee -a "$LOG_FILE" >&2
-        else
-            echo -e "$message" >&2
-        fi
+        echo -e "$message" >&2
+    fi
+
+    # File Output (Always log debug to file unless disabled)
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] $message" >> "$LOG_FILE"
     fi
 }
-
 # --- Temporary File Management ---
 # Array to store all temporary files
 declare -a TEMP_FILES=()
@@ -86,7 +116,7 @@ cleanup_temp_files() {
         log_debug "Removing: $tmp_file" >&2
         rm -f "$tmp_file"
         # Verify removal
-        [[ ! -f "$tmp_file" ]] && log_debug "✓ Successfully removed" || log_debug "❌ Failed to remove"
+        [[ ! -f "$tmp_file" ]] && log_debug "Successfully removed" || log_debug "Failed to remove"
       else
         log_debug "File already gone: $tmp_file"
       fi

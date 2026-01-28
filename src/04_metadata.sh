@@ -67,9 +67,6 @@ get_audio_metadata() {
       -analyzeduration 10000000 -probesize 10000000 \
       -show_format -show_streams -of json "$file" 2>/dev/null)
 
-  log_debug "ffprobe JSON output for '$file':"
-  log_debug "$metadata_json"
-
   if [[ -n "$metadata_json" ]]; then
     # The output is tab-separated (@tsv), which is safer for parsing.
     local metadata_line
@@ -84,6 +81,8 @@ get_audio_metadata() {
 
     # Read the tab-separated output from jq directly into variables.
     IFS=$'\t' read -r title artist album genre <<< "$metadata_line"
+  else
+      log_debug "ffprobe returned empty JSON for: $file"
   fi
 
   # --- Attempt 2: Fallback to mediainfo if ffprobe didn't find title/artist ---
@@ -101,6 +100,7 @@ get_audio_metadata() {
       if [[ -n "$mediainfo_raw" ]]; then
         # Split by pipe '|' which is the default separator for --Inform
         IFS='|' read -r title artist <<< "$mediainfo_raw"
+        log_debug "MediaInfo found - Title: '$title', Artist: '$artist'"
       fi
     fi
   fi
@@ -115,12 +115,15 @@ get_audio_metadata() {
   # Fallback to filename for title if still empty
   if [[ -z "$title" ]]; then
     title="$(basename "$file" | sed 's/\.[^.]*$//')" # Get filename without extension
+    log_debug "No metadata title found. Using filename: $title"
   fi
 
   # Default other empty fields to UNKNOWN
   artist="${artist:-UNKNOWN}"
   album="${album:-UNKNOWN}"
   genre="${genre:-UNKNOWN}"
+
+  log_debug "Parsed: Title='${title:0:50}', Artist='${artist:0:50}', Album='${album:0:50}'"
 
  # Output as tab-separated string to avoid issues with commas in titles
   echo -e "${title}\t${artist}\t${album}\t${genre}"
@@ -423,6 +426,10 @@ update_music_index() {
   local count=0
   local total=${#current_files_on_disk[@]}
 
+  local cnt_new=0
+  local cnt_mod=0
+  local cnt_unchanged=0
+
   for file_path in "${current_files_on_disk[@]}"; do
     count=$((count + 1))
 
@@ -447,8 +454,11 @@ update_music_index() {
 
       if [[ "$current_mtime" == "$old_mtime" && "$current_size" == "$old_size" ]]; then
         track_json_to_add="$old_track_json"
+        cnt_unchanged=$((cnt_unchanged + 1))
+        log_debug "Unchanged: $(basename "$file_path")"
       else
-        log_debug "(Modified: $(basename "$file_path"))"
+        log_debug "File modified: $(basename "$file_path") (Old Mtime: $old_mtime, New: $current_mtime)"
+        cnt_mod=$((cnt_mod + 1))
         local raw_metadata_output=$(get_audio_metadata "$file_path")
         IFS=$'\t' read -r -a metadata_array <<< "$raw_metadata_output"
 
@@ -471,7 +481,8 @@ update_music_index() {
         track_json_to_add="{\"path\":\"$(json_escape "$trimmed_file_path")\",\"title\":\"$(json_escape "$title")\",\"artist\":\"$(json_escape "$artist")\",\"album\":\"$(json_escape "$album")\",\"genre\":\"$(json_escape "$genre")\",\"mtime\":\"$current_mtime\",\"size\":\"$current_size\",\"media_type\":\"$media_type\"}"
       fi
     else
-      log_debug "(New: $(basename "$file_path"))"
+      log_verbose "New file detected: $(basename "$file_path")"
+      cnt_new=$((cnt_new + 1))
       local raw_metadata_output=$(get_audio_metadata "$file_path")
       IFS=$'\t' read -r -a metadata_array <<< "$raw_metadata_output"
 
@@ -517,6 +528,9 @@ update_music_index() {
   echo "$current_indexed_dirs_json_array" > "$DIRS_STATE_FILE"
   mv "$new_index_lines" "$MUSIC_INDEX_FILE"
 
+  # SUMMARY REPORT
+  msg_success "Index refreshed."
+  msg_info "Stats: $total Scanned | $cnt_new New | $cnt_mod Modified | $cnt_unchanged Unchanged"
   log_verbose "Index updated and saved to $MUSIC_INDEX_FILE"
 
   # --- CLEANUP LEGACY JSON ---
