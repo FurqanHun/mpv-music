@@ -1,4 +1,4 @@
-## mpv-music
+# mpv-music
 ![version](assets/version.svg)
 
 **mpv-music** is a blazing-fast terminal music player and library browser built on mpv.  
@@ -65,6 +65,10 @@ In short, it focuses on library indexing for super-fast access to your music col
   Install: `sudo apt install mediainfo` or `brew install mediainfo`
 * **JS Runtime** - for YouTube playback (Deno, Node.js, QuickJS, or Bun). Deno is recommended.
 
+> [!NOTE]
+  > YouTube playback now requires a JS runtime to bypass anti-bot protections.
+  > `mpv-music` automatically detects and configures **Deno**, **Node**, **QuickJS**, or **Bun** for `yt-dlp`.
+
 ---
 
 ## Installation
@@ -74,7 +78,9 @@ In short, it focuses on library indexing for super-fast access to your music col
 * **Linux:** Native. The script is built and tested primarily for Linux (GNU tools).
 * **WSL (Windows Subsystem for Linux):** Fully Supported. This is the recommended way to run it on Windows.
 * **macOS / BSD:** Experimental. These systems use BSD variants of standard tools (sed, find, readlink), which differ from the GNU versions used in this script. You may need to install GNU tools (coreutils, findutils, gnu-sed) and ensure they are in your PATH.
-* **Windows (Native/Git Bash):** Not Supported. Native path handling (C:\ vs /) prevents this from working. Please use WSL.
+* **Windows (Native/Git Bash):** Not Supported.
+  > [!CAUTION]
+  > Native path handling (`C:\` vs `/`) prevents this from working. **Please use WSL.**
 
 ### Option 1: Quick Install (Recommended)
 
@@ -105,7 +111,9 @@ mv mpv-music ~/.local/bin/
 mpv-music
 ```
 
-Note: Running `mpv-music` for the first time will create the index for `$HOME/Music`, it is **recommended** that you first run it as `mpv-music --config` to customize your settings and music directories before indexing. Unless you only keep your music in `$HOME/Music`.
+> [!IMPORTANT]
+> Running `mpv-music` for the first time will automatically index `$HOME/Music`.
+> It is **recommended** that you first run `mpv-music --config` to customize your settings and music directories before indexing (unless you only keep your music in `$HOME/Music`).
 
 That creates:
 - `~/.config/mpv-music/mpv-music.conf`
@@ -196,7 +204,10 @@ Searching the filesystem with find every time is slow, especially if you have a 
 * `--reindex` - Full rebuild
 * `--refresh-index` - Smart update (only processes new/modified files)
 
-Note: Run these flags alongside `--video-ok` to include video files in the index. For example: `mpv-music --video-ok --reindex`
+> [!TIP]
+> Run these flags alongside `--video-ok` to include video files in the index.
+> Example: `mpv-music --video-ok --reindex`
+> As of right now you may also have to run `--video-ok` when running `refresh-index`. I will expose the `VIDEO_OK` variable in the config file, in future.
 
 ---
 
@@ -274,4 +285,4 @@ MIT License. See [LICENSE](LICENSE).
 
 ## GenAI Disclosure
 
-Generative AI (Google Gemini, GitHub Copilot) was and is used for maintenance and development as an assistive tool.
+Generative AI (specifically Google Gemini, and sometimes others) was and is used for maintenance and development as an assistive tool.
