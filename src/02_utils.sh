@@ -1,10 +1,11 @@
 # --- Log Management ---
 rotate_log() {
-  if [[ "$FILE_LOGGING_DISABLED" == true ]]; then return; fi
+  # Safe expansion: Default to 0 if unset
+  if [[ "$FILE_LOGGING_DISABLED" == true ]] || [[ "${LOG_MAX_SIZE_KB:-0}" == "0" ]]; then return; fi
 
   # Check size every time
   if [[ -f "$LOG_FILE" ]]; then
-    local max_size_kb="$LOG_MAX_SIZE_KB"
+    local max_size_kb="${LOG_MAX_SIZE_KB:-0}" # Safe expansion
     local current_size_kb
     current_size_kb=$(du -k "$LOG_FILE" | cut -f1)
 
@@ -24,46 +25,47 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+# --- Verbose and Debug Mode ---
+VERBOSE=false
+DEBUG=false
+FILE_LOGGING_DISABLED=false
+
 # Standardized message helpers
 msg_error() {
     echo -e "${RED}[ERROR]${NC} $1" >&2
-    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+    # Safe expansion: ${LOG_MAX_SIZE_KB:-0} defaults to 0 if variable is unset
+    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] $1" >> "$LOG_FILE"
     fi
 }
 
 msg_warn() {
     echo -e "${YELLOW}[WARN]${NC}  $1" >&2
-    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [WARN]  $1" >> "$LOG_FILE"
     fi
 }
 
 msg_success() {
     echo -e "${GREEN}[OK]${NC}    $1" >&2
-    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [OK]    $1" >> "$LOG_FILE"
     fi
 }
 
 msg_info() {
     echo -e "${BLUE}[INFO]${NC}  $1" >&2
-    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [INFO]  $1" >> "$LOG_FILE"
     fi
 }
 
 msg_note() {
     echo -e "${CYAN}[NOTE]${NC}  $1" >&2
-    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [NOTE]  $1" >> "$LOG_FILE"
     fi
 }
-
-# --- Verbose and Debug Mode ---
-VERBOSE=false
-DEBUG=false
-FILE_LOGGING_DISABLED=false
 
 # Helper function for verbose logging
 log_verbose() {
@@ -75,7 +77,7 @@ log_verbose() {
     fi
 
     # File Output (Always log verbose to file unless disabled)
-    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] $message" >> "$LOG_FILE"
     fi
 }
@@ -90,10 +92,11 @@ log_debug() {
     fi
 
     # File Output (Always log debug to file unless disabled)
-    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] $message" >> "$LOG_FILE"
     fi
 }
+
 # --- Temporary File Management ---
 # Array to store all temporary files
 declare -a TEMP_FILES=()
@@ -108,24 +111,24 @@ create_temp_file() {
 # Function to clean up all temporary files
 cleanup_temp_files() {
     trap '' HUP INT TERM QUIT  # Ignore signals during cleanup
-    log_debug "\n--- Cleanup triggered ---"
-  if [[ ${#TEMP_FILES[@]} -gt 0 ]]; then
-    log_debug "Cleaning up ${#TEMP_FILES[@]} temporary files..."
-    for tmp_file in "${TEMP_FILES[@]}"; do
-      if [[ -f "$tmp_file" ]]; then
-        log_debug "Removing: $tmp_file" >&2
-        rm -f "$tmp_file"
-        # Verify removal
-        [[ ! -f "$tmp_file" ]] && log_debug "Successfully removed" || log_debug "Failed to remove"
-      else
-        log_debug "File already gone: $tmp_file"
-      fi
-    done
-    log_debug "--- Cleanup complete ---"
-  else
-      log_debug "No temporary files to clean up"
-  fi
-  trap - HUP INT TERM QUIT  # Restore signal handling
+
+    log_debug "--- Cleanup triggered ---"
+
+    # Only log cleanup if we actually have files to clean, to avoid spam
+    if [[ ${#TEMP_FILES[@]} -gt 0 ]]; then
+        log_debug "Cleaning up ${#TEMP_FILES[@]} temporary files..."
+        for tmp_file in "${TEMP_FILES[@]}"; do
+        if [[ -f "$tmp_file" ]]; then
+            rm -f "$tmp_file"
+            # Verify removal
+            [[ ! -f "$tmp_file" ]] && log_debug "Removed: $tmp_file" || log_debug "Failed to remove: $tmp_file"
+        fi
+        done
+        log_debug "--- Cleanup complete ---"
+    else
+        log_debug "No temporary files found."
+    fi
+    trap - HUP INT TERM QUIT
 }
 # Set up comprehensive trap for all common termination signals
 # Ensure cleanup happens on ANY exit
