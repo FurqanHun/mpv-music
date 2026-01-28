@@ -51,7 +51,9 @@ get_audio_metadata() {
 
   # --- Attempt 1: Use ffprobe ---
   log_debug "using ffprobe!"
-  metadata_json=$(ffprobe -v quiet -hide_banner -show_format -show_streams -of json "$file" 2>/dev/null)
+  metadata_json=$(timeout 2s ffprobe -v quiet -hide_banner \
+      -analyzeduration 10000000 -probesize 10000000 \
+      -show_format -show_streams -of json "$file" 2>/dev/null)
 
   log_debug "ffprobe JSON output for '$file':"
   log_debug "$metadata_json"

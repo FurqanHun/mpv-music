@@ -98,7 +98,11 @@ cleanup_temp_files() {
   trap - HUP INT TERM QUIT  # Restore signal handling
 }
 # Set up comprehensive trap for all common termination signals
-trap cleanup_temp_files EXIT HUP INT TERM QUIT
+# Ensure cleanup happens on ANY exit
+trap cleanup_temp_files EXIT
+
+# Force a hard exit on signals (which triggers the EXIT trap above)
+trap "echo -e '\nBye Bye!'; exit 1" HUP INT TERM QUIT
 
 # --- Update Trigger Function ---
 invoke_updater() {
