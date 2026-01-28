@@ -80,8 +80,8 @@ In short, it focuses on library indexing for super-fast access to your music col
 * **macOS / BSD:** Experimental. These systems use BSD variants of standard tools (sed, find, readlink), which differ from the GNU versions used in this script. You may need to install GNU tools (coreutils, findutils, gnu-sed) and ensure they are in your PATH.
 * **Windows (Native/Git Bash):** Not Supported.
 
-  > [!CAUTION]
-  > Native path handling (`C:\` vs `/`) prevents this from working. **Please use WSL.**
+> [!CAUTION]
+> Native path handling (`C:\` vs `/`) prevents this from working. **Please use WSL.**
 
 ### Option 1: Quick Install (Recommended)
 
