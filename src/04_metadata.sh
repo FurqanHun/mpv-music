@@ -2,6 +2,18 @@
 get_mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null; }
 get_size() { stat -c %s "$1" 2>/dev/null || stat -f %z "$1" 2>/dev/null; }
 
+# --- Helper: Pure Bash JSON Escaping ---
+# Replaces jq for simple object creation.
+json_escape() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+
 # --- Build Extension Filter Function ---
 # Builds the 'find' extension filter based on script settings
 build_ext_filter() {
@@ -124,78 +136,99 @@ build_temp_index() {
     log_verbose "Temporarily indexing files from '$custom_dir' for selection..."
 
     create_temp_file temp_index_ref
-
-    # Collect files into an array (same pattern as build_music_index)
-    local all_files=()
-    while IFS= read -r -d '' file; do
-        all_files+=("$file")
-    done < <(find "$custom_dir" -type f \( "${ext_filter[@]}" \) -print0)
-
-    local file_count=${#all_files[@]}
-
-    if [[ $file_count -eq 0 ]]; then
-        msg_warn "No music files found in '$custom_dir'."
-        # Create an empty index so downstream commands don't fail
-        : > "$temp_index_ref"
-        return 1
-    fi
-
-    log_verbose "Found $file_count files. Processing metadata..."
-    local count=0
-
-    # --- OPTIMIZATION ---
-    # Create another temporary file to hold the line-delimited JSON objects.
     create_temp_file temp_json_lines
 
-    for file_path in "${all_files[@]}"; do
-        count=$((count + 1))
+    # Detect if find supports -printf (Linux/GNU)
+    local use_printf=false
+    if find /dev/null -printf "" >/dev/null 2>&1; then use_printf=true; fi
 
-        # SMART PROGRESS BAR
-        if [[ "$VERBOSE" == true ]]; then
-             # Truncate filename to prevent messy wrapping
-             local fname=$(basename "$file_path")
-             if [[ ${#fname} -gt 30 ]]; then fname="${fname:0:27}..."; fi
-             printf "\rIndexing: %d/%d (%s)          " "$count" "$file_count" "$fname" >&2
-        else
-             # Default: Just numbers
-             printf "\rIndexing: %d/%d          " "$count" "$file_count" >&2
-        fi
+    local count=0
+    local total_files=0
 
-        local raw_metadata_output
-        raw_metadata_output=$(get_audio_metadata "$file_path")
-        IFS=$'\t' read -r -a metadata_array <<< "$raw_metadata_output"
+    # PRE-FLIGHT COUNT: Calculate total files first for progress bar
+    if [[ "$use_printf" == true ]]; then
+         # Count dots (one per file)
+         total_files=$(find "$custom_dir" -type f \( "${ext_filter[@]}" \) -printf '.' | wc -c)
+    else
+         # Fallback count
+         total_files=$(find "$custom_dir" -type f \( "${ext_filter[@]}" \) | wc -l)
+    fi
 
-        local title="${metadata_array[0]}"
-        local artist="${metadata_array[1]}"
-        local album="${metadata_array[2]}"
-        local genre="${metadata_array[3]}"
+    # --- OPTIMIZATION: FAST PATH (Linux) vs SLOW PATH (Mac/BSD) ---
+    if [[ "$use_printf" == true ]]; then
+        # Linux: Get path, size, mtime in one pass
+        while IFS= read -r -d '' file_path && IFS= read -r -d '' size && IFS= read -r -d '' mtime_full; do
+            count=$((count + 1))
 
-        local file_ext="${file_path##*.}"
-        file_ext="${file_ext,,}"
-        local media_type="UNKNOWN"
-        if [[ " ${AUDIO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
-            media_type="audio"
-        elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
-            media_type="video"
-        elif [[ " ${PLAYLIST_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
-            media_type="playlist"
-        fi
+            # PROGRESS BAR
+            if [[ "$VERBOSE" == true ]]; then
+                 local fname=$(basename "$file_path")
+                 if [[ ${#fname} -gt 30 ]]; then fname="${fname:0:27}..."; fi
+                 printf "\rIndexing: %d/%d (%s)          " "$count" "$total_files" "$fname" >&2
+            else
+                 printf "\rIndexing: %d/%d          " "$count" "$total_files" >&2
+            fi
 
-        jq -cn \
-          --arg path "$file_path" \
-          --arg title "$title" \
-          --arg artist "$artist" \
-          --arg album "$album" \
-          --arg genre "$genre" \
-          --arg media_type "$media_type" \
-          '{path: $path, title: $title, artist: $artist, album: $album, genre: $genre, media_type: $media_type}' >> "$temp_json_lines"
+            local mtime=${mtime_full%%.*}
+            local raw_metadata_output
+            raw_metadata_output=$(get_audio_metadata "$file_path")
+            IFS=$'\t' read -r title artist album genre <<< "$raw_metadata_output"
 
-    done
+            local file_ext="${file_path##*.}"
+            file_ext="${file_ext,,}"
+            local media_type="UNKNOWN"
+            if [[ " ${AUDIO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then media_type="audio"
+            elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then media_type="video"
+            elif [[ " ${PLAYLIST_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then media_type="playlist"; fi
+
+            echo "{\"path\":\"$(json_escape "$file_path")\",\"title\":\"$(json_escape "$title")\",\"artist\":\"$(json_escape "$artist")\",\"album\":\"$(json_escape "$album")\",\"genre\":\"$(json_escape "$genre")\",\"mtime\":\"$mtime\",\"size\":\"$size\",\"media_type\":\"$media_type\"}" >> "$temp_json_lines"
+
+        done < <(find "$custom_dir" -type f \( "${ext_filter[@]}" \) -printf "%p\0%s\0%T@\0")
+    else
+        # Fallback for systems without -printf
+        local all_files=()
+        while IFS= read -r -d '' file; do all_files+=("$file"); done < <(find "$custom_dir" -type f \( "${ext_filter[@]}" \) -print0)
+        # Total is already known here since we used array
+        total_files=${#all_files[@]}
+
+        for file_path in "${all_files[@]}"; do
+            count=$((count + 1))
+
+            # PROGRESS BAR RESTORED
+            if [[ "$VERBOSE" == true ]]; then
+                 local fname=$(basename "$file_path")
+                 if [[ ${#fname} -gt 30 ]]; then fname="${fname:0:27}..."; fi
+                 printf "\rIndexing: %d/%d (%s)          " "$count" "$total_files" "$fname" >&2
+            else
+                 printf "\rIndexing: %d/%d          " "$count" "$total_files" >&2
+            fi
+
+            local mtime=$(get_mtime "$file_path" || echo "")
+            local size=$(get_size "$file_path" || echo "")
+            local raw_metadata_output=$(get_audio_metadata "$file_path")
+            IFS=$'\t' read -r title artist album genre <<< "$raw_metadata_output"
+
+            local file_ext="${file_path##*.}"
+            file_ext="${file_ext,,}"
+            local media_type="UNKNOWN"
+            if [[ " ${AUDIO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then media_type="audio"
+            elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then media_type="video"
+            elif [[ " ${PLAYLIST_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then media_type="playlist"; fi
+
+            echo "{\"path\":\"$(json_escape "$file_path")\",\"title\":\"$(json_escape "$title")\",\"artist\":\"$(json_escape "$artist")\",\"album\":\"$(json_escape "$album")\",\"genre\":\"$(json_escape "$genre")\",\"mtime\":\"$mtime\",\"size\":\"$size\",\"media_type\":\"$media_type\"}" >> "$temp_json_lines"
+        done
+    fi
 
     echo "" >&2
 
-    mv "$temp_json_lines" "$temp_index_ref"
+    if [[ "$count" -eq 0 ]]; then
+        msg_warn "No music files found in '$custom_dir'."
+        : > "$temp_index_ref"
+        rm "$temp_json_lines"
+        return 1
+    fi
 
+    mv "$temp_json_lines" "$temp_index_ref"
     log_verbose "Temporary index created at '$temp_index_ref'."
 }
 
@@ -204,10 +237,32 @@ build_temp_index() {
 build_music_index() {
   local music_dirs=("${MUSIC_DIRS_ARRAY[@]}")
   local ext_filter=("${EXT_FILTER[@]}")
-  local all_music_files=()
   local indexed_dirs_json_array="[]"
 
-  log_verbose "Indexing music library for the first time... This may take a while for large collections."
+  log_verbose "Indexing music library for the first time..."
+
+  create_temp_file temp_json_lines
+
+  # Detect if find supports -printf
+  local use_printf=false
+  if find /dev/null -printf "" >/dev/null 2>&1; then use_printf=true; fi
+
+  # PRE-FLIGHT COUNT: We must count ALL files across ALL dirs first for accurate X/Y
+  local total_files=0
+  log_verbose "Counting files..."
+  for dir_path in "${music_dirs[@]}"; do
+      if [[ -d "$dir_path" ]]; then
+          local dir_count=0
+          if [[ "$use_printf" == true ]]; then
+             dir_count=$(find "$dir_path" -type f \( "${ext_filter[@]}" \) -printf '.' | wc -c)
+          else
+             dir_count=$(find "$dir_path" -type f \( "${ext_filter[@]}" \) | wc -l)
+          fi
+          total_files=$((total_files + dir_count))
+      fi
+  done
+
+  local count=0
 
   # Populate all_music_files and indexed_dirs_json_array
   for dir_path in "${music_dirs[@]}"; do
@@ -221,10 +276,75 @@ build_music_index() {
       dir_json=$(jq -n --arg path "$trimmed_dir_path" --arg mtime "$dir_mtime" '{path: $path, mtime: $mtime}')
       indexed_dirs_json_array=$(echo "$indexed_dirs_json_array" | jq --argjson new_dir "$dir_json" '. + [$new_dir]')
 
-      # Find files within this specific directory and its subdirectories
-      while IFS= read -r -d '' file; do
-        all_music_files+=("$file")
-      done < <(find "$dir_path" -type f \( "${ext_filter[@]}" \) -print0)
+      # --- OPTIMIZED INDEXING LOOP ---
+      if [[ "$use_printf" == true ]]; then
+          while IFS= read -r -d '' file_path && IFS= read -r -d '' size && IFS= read -r -d '' mtime_full; do
+              count=$((count + 1))
+
+              # PROGRESS BAR
+              if [[ "$VERBOSE" == true ]]; then
+                   local fname=$(basename "$file_path")
+                   if [[ ${#fname} -gt 30 ]]; then fname="${fname:0:27}..."; fi
+                   printf "\rIndexing: %d/%d (%s)          " "$count" "$total_files" "$fname" >&2
+              else
+                   printf "\rIndexing: %d/%d          " "$count" "$total_files" >&2
+              fi
+
+              local mtime=${mtime_full%%.*}
+              local raw_metadata_output="$(get_audio_metadata "$file_path")"
+              IFS=$'\t' read -r -a metadata_array <<< "$raw_metadata_output"
+
+              local title="${metadata_array[0]}"
+              local artist="${metadata_array[1]}"
+              local album="${metadata_array[2]}"
+              local genre="${metadata_array[3]}"
+
+              local file_ext="${file_path##*.}"
+              file_ext="${file_ext,,}"
+              local media_type="UNKNOWN"
+              if [[ " ${AUDIO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then media_type="audio"
+              elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then media_type="video"
+              elif [[ " ${PLAYLIST_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then media_type="playlist"; fi
+
+              echo "{\"path\":\"$(json_escape "$file_path")\",\"title\":\"$(json_escape "$title")\",\"artist\":\"$(json_escape "$artist")\",\"album\":\"$(json_escape "$album")\",\"genre\":\"$(json_escape "$genre")\",\"mtime\":\"$mtime\",\"size\":\"$size\",\"media_type\":\"$media_type\"}" >> "$temp_json_lines"
+          done < <(find "$dir_path" -type f \( "${ext_filter[@]}" \) -printf "%p\0%s\0%T@\0")
+      else
+          # Fallback
+          local all_music_files=()
+          while IFS= read -r -d '' file; do all_music_files+=("$file"); done < <(find "$dir_path" -type f \( "${ext_filter[@]}" \) -print0)
+
+          for file_path in "${all_music_files[@]}"; do
+              count=$((count + 1))
+
+              # PROGRESS BAR
+              if [[ "$VERBOSE" == true ]]; then
+                   local fname=$(basename "$file_path")
+                   if [[ ${#fname} -gt 30 ]]; then fname="${fname:0:27}..."; fi
+                   printf "\rIndexing: %d/%d (%s)          " "$count" "$total_files" "$fname" >&2
+              else
+                   printf "\rIndexing: %d/%d          " "$count" "$total_files" >&2
+              fi
+
+              local mtime=$(get_mtime "$file_path" || echo "")
+              local size=$(get_size "$file_path" || echo "")
+              local raw_metadata_output="$(get_audio_metadata "$file_path")"
+              IFS=$'\t' read -r -a metadata_array <<< "$raw_metadata_output"
+
+              local title="${metadata_array[0]}"
+              local artist="${metadata_array[1]}"
+              local album="${metadata_array[2]}"
+              local genre="${metadata_array[3]}"
+
+              local file_ext="${file_path##*.}"
+              file_ext="${file_ext,,}"
+              local media_type="UNKNOWN"
+              if [[ " ${AUDIO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then media_type="audio"
+              elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then media_type="video"
+              elif [[ " ${PLAYLIST_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then media_type="playlist"; fi
+
+              echo "{\"path\":\"$(json_escape "$file_path")\",\"title\":\"$(json_escape "$title")\",\"artist\":\"$(json_escape "$artist")\",\"album\":\"$(json_escape "$album")\",\"genre\":\"$(json_escape "$genre")\",\"mtime\":\"$mtime\",\"size\":\"$size\",\"media_type\":\"$media_type\"}" >> "$temp_json_lines"
+          done
+      fi
     else
       msg_warn "Configured music directory '$dir_path' does not exist. Skipping."
     fi
@@ -233,80 +353,13 @@ build_music_index() {
   # save directory state to its own file
   echo "$indexed_dirs_json_array" > "$DIRS_STATE_FILE"
 
-  if [[ ${#all_music_files[@]} -eq 0 ]]; then
+  echo "" >&2
+  if [[ "$count" -eq 0 ]]; then
     msg_warn "No music files found in configured directories. Index will be empty."
-    # make an empty file
     : > "$MUSIC_INDEX_FILE"
+    rm "$temp_json_lines"
     return 0
   fi
-
-  # --- OPTIMIZED INDEXING LOOP ---
-  # Create a temporary file to store one JSON object per line
-  create_temp_file temp_json_lines
-
-  local count=0
-  local total=${#all_music_files[@]}
-
-  for file_path in "${all_music_files[@]}"; do
-    count=$((count + 1))
-
-    # SMART PROGRESS BAR
-    if [[ "$VERBOSE" == true ]]; then
-         local fname=$(basename "$file_path")
-         if [[ ${#fname} -gt 30 ]]; then fname="${fname:0:27}..."; fi
-         printf "\rIndexing: %d/%d (%s)          " "$count" "$total" "$fname" >&2
-    else
-         printf "\rIndexing: %d/%d          " "$count" "$total" >&2
-    fi
-
-    local raw_metadata_output
-    raw_metadata_output="$(get_audio_metadata "$file_path")"
-
-    log_debug "(build_index): Processing file: '$file_path'"
-    log_debug "(build_index): Raw metadata function output: '$raw_metadata_output'"
-
-
-    # Split metadata string (title,artist,album,genre)
-    IFS=$'\t' read -r -a metadata_array <<< "$raw_metadata_output"
-
-    local title="${metadata_array[0]}"
-    local artist="${metadata_array[1]}"
-    local album="${metadata_array[2]}"
-    local genre="${metadata_array[3]}"
-    local mtime
-    mtime=$(get_mtime "$file_path" || echo "")
-    local size
-    size=$(get_size "$file_path" || echo "")
-    local trimmed_file_path
-    trimmed_file_path="$file_path"
-    local file_ext="${file_path##*.}"
-    file_ext="${file_ext,,}" # Convert to lowercase
-    local media_type="UNKNOWN"
-
-    # Check if extension is in audio or video lists
-    if [[ " ${AUDIO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
-      media_type="audio"
-    elif [[ " ${VIDEO_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
-      media_type="video"
-    elif [[ " ${PLAYLIST_EXTS_ARRAY[*]} " =~ " ${file_ext} " ]]; then
-      media_type="playlist"
-    fi
-
-    # Append a single, compact JSON line to the temp file for each track
-    jq -cn \
-      --arg path "$trimmed_file_path" \
-      --arg title "$title" \
-      --arg artist "$artist" \
-      --arg album "$album" \
-      --arg genre "$genre" \
-      --arg mtime "$mtime" \
-      --arg size "$size" \
-      --arg media_type "$media_type" \
-      '{path: $path, title: $title, artist: $artist, album: $album, genre: $genre, mtime: $mtime, size: $size, media_type: $media_type}' >> "$temp_json_lines"
-
-  done
-
-  printf "\rIndexing complete: %d/%d files processed.\n" "$total" "$total" >&2
 
   # --- EFFICIENT JSON ASSEMBLY ---
   # Just move the JSONL file to the final location.
@@ -315,7 +368,6 @@ build_music_index() {
   log_verbose "Index saved to $MUSIC_INDEX_FILE"
 
   # --- CLEANUP LEGACY JSON ---
-    # If we successfully built the new JSONL index, remove the old JSON file.
     local legacy_index="${MUSIC_INDEX_FILE%.jsonl}.json"
     if [[ -f "$legacy_index" ]]; then
         rm "$legacy_index"
@@ -416,10 +468,7 @@ update_music_index() {
           media_type="playlist"
         fi
 
-        track_json_to_add=$(jq -cn \
-          --arg path "$trimmed_file_path" --arg title "$title" --arg artist "$artist" --arg album "$album" --arg genre "$genre" \
-          --arg mtime "$current_mtime" --arg size "$current_size" --arg media_type "$media_type" \
-          '{path: $path, title: $title, artist: $artist, album: $album, genre: $genre, mtime: $mtime, size: $size, media_type: $media_type}')
+        track_json_to_add="{\"path\":\"$(json_escape "$trimmed_file_path")\",\"title\":\"$(json_escape "$title")\",\"artist\":\"$(json_escape "$artist")\",\"album\":\"$(json_escape "$album")\",\"genre\":\"$(json_escape "$genre")\",\"mtime\":\"$current_mtime\",\"size\":\"$current_size\",\"media_type\":\"$media_type\"}"
       fi
     else
       log_debug "(New: $(basename "$file_path"))"
@@ -442,10 +491,7 @@ update_music_index() {
           media_type="playlist"
       fi
 
-      track_json_to_add=$(jq -cn \
-        --arg path "$trimmed_file_path" --arg title "$title" --arg artist "$artist" --arg album "$album" --arg genre "$genre" \
-        --arg mtime "$current_mtime" --arg size "$current_size" --arg media_type "$media_type" \
-        '{path: $path, title: $title, artist: $artist, album: $album, genre: $genre, mtime: $mtime, size: $size, media_type: $media_type}')
+      track_json_to_add="{\"path\":\"$(json_escape "$trimmed_file_path")\",\"title\":\"$(json_escape "$title")\",\"artist\":\"$(json_escape "$artist")\",\"album\":\"$(json_escape "$album")\",\"genre\":\"$(json_escape "$genre")\",\"mtime\":\"$current_mtime\",\"size\":\"$current_size\",\"media_type\":\"$media_type\"}"
     fi
 
     # Append the resulting JSON object (as a single line) to our temp file.
