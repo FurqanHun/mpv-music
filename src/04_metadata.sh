@@ -330,17 +330,18 @@ update_music_index() {
   local ext_filter=("${EXT_FILTER[@]}")
   local current_files_on_disk=()
   declare -A old_index_map
-  # local old_index_json_string (Removed, no longer reading whole file into string)
 
   log_verbose "Updating music library index..."
 
   if [[ -f "$MUSIC_INDEX_FILE" ]]; then
     # Read line-by-line to build the map. Fast and low memory.
-    while IFS= read -r line; do
-        # Extract path safely using jq
-        local p=$(echo "$line" | jq -r .path)
-        old_index_map["$p"]="$line"
-    done < "$MUSIC_INDEX_FILE"
+    # OPTIMIZATION: Dual-Stream Reader (jq + raw file)
+    # Avoids spawning a subshell for every line.
+    while IFS= read -r path <&3 && IFS= read -r line <&4; do
+        if [[ -n "$path" && "$path" != "null" ]]; then
+            old_index_map["$path"]="$line"
+        fi
+    done 3< <(jq -r .path "$MUSIC_INDEX_FILE") 4< "$MUSIC_INDEX_FILE"
   else
     msg_info "Index file not found. Building index for the first time."
     build_music_index
