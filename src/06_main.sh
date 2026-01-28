@@ -446,59 +446,47 @@ if [[ "$CLI_FILTER_ACTIVE" == true ]]; then
     fi
 
 # --- Interactive Mode Selection ---
-echo -e "${CYAN}🎧 Pick mode:${NC}"
-echo "1) Play entire Directory(s)"
-echo "2) Pick individual tracks"
-echo "3) Play a saved playlist"
-echo "4) Filter by Tag..."
-echo "5) Play All Music"
-echo "6) Play URL (YouTube/Stream)"
-# read -rp "Enter choice [1/2]: " MODE
-# Use -t with a very long timeout instead of blocking read
-# This allows the SIGINT to be caught by our trap
-read -t 31536000 -rp "Enter choice [1/2/3/4/5/6]: " MODE || {
-    echo -e "\nRead interrupted. Exiting."
-    exit 1
-}
+while true; do
 
-if [[ "$MODE" == "1" ]]; then
-    run_dir_mode
+    echo -e "${CYAN}🎧 Pick mode:${NC}"
+    echo "1) Play entire Directory(s)"
+    echo "2) Pick individual tracks"
+    echo "3) Play a saved playlist"
+    echo "4) Filter by Tag..."
+    echo "5) Play All Music"
+    echo "6) Play URL (Stream)"
+    echo "q) Quit"
 
-elif [[ "$MODE" == "2" ]]; then
-    run_track_mode
+    # Read with prompt. Supports ESC+Enter to quit.
+    read -rp "Enter choice [1-6/q]: " MODE || exit 0
 
-elif [[ "$MODE" == "3" ]]; then
-    run_playlist_mode
-
-elif [[ "$MODE" == "4" ]]; then
-    run_tag_mode
-
-elif [[ "$MODE" == "5" ]]; then
-    run_play_all_mode
-
-elif [[ "$MODE" == "6" ]]; then
-    echo ""
-    echo "Paste URL(s) (separated by space):"
-    # -a reads the input into an array named USER_URLS
-    read -rp "> " -a USER_URLS
-
-    if [[ ${#USER_URLS[@]} -gt 0 ]]; then
-        # The first URL becomes the primary target
-        TARGET="${USER_URLS[0]}"
-
-        # If there are more URLs, add them to the global MPV_ARGS list
-        if [[ ${#USER_URLS[@]} -gt 1 ]]; then
-            # Add everything from index 1 onwards
-            MPV_ARGS+=("${USER_URLS[@]:1}")
-        fi
-
-        handle_direct_play "$TARGET"
-    else
-        msg_error "No URL provided."
-        exit 1
-    fi
-
-else
-  msg_error "Invalid input."
-  exit 1
-fi
+    case "$MODE" in
+        1) run_dir_mode; exit 0 ;;
+        2) run_track_mode; exit 0 ;;
+        3) run_playlist_mode; exit 0 ;;
+        4) run_tag_mode; exit 0 ;;
+        5) run_play_all_mode; exit 0 ;;
+        6)
+            echo ""
+            echo "Paste URL(s) (separated by space):"
+            read -rp "> " -a USER_URLS
+            if [[ ${#USER_URLS[@]} -gt 0 ]]; then
+                TARGET="${USER_URLS[0]}"
+                [[ ${#USER_URLS[@]} -gt 1 ]] && MPV_ARGS+=("${USER_URLS[@]:1}")
+                handle_direct_play "$TARGET"
+            else
+                msg_error "No URL provided."
+            fi
+            exit 0
+            ;;
+        q|Q|$'\e')
+            echo "Bye Bye!"
+            exit 0
+            ;;
+        *)
+            msg_warn "Invalid input. Please pick 1-6 or q."
+            sleep 0.5
+            echo ""
+            ;;
+    esac
+done
