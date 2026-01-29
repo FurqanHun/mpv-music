@@ -79,17 +79,47 @@ echo -e "${GREEN}[OK]${NC} Found version: $LATEST_TAG"
 
 # --- 4. Download File ---
 BASE_URL="https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/$LATEST_TAG"
+INSTALLED_SCRIPT="$INSTALL_DIR/mpv-music"
 
 echo "Downloading mpv-music..."
-if curl -sL "$BASE_URL/mpv-music" -o "$INSTALL_DIR/mpv-music"; then
-    chmod +x "$INSTALL_DIR/mpv-music"
+if curl -sL "$BASE_URL/mpv-music" -o "$INSTALLED_SCRIPT"; then
+    chmod +x "$INSTALLED_SCRIPT"
     echo -e "${GREEN}[OK]${NC} Script installed."
 else
     echo -e "${RED}[ERROR]${NC} Download failed."
     exit 1
 fi
 
-# --- 5. PATH Check ---
+# --- 5. Initial Configuration ---
+echo -e "\n${BLUE}[INFO]${NC} Initial Setup"
+echo "Would you like to add music directories now?"
+read -rp "[y/N]: " SETUP_CHOICE < /dev/tty
+
+if [[ "$SETUP_CHOICE" =~ ^[Yy]$ ]]; then
+    echo -e "${YELLOW}Tip:${NC} You can drag and drop folders into this terminal."
+
+    # We loop until the user gives us an empty line
+    while true; do
+        echo -e "\nEnter full path to music directory (or press ENTER to finish):"
+        read -rp "> " MUSIC_PATH < /dev/tty
+
+        # Clean inputs: trim whitespace and remove simple quotes if user typed them
+        MUSIC_PATH=$(echo "$MUSIC_PATH" | tr -d "'\"")
+
+        if [[ -z "$MUSIC_PATH" ]]; then
+            break
+        fi
+
+        # The script will auto-create the config on the first run of --add-dir
+        if "$INSTALLED_SCRIPT" --add-dir "$MUSIC_PATH"; then
+             : # Output is handled by the script itself
+        else
+             echo -e "${RED}[ERROR]${NC} Could not add that path."
+        fi
+    done
+fi
+
+# --- 6. PATH Check ---
 echo -e "\n${BLUE}[INFO]${NC} Verifying PATH..."
 if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
     echo -e "${YELLOW}[WARN] $INSTALL_DIR is NOT in your PATH.${NC}"

@@ -9,6 +9,7 @@ TARGET_PATH="$1"
 API_URL="https://api.github.com/repos/FurqanHun/mpv-music/releases"
 TEMP_DOWNLOAD="$HOME/.config/mpv-music/mpv-music.new"
 CONFIG_DIR="$HOME/.config/mpv-music"
+CONFIG_FILE="$CONFIG_DIR/mpv-music.conf"
 
 # --- Colors & Helpers ---
 GREEN='\033[0;32m'
@@ -93,16 +94,53 @@ fi
 if mv "$TEMP_DOWNLOAD" "$TARGET_PATH"; then
     msg_ok "Update to v$REMOTE_VERSION successful!"
 
-    # --- MIGRATION CHECK (JSON -> JSONL) ---
-        # Check if the OLD index format exists.
-        if [[ -f "$CONFIG_DIR/music_index.json" ]]; then
-            echo ""
-            msg_warn "Legacy database format detected (.json)."
-            msg_warn "v0.15.0 update introduced a faster engine (.jsonl)."
+    # --- CONFIG MIGRATION (String -> Array) ---
+    if [[ -f "$CONFIG_FILE" ]]; then
+        # Check if MUSIC_DIRS is defined but NOT as an array (does not start with '(' )
+        if grep -qE '^MUSIC_DIRS=[^(]' "$CONFIG_FILE"; then
+            msg_warn "Legacy config format detected (MUSIC_DIRS string)."
+            msg_info "Migrating to new Array format..."
 
-            echo -e "${YELLOW}Your library will automatically migrate to the new format the next time you run mpv-music.${NC}"
-            echo -e "${YELLOW}The old .json file will be removed upon success.${NC}"
+            cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
+
+            # Extract the old value safely by sourcing in a subshell
+            # suppress output to avoid noise
+            OLD_VAL=$(set +e; source "$CONFIG_FILE" &>/dev/null; echo "$MUSIC_DIRS")
+
+            TEMP_CONF=$(mktemp)
+
+            # remove the old line(s)
+            sed '/^MUSIC_DIRS=/d' "$CONFIG_FILE" > "$TEMP_CONF"
+
+            # append the new format
+            {
+                echo ""
+                echo "# Migrated by mpv-music-updater v$REMOTE_VERSION"
+                echo "MUSIC_DIRS=("
+                # Split the old string by spaces
+                IFS=' ' read -r -a DIRS <<< "$OLD_VAL"
+                for dir in "${DIRS[@]}"; do
+                    # Force quotes for safety
+                    echo "    \"$dir\""
+                done
+                echo ")"
+            } >> "$TEMP_CONF"
+
+            # 6. Apply
+            mv "$TEMP_CONF" "$CONFIG_FILE"
+            msg_ok "Config migrated successfully."
         fi
+    fi
+
+    # --- MIGRATION CHECK (JSON -> JSONL) ---
+    if [[ -f "$CONFIG_DIR/music_index.json" ]]; then
+        echo ""
+        msg_warn "Legacy database format detected (.json)."
+        msg_warn "v0.15.0+ introduced a faster engine (.jsonl)."
+        echo -e "${YELLOW}Your library will automatically migrate to the new format the next time you run mpv-music.${NC}"
+        echo -e "${YELLOW}The old .json file will be removed upon success.${NC}"
+    fi
+
 else
     msg_error "Failed to replace file. Check permissions."
     rm "$TEMP_DOWNLOAD"
