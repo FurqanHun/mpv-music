@@ -34,6 +34,7 @@ In short, it focuses on library indexing for super-fast access to your music col
   * **Tag Filter Mode:** Drill down by genre, artist, album, or title interactively.
   * **Play All:** Instantly play your entire indexed library.
   * **URL Mode:** Paste YouTube or stream URLs directly from the menu.
+  * **Manage Directories:** Add or remove music folders directly from the UI without editing config files.
 * **Direct File/URL Playback:** Instantly play local audio/video files or URLs (YouTube, streams) without going through the menu.
 * **Custom Directory Support:** Pass a folder path to browse and filter only that directory instead of your full library.
 * **CLI Filtering:** Use flags like --genre, --artist, --album, --title for direct filtering. Pass a value or omit it to open an interactive picker.
@@ -77,10 +78,10 @@ In short, it focuses on library indexing for super-fast access to your music col
 * **Linux:** Native. The script is built and tested primarily for Linux (GNU tools).
 * **WSL (Windows Subsystem for Linux):** Fully Supported. This is the recommended way to run it on Windows.
 * **macOS / BSD:** Experimental. These systems use BSD variants of standard tools (sed, find, readlink), which differ from the GNU versions used in this script. You may need to install GNU tools (coreutils, findutils, gnu-sed) and ensure they are in your PATH.
-* **Windows (Native/Git Bash):** Not Supported.
+* **Windows (Native/Git Bash):** Not Supported. Native path handling (`C:\` vs `/`) prevents this from working.
 
-> [!CAUTION]
-> Native path handling (`C:\` vs `/`) prevents this from working. **Please use WSL.**
+> [!Tip]
+> You can use WSL (Windows Subsystem for Linux) to run `mpv-music` on Windows.
 
 ### Option 1: Quick Install (Recommended)
 
@@ -113,12 +114,13 @@ mpv-music
 
 > [!IMPORTANT]
 > Running `mpv-music` for the first time will automatically index `$HOME/Music`.
-> It is **recommended** that you first run `mpv-music --config` to customize your settings and music directories before indexing (unless you only keep your music in `$HOME/Music`).
+> It is **recommended** that you first run `mpv-music --manage-dirs` to customize music directories before indexing (unless you only keep your music in `$HOME/Music`).
 
 That creates:
-- `~/.config/mpv-music/mpv-music.conf`
+- `~/.config/mpv-music/mpv-music.conf` (the actual config)
 - `~/.config/mpv-music/music_index.jsonl` (your indexed library)
 - `~/.config/mpv-music/dirs_state.json` (directory state cache)
+- `~/.config/mpv-music/mpv-music.log` (verbose/debug logs file)
 
 ---
 
@@ -148,6 +150,9 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `--update` | Update the script to the latest version |
 | `--reindex` | Force rebuild the full index |
 | `--refresh-index` | Update index without wiping it |
+| `--manage-dirs` | Open the directory management UI directly |
+| `--add-dir` | Add a/multiple new music directories |
+| `--remove-dir` | Remove a/multiple music directories |
 | `-V, --verbose` | Increase verbosity, printing additional information |
 | `--debug` | Print detailed debug messages |
 | `-g, --genre [val]` | Filter by genre. Opens picker if no value given |
@@ -177,6 +182,9 @@ mpv-music -g -a "Daft Punk" -p         # pick genre, then play all Daft Punk
 mpv-music --volume=50 --shuffle        # custom mpv flags
 mpv-music --reindex                    # rebuild the index from scratch
 mpv-music --verbose --debug            # run with full logging enabled
+mpv-music --add-dir /path/to/music /path/to/music2 # Add multiple directories
+mpv-music --remove-dir /path/to/music /path/to/music2 # Remove multiple directories
+mpv-music --manage-dirs                  # Manage directories
 ```
 
 ---
@@ -223,9 +231,6 @@ If a config file does not exist, mpv-music will create one at startup. To custom
 ```bash
 # mpv-music configuration
 
-# Music Directories (Space-separated)
-MUSIC_DIRS="$HOME/Music /mnt/media/audio"
-
 # --- Visual Customization ---
 # Banner text (displayed at start of track)
 # Uses ANSI escape codes or simple text, which is directly passed to mpv
@@ -256,6 +261,13 @@ PLAYLIST_EXTS="m3u m3u8 pls"
 
 # Log Rotation (set to 0 to disable file logging)
 LOG_MAX_SIZE_KB=5120
+
+# Music Directories (double quotes separated)
+MUSIC_DIRS=(
+    "$HOME/Music"
+    "/mnt/media/audios"
+)
+
 ```
 
 ---
@@ -263,6 +275,8 @@ LOG_MAX_SIZE_KB=5120
 ## Development
 
 This project is developed using a modular (more of a faux module) source structure.
+* **Installer**: Located in root `install.sh`
+* **Updater**: Located in root `mpv-music-updater`
 * **Source Code:** Located in `src/`.
   * `01_vars.sh` contains config vars
   * `02_utils.sh` contains utility functions (i.e, logging, updater etc)

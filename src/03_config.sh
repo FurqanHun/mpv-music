@@ -37,7 +37,7 @@ create_config() {
 BANNER_TEXT='$BANNER'
 STATUS_MSG='$MPV_STATUS_MSG_DEFAULT'
 
-# Default MPV arguments (space-separated)
+# Default MPV arguments (Bash Array - Double Quoted)
 # These will be used if no other MPV args are passed on the command line.
 # Example:
 # MPV_DEFAULT_ARGS=(
@@ -72,12 +72,12 @@ PLAYLIST_EXTS="$PLAYLIST_EXTS_DEFAULT"
 # Default is 5120 (5MB).
 LOG_MAX_SIZE_KB=5120
 
-# Default music directories (space-separated)
+# Default music directories (Bash Array - Double Quoted)
 # You can add multiple paths,
 # Example:
 # MUSIC_DIRS=(
-#   \$HOME/Music
-#   /mnt/my_music_drive/audio
+#   "\$HOME/Music"
+#   "/mnt/my_music_drive/audio"
 # )
 MUSIC_DIRS=(
     "${MUSIC_DIRS_DEFAULT[*]}"
