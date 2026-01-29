@@ -218,3 +218,25 @@ ensure_index_integrity() {
         fi
     fi
 }
+
+reload_config_state() {
+    # so we don't duplicate items if we run this multiple times
+    MUSIC_DIRS_ARRAY=()
+
+    if [[ -f "$CONFIG_FILE" ]]; then
+
+        source "$CONFIG_FILE"
+
+        # COMPATIBILITY CHECK:
+        # If the config only defined the old string variable (MUSIC_DIRS="a b")
+        # and didn't define the array, we convert it on the fly.
+        if [[ ${#MUSIC_DIRS_ARRAY[@]} -eq 0 && -n "$MUSIC_DIRS" ]]; then
+            # Still dangerous for spaces in paths, but keeps your old config working
+            IFS=' ' read -r -a MUSIC_DIRS_ARRAY <<< "$MUSIC_DIRS"
+        fi
+
+        log_verbose "Config reloaded. Found ${#MUSIC_DIRS_ARRAY[@]} directories."
+    else
+        log_verbose "No config file found at $CONFIG_FILE. Using defaults."
+    fi
+}

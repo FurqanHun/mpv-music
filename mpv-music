@@ -255,6 +255,28 @@ ensure_index_integrity() {
         fi
     fi
 }
+
+reload_config_state() {
+    # so we don't duplicate items if we run this multiple times
+    MUSIC_DIRS_ARRAY=()
+
+    if [[ -f "$CONFIG_FILE" ]]; then
+
+        source "$CONFIG_FILE"
+
+        # COMPATIBILITY CHECK:
+        # If the config only defined the old string variable (MUSIC_DIRS="a b")
+        # and didn't define the array, we convert it on the fly.
+        if [[ ${#MUSIC_DIRS_ARRAY[@]} -eq 0 && -n "$MUSIC_DIRS" ]]; then
+            # Still dangerous for spaces in paths, but keeps your old config working
+            IFS=' ' read -r -a MUSIC_DIRS_ARRAY <<< "$MUSIC_DIRS"
+        fi
+
+        log_verbose "Config reloaded. Found ${#MUSIC_DIRS_ARRAY[@]} directories."
+    else
+        log_verbose "No config file found at $CONFIG_FILE. Using defaults."
+    fi
+}
 # --- Pre-Flight Flag Check ---
 # We check these specific flags BEFORE sourcing the config file.
 # This ensures that if the config file is broken (syntax error),
@@ -777,6 +799,7 @@ build_temp_index() {
 # --- Music Library Indexing Function ---
 # Builds or rebuilds the entire music index.
 build_music_index() {
+  reload_config_state
   local music_dirs=("${MUSIC_DIRS_ARRAY[@]}")
   local ext_filter=("${EXT_FILTER[@]}")
   local indexed_dirs_json_array="[]"
@@ -920,22 +943,8 @@ build_music_index() {
 # --- Music Library Update Function ---
 # Updates the music index by checking for new, removed, or modified files.
 update_music_index() {
-    # FIX: Reload configuration to catch any recent Add/Remove directory changes
-      if [[ -f "$CONFIG_FILE" ]]; then
-          # Source config in a subshell or just grep the variable to update local array
-          # Sourcing is safer to get the exact array expansion
-          # We use a temp function to avoid polluting global namespace if we don't want to
-          local fresh_dirs_line
-          fresh_dirs_line=$(grep '^MUSIC_DIRS=' "$CONFIG_FILE" | cut -d'"' -f2)
-
-          # Re-populate the array from the fresh config line
-          # IFS=' ' handles the space-separated string from the config
-          IFS=' ' read -r -a music_dirs <<< "$fresh_dirs_line"
-      else
-          # Fallback to current global state if config file is missing (unlikely)
-          local music_dirs=("${MUSIC_DIRS_ARRAY[@]}")
-      fi
-
+  reload_config_state
+  local music_dirs=("${MUSIC_DIRS_ARRAY[@]}")
   local ext_filter=("${EXT_FILTER[@]}")
   local current_files_on_disk=()
   declare -A old_index_map
