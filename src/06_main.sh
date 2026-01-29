@@ -133,6 +133,52 @@ while [[ $# -gt 0 ]]; do
     --ext=*) CUSTOM_EXTS="${1#--ext=}"; shift;;
     --refresh-index) ensure_index_integrity; build_ext_filter; update_music_index; exit 0;;
     --reindex) build_ext_filter; log_verbose "Forcing a complete rebuild of the music index."; build_music_index; exit 0;;
+    --add-dir)
+        # Check if we have at least one valid argument
+        if [[ -z "${2:-}" || "${2:-}" == -* ]]; then
+            msg_error "Missing argument for --add-dir."
+            exit 1
+        fi
+
+        # Loop to consume all subsequent arguments until a flag is found
+        shift # Skip the --add-dir flag itself
+        while [[ $# -gt 0 && "$1" != -* ]]; do
+            TARGET="${1/#\~/$HOME}"
+            config_add_dir "$TARGET" "true"
+            changes_made=true
+            shift
+        done
+        if [[ "$changes_made" == true ]]; then
+            log_verbose "Applying batch changes..."
+            update_music_index
+        fi
+        exit 0
+        ;;
+
+    --remove-dir)
+        if [[ -z "${2:-}" || "${2:-}" == -* ]]; then
+            msg_error "Missing argument for --remove-dir."
+            exit 1
+        fi
+
+        shift
+        while [[ $# -gt 0 && "$1" != -* ]]; do
+            TARGET="${1/#\~/$HOME}"
+            config_remove_dir "$TARGET" "true"
+            changes_made=true
+            shift
+        done
+        if [[ "$changes_made" == true ]]; then
+            log_verbose "Applying batch changes..."
+            update_music_index
+        fi
+        exit 0
+        ;;
+
+    --manage-dirs)
+        run_manage_dirs_mode
+        exit 0
+        ;;
     -p|--play-all) PLAY_ALL=true; shift;;
     -l|--playlist) CLI_PLAYLIST_MODE=true; shift;;
 
@@ -438,10 +484,11 @@ while true; do
     echo "4) Filter by Tag..."
     echo "5) Play All Music"
     echo "6) Play URL (Stream)"
+    echo "7) Manage Directories"
     echo "q) Quit"
 
     # Read with prompt. Supports ESC+Enter to quit.
-    read -rp "Enter choice [1-6/q]: " MODE || exit 0
+    read -rp "Enter choice [1-7/q]: " MODE || exit 0
 
     case "$MODE" in
         1) run_dir_mode; exit 0 ;;
@@ -466,6 +513,7 @@ while true; do
             echo "Bye Bye!"
             exit 0
             ;;
+        7) run_manage_dirs_mode; exit 0;;
         *)
             msg_warn "Invalid input. Please pick 1-6 or q."
             sleep 0.5

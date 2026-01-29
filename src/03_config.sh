@@ -122,6 +122,122 @@ elif [[ "$LOG_MAX_SIZE_KB" -eq 0 ]]; then
     log_verbose "LOG_MAX_SIZE_KB is 0. All logging to file is disabled."
 fi
 
+# --- Config Management Functions ---
+
+# Helper: Get current directories as an array
+get_config_dirs() {
+    if [[ ! -f "$CONFIG_FILE" ]]; then return; fi
+
+    # Extract the value inside quotes
+    local raw_line
+    raw_line=$(grep '^MUSIC_DIRS=' "$CONFIG_FILE" | cut -d'"' -f2)
+
+    # Return as space-separated string
+    echo "$raw_line"
+}
+
+# Helper: Write the new directory string back to config
+write_dirs_to_config() {
+    local new_dirs_string="$1"
+
+    # Escape slashes for sed (replace / with \/)
+    local safe_dirs
+    safe_dirs=$(echo "$new_dirs_string" | sed 's/\//\\\//g')
+
+    # Surgical replacement of the MUSIC_DIRS line
+    local temp_conf
+    create_temp_file temp_conf
+
+    sed "s/^MUSIC_DIRS=\".*\"/MUSIC_DIRS=\"$safe_dirs\"/" "$CONFIG_FILE" > "$temp_conf"
+    mv "$temp_conf" "$CONFIG_FILE"
+}
+
+config_add_dir() {
+    local target="$1"
+    local skip_refresh="${2:-false}"
+
+    if ! command -v realpath &>/dev/null; then
+         msg_error "Missing 'realpath'. Cannot resolve path."
+         exit 1
+    fi
+    local abs_path
+    abs_path=$(realpath "$target")
+
+    if [[ ! -d "$abs_path" ]]; then
+        msg_error "Directory does not exist: $abs_path"
+        return 1
+    fi
+
+    local current_dirs
+    current_dirs=$(get_config_dirs)
+
+    # Check for duplicates
+    for d in $current_dirs; do
+        if [[ "$d" == "$abs_path" ]]; then
+            msg_warn "Directory already exists: $abs_path"
+            return 0
+        fi
+    done
+
+    # Append and Write
+    local new_list="$current_dirs $abs_path"
+    # Trim leading space if list was empty
+    new_list="${new_list#"${new_list%%[![:space:]]*}"}"
+
+    write_dirs_to_config "$new_list"
+    msg_success "Added: $abs_path"
+
+# CONDITIONAL REFRESH
+    if [[ "$skip_refresh" != "true" ]]; then
+        if command -v update_music_index &>/dev/null; then
+            log_verbose "Scanning new directory..."
+            update_music_index
+        else
+            msg_warn "Could not refresh index automatically (function missing)."
+        fi
+    fi
+    return 0
+}
+
+config_remove_dir() {
+    local target="$1"
+    local skip_refresh="${2:-false}"
+    local abs_path
+    abs_path=$(realpath "$target")
+
+    local current_dirs
+    current_dirs=$(get_config_dirs)
+    local new_list=""
+    local found=false
+
+    for d in $current_dirs; do
+        if [[ "$d" == "$abs_path" ]]; then
+            found=true
+            continue
+        fi
+        new_list+="$d "
+    done
+
+    if [[ "$found" == false ]]; then
+        msg_warn "Directory not found in config: $abs_path"
+        return 1
+    fi
+
+    # Trim trailing space
+    new_list="${new_list% }"
+
+    write_dirs_to_config "$new_list"
+    msg_success "Removed: $abs_path"
+
+    if [[ "$skip_refresh" != "true" ]]; then
+            if command -v update_music_index &>/dev/null; then
+                log_verbose "Updating index..."
+                update_music_index
+            fi
+        fi
+    return 0
+}
+
 # --- Dependency Checks ---
 if ! command -v mpv &>/dev/null || ! command -v fzf &>/dev/null; then
   msg_error "Missing dependencies. mpv-music requires:"

@@ -409,3 +409,75 @@ run_tag_mode() {
 run_play_all_mode() {
     play_all_music
 }
+
+# --- Management Mode ---
+run_manage_dirs_mode() {
+    while true; do
+        echo -e "\n${CYAN}📂 Managed Directories:${NC}"
+
+        # Read dirs fresh every loop
+        local current_dirs_str
+        current_dirs_str=$(get_config_dirs)
+
+        # Convert to array
+        local -a dir_array
+        read -r -a dir_array <<< "$current_dirs_str"
+
+        if [[ ${#dir_array[@]} -eq 0 ]]; then
+            echo "   (No directories configured)"
+        else
+            local i=1
+            for d in "${dir_array[@]}"; do
+                echo "   $i) $d"
+                ((i++))
+            done
+        fi
+
+        echo ""
+        echo "   [A] Add Directory"
+        echo "   [R] Remove Directory"
+        echo "   [q] Quit"
+
+        read -rp "Action: " ACTION
+
+        case "${ACTION,,}" in
+            a|add)
+                read -rp "Enter path to add: " NEW_PATH
+                # Tilde expansion hack
+                NEW_PATH="${NEW_PATH/#\~/$HOME}"
+                if [[ -n "$NEW_PATH" ]]; then
+                    config_add_dir "$NEW_PATH"
+                fi
+                ;;
+            r|remove)
+                if [[ ${#dir_array[@]} -eq 0 ]]; then
+                    msg_warn "Nothing to remove."
+                    continue
+                fi
+                read -rp "Enter NUMBER to remove: " IDX
+
+                # Validate input is a number
+                if [[ "$IDX" =~ ^[0-9]+$ ]]; then
+                    # Adjust for 0-based array
+                    local array_idx=$((IDX-1))
+
+                    # Check bounds against array LENGTH instead of accessing the element directly
+                    if [[ "$array_idx" -ge 0 && "$array_idx" -lt "${#dir_array[@]}" ]]; then
+                        local path_to_remove="${dir_array[$array_idx]}"
+                        config_remove_dir "$path_to_remove"
+                    else
+                        msg_error "Invalid number ($IDX). Please pick 1-${#dir_array[@]}."
+                    fi
+                else
+                    msg_error "Please enter a valid number."
+                fi
+                ;;
+            q|quit)
+                return
+                ;;
+            *)
+                msg_warn "Invalid option."
+                ;;
+        esac
+    done
+}

@@ -381,7 +381,22 @@ build_music_index() {
 # --- Music Library Update Function ---
 # Updates the music index by checking for new, removed, or modified files.
 update_music_index() {
-  local music_dirs=("${MUSIC_DIRS_ARRAY[@]}")
+    # FIX: Reload configuration to catch any recent Add/Remove directory changes
+      if [[ -f "$CONFIG_FILE" ]]; then
+          # Source config in a subshell or just grep the variable to update local array
+          # Sourcing is safer to get the exact array expansion
+          # We use a temp function to avoid polluting global namespace if we don't want to
+          local fresh_dirs_line
+          fresh_dirs_line=$(grep '^MUSIC_DIRS=' "$CONFIG_FILE" | cut -d'"' -f2)
+
+          # Re-populate the array from the fresh config line
+          # IFS=' ' handles the space-separated string from the config
+          IFS=' ' read -r -a music_dirs <<< "$fresh_dirs_line"
+      else
+          # Fallback to current global state if config file is missing (unlikely)
+          local music_dirs=("${MUSIC_DIRS_ARRAY[@]}")
+      fi
+
   local ext_filter=("${EXT_FILTER[@]}")
   local current_files_on_disk=()
   declare -A old_index_map
@@ -529,8 +544,8 @@ update_music_index() {
   mv "$new_index_lines" "$MUSIC_INDEX_FILE"
 
   # SUMMARY REPORT
-  msg_success "Index refreshed."
-  msg_info "Stats: $total Scanned | $cnt_new New | $cnt_mod Modified | $cnt_unchanged Unchanged"
+  log_verbose "Index refreshed."
+  log_verbose "Stats: $total Scanned | $cnt_new New | $cnt_mod Modified | $cnt_unchanged Unchanged"
   log_verbose "Index updated and saved to $MUSIC_INDEX_FILE"
 
   # --- CLEANUP LEGACY JSON ---
