@@ -139,6 +139,14 @@ trap "echo -e '\nBye Bye!'; exit 1" HUP INT TERM QUIT
 
 # --- Update Trigger Function ---
 invoke_updater() {
+
+    if [[ -f "$CONFIG_FILE" ]]; then
+        # Temporarily disable exit-on-error in case config is slightly broken
+        set +e
+        # shellcheck source=/dev/null
+        source "$CONFIG_FILE"
+        set -e
+    fi
     # Lazy Dependency Check
     if ! command -v curl &>/dev/null; then
         msg_error "Cannot update: 'curl' is missing."
