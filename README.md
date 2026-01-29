@@ -30,18 +30,18 @@ In short, it focuses on library indexing for super-fast access to your music col
 * **Interactive Selection with Multiple Modes:**
   * **Directory Mode:** Navigate folders with clean names instead of full paths.
   * **Track Mode:** Fuzzy-search individual tracks with metadata previews.
-  * **Playlist Mode:** Find and play your saved .m3u or .pls playlists.
+  * **Playlist Mode:** Find and play your saved `.m3u` or `.pls` playlists.
   * **Tag Filter Mode:** Drill down by genre, artist, album, or title interactively.
   * **Play All:** Instantly play your entire indexed library.
   * **URL Mode:** Paste YouTube or stream URLs directly from the menu.
   * **Manage Directories:** Add or remove music folders directly from the UI without editing config files.
 * **Direct File/URL Playback:** Instantly play local audio/video files or URLs (YouTube, streams) without going through the menu.
 * **Custom Directory Support:** Pass a folder path to browse and filter only that directory instead of your full library.
-* **CLI Filtering:** Use flags like --genre, --artist, --album, --title for direct filtering. Pass a value or omit it to open an interactive picker.
+* **CLI Filtering:** Use flags like `--genre`, `--artist`, `--album`, `--title` for direct filtering. Pass a value or omit it to open an interactive picker.
 * **Smart Matching:** CLI filters attempt exact matches first, then fall back to partial matches with disambiguation.
 * **Configurable File Types:** Support for both audio and video extensions, easily tweakable.
 * **Custom MPV Flags:** Pass mpv flags directly or set defaults in the config.
-* **Video Toggle:** --video-ok lets you include videos in your library scans.
+* **Video Toggle:** `--video-ok` lets you include videos in your library scans.
 * **YouTube Auto-Config:** Automatically detects JS runtimes (Deno, Node, QuickJS, Bun) for yt-dlp YouTube playback.
 * **Enhanced Logging:** Verbose/debug modes with log rotation and configurable log file size.
 
@@ -151,8 +151,8 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `--reindex` | Force rebuild the full index |
 | `--refresh-index` | Update index without wiping it |
 | `--manage-dirs` | Open the directory management UI directly |
-| `--add-dir` | Add a/multiple new music directories |
-| `--remove-dir` | Remove a/multiple music directories |
+| `--add-dir [path]` | Add a/multiple new music directories |
+| `--remove-dir [path]` | Remove a/multiple music directories |
 | `-V, --verbose` | Increase verbosity, printing additional information |
 | `--debug` | Print detailed debug messages |
 | `-g, --genre [val]` | Filter by genre. Opens picker if no value given |
