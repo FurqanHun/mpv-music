@@ -241,7 +241,6 @@ build_music_index() {
   reload_config_state
   local music_dirs=("${MUSIC_DIRS_ARRAY[@]}")
   local ext_filter=("${EXT_FILTER[@]}")
-  local indexed_dirs_json_array="[]"
 
   log_verbose "Indexing music library for the first time..."
 
@@ -268,17 +267,9 @@ build_music_index() {
 
   local count=0
 
-  # Populate all_music_files and indexed_dirs_json_array
+  # Populate all_music_files
   for dir_path in "${music_dirs[@]}"; do
     if [[ -d "$dir_path" ]]; then
-      # Fix for newline: Ensure dir_path is trimmed before passing to jq
-      local trimmed_dir_path
-      trimmed_dir_path="$dir_path"
-      local dir_mtime
-      dir_mtime=$(get_mtime "$dir_path" || echo "")
-      local dir_json
-      dir_json=$(jq -n --arg path "$trimmed_dir_path" --arg mtime "$dir_mtime" '{path: $path, mtime: $mtime}')
-      indexed_dirs_json_array=$(echo "$indexed_dirs_json_array" | jq --argjson new_dir "$dir_json" '. + [$new_dir]')
 
       # --- OPTIMIZED INDEXING LOOP ---
       if [[ "$use_printf" == true ]]; then
@@ -354,9 +345,6 @@ build_music_index() {
     fi
   done
 
-  # save directory state to its own file
-  echo "$indexed_dirs_json_array" > "$DIRS_STATE_FILE"
-
   echo "" >&2
   if [[ "$count" -eq 0 ]]; then
     msg_warn "No music files found in configured directories. Index will be empty."
@@ -417,7 +405,6 @@ update_music_index() {
     msg_warn "No music files found on disk during update scan. Index will be empty."
     # Clear index, save empty state
     : > "$MUSIC_INDEX_FILE"
-    echo "[]" > "$DIRS_STATE_FILE"
     return 0
   fi
 
@@ -515,19 +502,7 @@ update_music_index() {
   done
   printf "\rScanning and updating complete: %d/%d files processed.\n" "$total" "$total" >&2
 
-  local current_indexed_dirs_json_array="[]"
-  for dir_path in "${music_dirs[@]}"; do
-    if [[ -d "$dir_path" ]]; then
-      local trimmed_dir_path="$dir_path"
-      local dir_mtime=$(get_mtime "$dir_path" || echo "")
-      local dir_json=$(jq -n --arg path "$trimmed_dir_path" --arg mtime "$dir_mtime" '{path: $path, mtime: $mtime}')
-      current_indexed_dirs_json_array=$(echo "$current_indexed_dirs_json_array" | jq --argjson new_dir "$dir_json" '. + [$new_dir]')
-    fi
-  done
-
   # --- OPTIMIZATION: EFFICIENT JSON ASSEMBLY ---
-  # Save the state separate from tracks
-  echo "$current_indexed_dirs_json_array" > "$DIRS_STATE_FILE"
   mv "$new_index_lines" "$MUSIC_INDEX_FILE"
 
   # SUMMARY REPORT

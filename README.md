@@ -119,7 +119,6 @@ mpv-music
 That creates:
 - `~/.config/mpv-music/mpv-music.conf` (the actual config)
 - `~/.config/mpv-music/music_index.jsonl` (your indexed library)
-- `~/.config/mpv-music/dirs_state.json` (directory state cache)
 - `~/.config/mpv-music/mpv-music.log` (verbose/debug logs file)
 
 ---
