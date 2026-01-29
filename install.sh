@@ -27,7 +27,6 @@ INSTALL_DIR="${USER_INPUT:-$DEFAULT_INSTALL_DIR}"
 
 # Expand ~ if user typed it manually
 INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
-# FIX: Remove trailing slash so PATH check matches correctly
 INSTALL_DIR="${INSTALL_DIR%/}"
 
 echo -e "${BLUE}[INFO]${NC} Installing to: $INSTALL_DIR"
@@ -35,10 +34,7 @@ echo -e "${BLUE}[INFO]${NC} Installing to: $INSTALL_DIR"
 # Create dir if missing
 if [[ ! -d "$INSTALL_DIR" ]]; then
     echo -e "${YELLOW}[WARN]${NC} Directory does not exist. Creating it..."
-    mkdir -p "$INSTALL_DIR" || {
-        echo -e "${RED}[ERROR]${NC} Failed to create directory. Do you need sudo?"
-        exit 1
-    }
+    mkdir -p "$INSTALL_DIR" || { echo -e "${RED}[ERROR]${NC} Failed to create directory."; exit 1; }
 fi
 
 # Check write permissions
@@ -90,7 +86,7 @@ else
     exit 1
 fi
 
-# --- 5. Initial Configuration ---
+# --- 5. Initial Configuration (BATCH MODE) ---
 echo -e "\n${BLUE}[INFO]${NC} Initial Setup"
 echo "Would you like to add music directories now?"
 read -rp "[y/N]: " SETUP_CHOICE < /dev/tty
@@ -98,25 +94,38 @@ read -rp "[y/N]: " SETUP_CHOICE < /dev/tty
 if [[ "$SETUP_CHOICE" =~ ^[Yy]$ ]]; then
     echo -e "${YELLOW}Tip:${NC} You can drag and drop folders into this terminal."
 
-    # We loop until the user gives us an empty line
+    # Array to store collected paths
+    COLLECTED_PATHS=()
+
     while true; do
         echo -e "\nEnter full path to music directory (or press ENTER to finish):"
         read -rp "> " MUSIC_PATH < /dev/tty
-
-        # Clean inputs: trim whitespace and remove simple quotes if user typed them
-        MUSIC_PATH=$(echo "$MUSIC_PATH" | tr -d "'\"")
 
         if [[ -z "$MUSIC_PATH" ]]; then
             break
         fi
 
-        # The script will auto-create the config on the first run of --add-dir
-        if "$INSTALLED_SCRIPT" --add-dir "$MUSIC_PATH"; then
-             : # Output is handled by the script itself
+        # Clean quotes safely
+        CLEAN_PATH=$(echo "$MUSIC_PATH" | sed -E "s/^['\"]|['\"]$//g")
+
+        if [[ -d "$CLEAN_PATH" ]]; then
+            COLLECTED_PATHS+=("$CLEAN_PATH")
+            echo -e "${GREEN}[QUEUED]${NC} $CLEAN_PATH"
         else
-             echo -e "${RED}[ERROR]${NC} Could not add that path."
+            echo -e "${RED}[ERROR]${NC} Directory not found: $CLEAN_PATH"
         fi
     done
+
+    # If we collected any paths, process them all at once
+    if [[ ${#COLLECTED_PATHS[@]} -gt 0 ]]; then
+        echo -e "\n${BLUE}[INFO]${NC} Configuring mpv-music..."
+        # Pass all collected paths as arguments to --add-dir
+        if "$INSTALLED_SCRIPT" --add-dir "${COLLECTED_PATHS[@]}"; then
+             echo -e "${GREEN}[OK]${NC} Configuration updated."
+        else
+             echo -e "${RED}[ERROR]${NC} Failed to update configuration."
+        fi
+    fi
 fi
 
 # --- 6. PATH Check ---
@@ -130,5 +139,5 @@ else
     echo -e "${GREEN}[OK]${NC} Install directory is in your PATH."
 fi
 
-echo -e "\n${GREEN}✅ Installation complete!${NC}"
-echo "Try running: mpv-music"
+echo -e "\n${GREEN}Installation complete!${NC}"
+echo "Run 'mpv-music' to start."
