@@ -34,10 +34,6 @@ create_config() {
     cat <<EOF > "$CONFIG_FILE"
 # mpv-music configuration file
 
-# Default music directories (space-separated)
-# You can add multiple paths, e.g., MUSIC_DIRS="\$HOME/Music /mnt/my_music_drive/audio"
-MUSIC_DIRS="${MUSIC_DIRS_DEFAULT[*]}"
-
 BANNER_TEXT='$BANNER'
 STATUS_MSG='$MPV_STATUS_MSG_DEFAULT'
 
@@ -76,6 +72,17 @@ PLAYLIST_EXTS="$PLAYLIST_EXTS_DEFAULT"
 # Default is 5120 (5MB).
 LOG_MAX_SIZE_KB=5120
 
+# Default music directories (space-separated)
+# You can add multiple paths,
+# Example:
+# MUSIC_DIRS=(
+#   \$HOME/Music
+#   /mnt/my_music_drive/audio
+# )
+MUSIC_DIRS=(
+    "${MUSIC_DIRS_DEFAULT[*]}"
+)
+
 EOF
     log_verbose "Created default config file at $CONFIG_FILE"
 }
@@ -101,8 +108,13 @@ if [[ $CONFIG_STATUS -ne 0 ]]; then
     exit 1
 fi
 
-# Convert space-separated strings from config into arrays
-IFS=' ' read -ra MUSIC_DIRS_ARRAY <<< "$MUSIC_DIRS"
+if [[ "$(declare -p MUSIC_DIRS 2>/dev/null)" =~ "declare -a" ]]; then
+    MUSIC_DIRS_ARRAY=("${MUSIC_DIRS[@]}")
+else
+    msg_error "Invalid MUSIC_DIRS in config. Please run 'mpv-music --config' to fix it." >&2
+    exit 1
+fi
+
 if [ -n "${MPV_DEFAULT_ARGS+x}" ]; then
     MPV_DEFAULT_ARGS_ARRAY=("${MPV_DEFAULT_ARGS[@]}")
 else
@@ -124,34 +136,6 @@ fi
 
 # --- Config Management Functions ---
 
-# Helper: Get current directories as an array
-get_config_dirs() {
-    if [[ ! -f "$CONFIG_FILE" ]]; then return; fi
-
-    # Extract the value inside quotes
-    local raw_line
-    raw_line=$(grep '^MUSIC_DIRS=' "$CONFIG_FILE" | cut -d'"' -f2)
-
-    # Return as space-separated string
-    echo "$raw_line"
-}
-
-# Helper: Write the new directory string back to config
-write_dirs_to_config() {
-    local new_dirs_string="$1"
-
-    # Escape slashes for sed (replace / with \/)
-    local safe_dirs
-    safe_dirs=$(echo "$new_dirs_string" | sed 's/\//\\\//g')
-
-    # Surgical replacement of the MUSIC_DIRS line
-    local temp_conf
-    create_temp_file temp_conf
-
-    sed "s/^MUSIC_DIRS=\".*\"/MUSIC_DIRS=\"$safe_dirs\"/" "$CONFIG_FILE" > "$temp_conf"
-    mv "$temp_conf" "$CONFIG_FILE"
-}
-
 config_add_dir() {
     local target="$1"
     local skip_refresh="${2:-false}"
@@ -168,32 +152,27 @@ config_add_dir() {
         return 1
     fi
 
-    local current_dirs
-    current_dirs=$(get_config_dirs)
+    reload_config_state
 
     # Check for duplicates
-    for d in $current_dirs; do
+    for d in "${MUSIC_DIRS_ARRAY[@]}"; do
         if [[ "$d" == "$abs_path" ]]; then
             msg_warn "Directory already exists: $abs_path"
             return 0
         fi
     done
 
-    # Append and Write
-    local new_list="$current_dirs $abs_path"
-    # Trim leading space if list was empty
-    new_list="${new_list#"${new_list%%[![:space:]]*}"}"
+    MUSIC_DIRS_ARRAY+=("$abs_path")
 
-    write_dirs_to_config "$new_list"
+    save_config_state
     msg_success "Added: $abs_path"
 
-# CONDITIONAL REFRESH
     if [[ "$skip_refresh" != "true" ]]; then
         if command -v update_music_index &>/dev/null; then
             log_verbose "Scanning new directory..."
             update_music_index
         else
-            msg_warn "Could not refresh index automatically (function missing)."
+            msg_warn "Could not refresh index automatically."
         fi
     fi
     return 0
@@ -205,17 +184,18 @@ config_remove_dir() {
     local abs_path
     abs_path=$(realpath "$target")
 
-    local current_dirs
-    current_dirs=$(get_config_dirs)
-    local new_list=""
+    reload_config_state
+
+    local new_array=()
     local found=false
 
-    for d in $current_dirs; do
+    # filter the array
+    for d in "${MUSIC_DIRS_ARRAY[@]}"; do
         if [[ "$d" == "$abs_path" ]]; then
             found=true
             continue
         fi
-        new_list+="$d "
+        new_array+=("$d")
     done
 
     if [[ "$found" == false ]]; then
@@ -223,18 +203,16 @@ config_remove_dir() {
         return 1
     fi
 
-    # Trim trailing space
-    new_list="${new_list% }"
-
-    write_dirs_to_config "$new_list"
+    MUSIC_DIRS_ARRAY=("${new_array[@]}")
+    save_config_state
     msg_success "Removed: $abs_path"
 
     if [[ "$skip_refresh" != "true" ]]; then
-            if command -v update_music_index &>/dev/null; then
-                log_verbose "Updating index..."
-                update_music_index
-            fi
+        if command -v update_music_index &>/dev/null; then
+            log_verbose "Updating index..."
+            update_music_index
         fi
+    fi
     return 0
 }
 

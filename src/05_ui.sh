@@ -415,22 +415,17 @@ run_manage_dirs_mode() {
     while true; do
         echo -e "\n${CYAN}📂 Managed Directories:${NC}"
 
-        # Read dirs fresh every loop
-        local current_dirs_str
-        current_dirs_str=$(get_config_dirs)
+        # FREEEEESH DATA (Populates MUSIC_DIRS_ARRAY)
+        reload_config_state
 
-        # Convert to array
-        local -a dir_array
-        read -r -a dir_array <<< "$current_dirs_str"
-
-        if [[ ${#dir_array[@]} -eq 0 ]]; then
-            echo "   (No directories configured)"
+        if [[ ${#MUSIC_DIRS_ARRAY[@]} -eq 0 ]]; then
+             msg_warn "No directories configured"
         else
-            local i=1
-            for d in "${dir_array[@]}"; do
-                echo "   $i) $d"
-                ((i++))
-            done
+             local i=1
+             for d in "${MUSIC_DIRS_ARRAY[@]}"; do
+                 echo "   $i) $d"
+                 ((i++))
+             done
         fi
 
         echo ""
@@ -450,10 +445,11 @@ run_manage_dirs_mode() {
                 fi
                 ;;
             r|remove)
-                if [[ ${#dir_array[@]} -eq 0 ]]; then
+                if [[ ${#MUSIC_DIRS_ARRAY[@]} -eq 0 ]]; then
                     msg_warn "Nothing to remove."
                     continue
                 fi
+
                 read -rp "Enter NUMBER to remove: " IDX
 
                 # Validate input is a number
@@ -461,12 +457,12 @@ run_manage_dirs_mode() {
                     # Adjust for 0-based array
                     local array_idx=$((IDX-1))
 
-                    # Check bounds against array LENGTH instead of accessing the element directly
-                    if [[ "$array_idx" -ge 0 && "$array_idx" -lt "${#dir_array[@]}" ]]; then
-                        local path_to_remove="${dir_array[$array_idx]}"
+                    # Check bounds against MUSIC_DIRS_ARRAY length
+                    if [[ "$array_idx" -ge 0 && "$array_idx" -lt "${#MUSIC_DIRS_ARRAY[@]}" ]]; then
+                        local path_to_remove="${MUSIC_DIRS_ARRAY[$array_idx]}"
                         config_remove_dir "$path_to_remove"
                     else
-                        msg_error "Invalid number ($IDX). Please pick 1-${#dir_array[@]}."
+                        msg_error "Invalid number ($IDX). Please pick 1-${#MUSIC_DIRS_ARRAY[@]}."
                     fi
                 else
                     msg_error "Please enter a valid number."
@@ -476,7 +472,7 @@ run_manage_dirs_mode() {
                 return
                 ;;
             *)
-                msg_warn "Invalid option."
+                msg_warn "Invalid option. Press 'r' then the number."
                 ;;
         esac
     done

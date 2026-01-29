@@ -219,24 +219,49 @@ ensure_index_integrity() {
     fi
 }
 
+save_config_state() {
+    local temp_conf
+    create_temp_file temp_conf
+
+    # ONLY delete the specific MUSIC_DIRS block range.
+    # do NOT delete global orphans
+    sed -e '/^MUSIC_DIRS=(/,/^)/d' \
+        -e '/^MUSIC_DIRS=/d' \
+        "$CONFIG_FILE" > "$temp_conf"
+
+    {
+            echo "MUSIC_DIRS=("
+            for dir in "${MUSIC_DIRS_ARRAY[@]}"; do
+                # we assuming the path dont contain double quotes (") inside them.
+                echo "    \"$dir\""
+            done
+            echo ")"
+        } >> "$temp_conf"
+
+    mv "$temp_conf" "$CONFIG_FILE"
+
+    log_verbose "Saved config state."
+
+    # Reload to ensure memory matches disk
+    reload_config_state
+}
+
 reload_config_state() {
-    # so we don't duplicate items if we run this multiple times
     MUSIC_DIRS_ARRAY=()
 
-    if [[ -f "$CONFIG_FILE" ]]; then
+    # prevents 'ghost' data if the file is empty/broken
+    unset MUSIC_DIRS
 
+    if [[ -f "$CONFIG_FILE" ]]; then
         source "$CONFIG_FILE"
 
-        # COMPATIBILITY CHECK:
-        # If the config only defined the old string variable (MUSIC_DIRS="a b")
-        # and didn't define the array, we convert it on the fly.
-        if [[ ${#MUSIC_DIRS_ARRAY[@]} -eq 0 && -n "$MUSIC_DIRS" ]]; then
-            # Still dangerous for spaces in paths, but keeps your old config working
-            IFS=' ' read -r -a MUSIC_DIRS_ARRAY <<< "$MUSIC_DIRS"
+        # Map the config variable to the script variable
+        if [[ -n "${MUSIC_DIRS[*]}" ]]; then
+             MUSIC_DIRS_ARRAY=("${MUSIC_DIRS[@]}")
         fi
 
-        log_verbose "Config reloaded. Found ${#MUSIC_DIRS_ARRAY[@]} directories."
+        log_verbose "Reloaded: Found ${#MUSIC_DIRS_ARRAY[@]} dirs."
     else
-        log_verbose "No config file found at $CONFIG_FILE. Using defaults."
+        log_verbose "No config file found. Using defaults."
     fi
 }

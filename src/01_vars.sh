@@ -7,7 +7,9 @@ DIRS_STATE_FILE="$CONFIG_DIR/dirs_state.json"
 LOG_FILE="$CONFIG_DIR/mpv-music.log"
 
 # Default values (will be overridden by config file if it exists)
-MUSIC_DIRS_DEFAULT=("$HOME/Music")
+MUSIC_DIRS_DEFAULT=(
+    "$HOME/Music"
+)
 
 # visual setup
 BANNER="\n╔══  MPV-MUSIC  ══╗\n"
