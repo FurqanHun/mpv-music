@@ -1,12 +1,13 @@
 use anyhow::Result;
 use clap::Parser;
+use indicatif::{ProgressBar, ProgressStyle};
 use lofty::prelude::*;
 use lofty::probe::Probe;
 use serde::Serialize;
 use std::collections::HashSet;
 use std::fs;
 use std::io::{self, Write};
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 use walkdir::WalkDir;
 
 // --- CLI Arguments ---
@@ -74,6 +75,16 @@ fn main() -> Result<()> {
     let stdout = io::stdout();
     let mut handle = stdout.lock();
 
+    // --- SETUP PROGRESS BAR ---
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(
+        ProgressStyle::default_spinner()
+            .template("{spinner:.green} [{elapsed_precise}] {pos} tracks ({per_sec})")
+            .unwrap(),
+    );
+    pb.enable_steady_tick(Duration::from_millis(100));
+    // --------------------------
+
     for dir in &cli.directories {
         // WalkDir follows symlinks (default is false)
         for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
@@ -99,6 +110,9 @@ fn main() -> Result<()> {
             } else {
                 continue; // Skip unknown extensions
             };
+
+            // TICK THE SPINNER (Only count valid files)
+            pb.inc(1);
 
             // File Stats
             let metadata = match fs::metadata(path) {
@@ -187,6 +201,9 @@ fn main() -> Result<()> {
             }
         }
     }
+
+    // Finish spinner
+    pb.finish_with_message("Done");
 
     Ok(())
 }
