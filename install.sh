@@ -86,7 +86,61 @@ else
     exit 1
 fi
 
-# --- 5. Initial Configuration (BATCH MODE) ---
+# --- 5. Download Rust Indexer (Monke Engine) ---
+ARCH=$(uname -m)
+
+if [[ "$ARCH" == "x86_64" ]]; then
+    echo -e "\n${BLUE}[OPTIONAL]${NC} Install High-Performance Indexer?"
+    echo -e "The Rust-based indexer is ${GREEN}significantly faster${NC}."
+    read -rp "Install pre-compiled binary? [Y/n]: " RUST_CHOICE < /dev/tty
+    RUST_CHOICE=${RUST_CHOICE:-Y}
+
+    if [[ "$RUST_CHOICE" =~ ^[Yy]$ ]]; then
+        # Default config dir logic matches your script
+        CONFIG_DIR="$HOME/.config/mpv-music"
+
+        echo -e "\n${BLUE}[QUESTION]${NC} Where should the Indexer Binary be placed?"
+        echo -e "  [1] ${GREEN}$INSTALL_DIR${NC} (Recommended - Same as script)"
+        echo -e "  [2] ${YELLOW}$CONFIG_DIR${NC} (Project Config Folder)"
+        read -rp "Select [1/2] (Default: 1): " BIN_LOC_CHOICE < /dev/tty
+        BIN_LOC_CHOICE=${BIN_LOC_CHOICE:-1}
+
+        if [[ "$BIN_LOC_CHOICE" == "2" ]]; then
+            TARGET_BIN_DIR="$CONFIG_DIR"
+        else
+            TARGET_BIN_DIR="$INSTALL_DIR"
+        fi
+
+        mkdir -p "$TARGET_BIN_DIR"
+
+        # We download the specific x86 asset, but save it as the generic name
+        RELEASE_ASSET_NAME="mpv-music-indexer-linux-x86_64"
+        LOCAL_BINARY_NAME="mpv-music-indexer"
+        BINARY_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$LATEST_TAG/$RELEASE_ASSET_NAME"
+        DESTINATION_PATH="$TARGET_BIN_DIR/$LOCAL_BINARY_NAME"
+
+        echo "Downloading MPV Music Indexer ($RELEASE_ASSET_NAME)..."
+
+        if curl -sL --fail "$BINARY_URL" -o "$DESTINATION_PATH"; then
+            chmod +x "$DESTINATION_PATH"
+            echo -e "${GREEN}[OK]${NC} Indexer installed to $DESTINATION_PATH"
+        else
+            echo -e "${YELLOW}[WARN]${NC} Download failed (Asset '$RELEASE_ASSET_NAME' not found)."
+            echo "Falling back to Bash logic."
+        fi
+    else
+        echo -e "${YELLOW}[INFO]${NC} Skipping binary installation."
+    fi
+else
+    # Non-x86_64 handling
+    echo -e "\n${YELLOW}[INFO]${NC} Architecture detected: $ARCH"
+    echo "The pre-compiled indexer is currently x86_64 only."
+    echo -e "If you want speed, build from source:"
+    echo -e "${BLUE}  git clone https://github.com/$REPO_OWNER/$REPO_NAME${NC}"
+    echo -e "${BLUE}  cd $REPO_NAME/crates/mpv-music-indexer && cargo install --path .${NC}"
+fi
+
+# --- 6. Initial Configuration (BATCH MODE) ---
 echo -e "\n${BLUE}[INFO]${NC} Initial Setup"
 echo "Would you like to add music directories now?"
 read -rp "[y/N]: " SETUP_CHOICE < /dev/tty
@@ -128,7 +182,7 @@ if [[ "$SETUP_CHOICE" =~ ^[Yy]$ ]]; then
     fi
 fi
 
-# --- 6. PATH Check ---
+# --- 7. PATH Check ---
 echo -e "\n${BLUE}[INFO]${NC} Verifying PATH..."
 if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
     echo -e "${YELLOW}[WARN] $INSTALL_DIR is NOT in your PATH.${NC}"
