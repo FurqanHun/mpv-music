@@ -20,7 +20,7 @@ HEADER
 cat src/01_vars.sh \
     src/02_utils.sh \
     src/03_config.sh \
-    src/04_metadata.sh \
+    src/04_metadata/*.sh \
     src/05_ui.sh \
     src/06_main.sh >> "$OUTPUT"
 
