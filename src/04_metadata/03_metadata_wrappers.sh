@@ -1,8 +1,7 @@
 # --- Music Library Indexing Function ---
 try_rust_indexer() {
-    local indexer_bin="$CONFIG_DIR/mpv-music-indexer"
 
-    if [[ ! -x "$indexer_bin" ]]; then
+    if [[ -z "$INDEXER_BIN" || ! -x "$INDEXER_BIN" ]]; then
         return 1
     fi
 
@@ -24,7 +23,7 @@ try_rust_indexer() {
     # Run into a temp file first (Safe Write)
     local temp_rust_out="${MUSIC_INDEX_FILE}.rust.tmp"
 
-    if "$indexer_bin" "${args[@]}" > "$temp_rust_out"; then
+    if "$INDEXER_BIN" "${args[@]}" > "$temp_rust_out"; then
         mv "$temp_rust_out" "$MUSIC_INDEX_FILE"
         log_verbose "Rust Indexing Complete."
 
@@ -45,9 +44,7 @@ build_temp_index() {
     # We pass the NAME of the variable holding the temp file path (for nameref)
     local output_var_name="$2"
 
-    local indexer_bin="$CONFIG_DIR/mpv-music-indexer"
-
-    if [[ -x "$indexer_bin" ]]; then
+    if [[ -n "$INDEXER_BIN" && -x "$INDEXER_BIN" ]]; then
         log_verbose "Rust Indexer Found! Fast indexing '$custom_dir'..."
 
         # We need to resolve the output file path from the nameref passed in $2
@@ -72,7 +69,7 @@ build_temp_index() {
         args+=("$custom_dir")
 
         # Execute
-        if "$indexer_bin" "${args[@]}" > "$out_ref"; then
+        if "$INDEXER_BIN" "${args[@]}" > "$out_ref"; then
             return 0
         fi
 

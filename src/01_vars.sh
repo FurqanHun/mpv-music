@@ -9,6 +9,14 @@ MUSIC_DIRS_DEFAULT=(
     "$HOME/Music"
 )
 
+INDEXER_BIN=""
+
+if command -v mpv-music-indexer >/dev/null 2>&1; then
+    INDEXER_BIN="$(command -v mpv-music-indexer)"
+elif [[ -x "$CONFIG_DIR/mpv-music-indexer" ]]; then
+    INDEXER_BIN="$CONFIG_DIR/mpv-music-indexer"
+fi
+
 # visual setup
 BANNER="\n╔══  MPV-MUSIC  ══╗\n"
 
