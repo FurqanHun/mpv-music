@@ -25,6 +25,7 @@ In short, it focuses on library indexing for super-fast access to your music col
 ## Features
 
 * **Blazing-Fast Indexed Searching:** Automatically indexes your music library into a JSONL (JSON Lines) file for lightning-fast search using fzf. If the index does not exist, it will be created on first run.
+* **Hybrid Indexing Engine:** Uses a high-performance **Rust binary** for millisecond-speed scanning of massive libraries. Automatically falls back to a robust Bash+ffprobe method if the binary is missing or incompatible.
 * **Self-Healing Index:** Automatically validates index integrity on startup. It detects corruption (e.g., from power loss), surgically repairs broken lines to save your library, or triggers a smart rebuild to prevent crashes. In a blink of an eye.
 * **Rich Metadata Previews:** View song title, artist, album, and genre directly in the fzf preview window.
 * **Interactive Selection with Multiple Modes:**
@@ -95,16 +96,18 @@ curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh
 ### Option 2: Manual Install
 
 1. Download the latest `mpv-music` script from the [Releases page](https://github.com/FurqanHun/mpv-music/releases).
+2. (Optional but Recommended) Download `mpv-music-indexer-linux-x86_64` and rename it to `mpv-music-indexer`.
 
 2. Make it executable:
 ```bash
-chmod +x mpv-music
+chmod +x mpv-music mpv-music-indexer
 ```
 
 3. Move to your PATH:
 ```bash
 mkdir -p ~/.local/bin
 mv mpv-music ~/.local/bin/
+mv mpv-music-indexer ~/.local/bin/  # Optional
 ```
 
 ### First run (setup):
@@ -205,10 +208,20 @@ Searching the filesystem with find every time is slow, especially if you have a 
 - Metadata previews
 - Offline-friendly behavior
 
+### Hybrid Engine
+
+`mpv-music` employs a dual-engine approach:
+
+1. Rust Indexer (Priority): If the mpv-music-indexer binary is found, it is used to scan your library in parallel. This is incredibly fast.
+2. Bash/FFprobe (Fallback): If the binary is missing or fails, the script seamlessly switches to the legacy method.
+
 ### Maintaining:
 
 * `--reindex` - Full rebuild
 * `--refresh-index` - Smart update (only processes new/modified files)
+
+> [!NOTE]
+> `--refresh-index` only works with bash logic, the way it worked didn't make sense for rust, as it would mean more work for the binary to do instead and hence it just reindexes everything.
 
 > [!TIP]
 > Run these flags alongside `--video-ok` to include video files in the index.
@@ -276,17 +289,21 @@ MUSIC_DIRS=(
 This project is developed using a modular (more of a faux module) source structure.
 * **Installer**: Located in root `install.sh`
 * **Updater**: Located in root `mpv-music-updater`
+* **Rust Source (Crates)**:
+  * `crates/mpv-music-indexer/`: The source code for the high-performance indexing binary.
 * **Source Code:** Located in `src/`.
-  * `01_vars.sh` contains config vars
-  * `02_utils.sh` contains utility functions (i.e, logging, updater etc)
-  * `03_config.sh` contains config file handling and dependency checks
-  * `04_metadata.sh` contains metadata extraction and index building
-  * `05_ui.sh` contains fzf UI and selection modes
-  * `06_main.sh` contains main script logic and argument parsing
+  * `01_vars.sh` Configuration variables.
+  * `02_utils.sh` Utility functions (i.e, logging, updater etc)
+  * `03_config.sh` Config handling and dependency checks.
+  * `04_metadata/` Modular metadata extraction logic (Helpers, Legacy, Rust Wrappers).
+  * `05_ui.sh` FZF UI and selection modes.
+  * `06_main.sh` Main script logic and argument parsing.
 * **Building:** Run `./build.sh` to compile the modules into the final `mpv-music` executable.
 
 > [!NOTE]
-> Compiling here just means concatenating the source files into a single file (mpv-music) with proper shebang and permissions.
+> `build.sh` only concatenates the Bash modules. To build the Rust indexer, you must use `cargo build --release` inside the crates/mpv-music-indexer directory.
+
+* *Requirement:* To build the Rust indexer, you need Rust **1.85.0+** installed.
 
 ---
 
