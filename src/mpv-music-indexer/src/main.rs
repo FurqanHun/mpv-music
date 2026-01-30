@@ -5,7 +5,6 @@ use lofty::prelude::*;
 use lofty::probe::Probe;
 use serde::Serialize;
 use std::collections::HashSet;
-use std::fs;
 use std::io::{self, Write};
 use std::time::{Duration, SystemTime};
 use walkdir::WalkDir;
@@ -114,8 +113,10 @@ fn main() -> Result<()> {
             // TICK THE SPINNER (Only count valid files)
             pb.inc(1);
 
-            // File Stats
-            let metadata = match fs::metadata(path) {
+            // OPTIMIZATION: Use `entry.metadata()`
+            // walkdir often already has this info cached from reading the directory.
+            // This saves 1 System Call per file.
+            let metadata = match entry.metadata() {
                 Ok(m) => m,
                 Err(_) => continue,
             };
@@ -195,9 +196,11 @@ fn main() -> Result<()> {
                 media_type: media_type.to_string(),
             };
 
-            // Write JSONL line
-            if let Ok(json) = serde_json::to_string(&track) {
-                writeln!(handle, "{}", json).ok();
+            // OPTIMIZATION: Direct Stream Write
+            // Do NOT allocate a String via to_string.
+            // Write directly into the stdout buffer.
+            if serde_json::to_writer(&mut handle, &track).is_ok() {
+                handle.write_all(b"\n").ok();
             }
         }
     }
