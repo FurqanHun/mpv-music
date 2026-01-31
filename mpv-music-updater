@@ -171,41 +171,44 @@ if [[ -n "$LOCAL_INDEXER" ]]; then
         msg_info "Checking Indexer ($LOCAL_INDEXER)..."
 
         # Get Local Version
-        # Output format: "mpv-music-indexer 0.22.0" -> awk gets 2nd column
         LOCAL_IDX_VER=$("$LOCAL_INDEXER" -V 2>/dev/null | awk '{print $2}')
 
         if [[ -z "$LOCAL_IDX_VER" ]]; then
             msg_warn "Could not detect local indexer version. Skipping."
-        elif [[ "$LOCAL_IDX_VER" == "$REMOTE_VERSION" ]]; then
-            msg_ok "Indexer is already up to date (v$LOCAL_IDX_VER)."
         else
-            # Compare Versions (Downgrade Check)
-            SMALLEST_IDX=$(echo -e "${LOCAL_IDX_VER}\n${REMOTE_VERSION}" | sort -V | head -n1)
+            TOML_URL="https://raw.githubusercontent.com/FurqanHun/mpv-music/${LATEST_TAG}/crates/mpv-music-indexer/Cargo.toml"
+            REMOTE_IDX_VER=$(curl -sL "$TOML_URL" | grep '^version =' | head -n1 | cut -d'"' -f2)
 
-            if [[ "$SMALLEST_IDX" == "$REMOTE_VERSION" ]]; then
-                msg_ok "Indexer is newer/same (v$LOCAL_IDX_VER vs v$REMOTE_VERSION). Skipping."
+            if [[ -z "$REMOTE_IDX_VER" ]]; then
+                 # Fallback to script version if TOML fails (rare)
+                 msg_warn "Could not read remote indexer version. Skipping."
+            elif [[ "$LOCAL_IDX_VER" == "$REMOTE_IDX_VER" ]]; then
+                msg_ok "Indexer is already up to date (v$LOCAL_IDX_VER)."
             else
-                msg_warn "Indexer Update: v$LOCAL_IDX_VER -> v$REMOTE_VERSION"
+                # Compare Versions (Downgrade Check)
+                SMALLEST_IDX=$(echo -e "${LOCAL_IDX_VER}\n${REMOTE_IDX_VER}" | sort -V | head -n1)
 
-                # Download and Replace
-                TEMP_IDX="$CONFIG_DIR/mpv-music-indexer.new"
-                # Note: Binaries are release assets, not raw files
-                IDX_URL="https://github.com/FurqanHun/mpv-music/releases/download/${LATEST_TAG}/${ASSET_NAME}"
+                if [[ "$SMALLEST_IDX" == "$REMOTE_IDX_VER" ]]; then
+                    msg_ok "Indexer is newer/same (v$LOCAL_IDX_VER vs Remote v$REMOTE_IDX_VER). Skipping."
+                else
+                    msg_warn "Indexer Update: v$LOCAL_IDX_VER -> v$REMOTE_IDX_VER"
 
-                if curl -sL --fail "$IDX_URL" -o "$TEMP_IDX"; then
-                    chmod +x "$TEMP_IDX"
+                    # Download and Replace
+                    TEMP_IDX="$CONFIG_DIR/mpv-music-indexer.new"
+                    IDX_URL="https://github.com/FurqanHun/mpv-music/releases/download/${LATEST_TAG}/${ASSET_NAME}"
 
-                    # If local indexer was in PATH but not config dir, update where it lives?
-                    # Or just overwrite the specific path we found.
-                    if mv "$TEMP_IDX" "$LOCAL_INDEXER"; then
-                        msg_ok "Indexer updated successfully!"
+                    if curl -sL --fail "$IDX_URL" -o "$TEMP_IDX"; then
+                        chmod +x "$TEMP_IDX"
+                        if mv "$TEMP_IDX" "$LOCAL_INDEXER"; then
+                            msg_ok "Indexer updated successfully!"
+                        else
+                            msg_error "Failed to replace indexer binary (Permission denied?)."
+                            rm -f "$TEMP_IDX"
+                        fi
                     else
-                        msg_error "Failed to replace indexer binary (Permission denied?)."
+                        msg_error "Failed to download indexer binary. Leaving old one."
                         rm -f "$TEMP_IDX"
                     fi
-                else
-                    msg_error "Failed to download indexer binary. Leaving old one."
-                    rm -f "$TEMP_IDX"
                 fi
             fi
         fi
