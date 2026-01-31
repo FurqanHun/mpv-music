@@ -58,91 +58,158 @@ fi
 
 if [[ "$REMOTE_VERSION" == "$CURRENT_VERSION" ]]; then
     msg_ok "You are already using the latest version (v$CURRENT_VERSION)."
-    exit 0
-fi
+    # We still check indexer below even if script matches,
+    # just in case user has old binary with new script manually
+else
+    # Downgrade Prevention
+    # Sort versions numerically/semantically.
+    # If the smallest (top) version is the REMOTE one, we are already newer.
+    SMALLEST_VERSION=$(echo -e "${CURRENT_VERSION}\n${REMOTE_VERSION}" | sort -V | head -n1)
 
-# Downgrade Prevention
-# Sort versions numerically/semantically.
-# If the smallest (top) version is the REMOTE one, we are already newer.
-SMALLEST_VERSION=$(echo -e "${CURRENT_VERSION}\n${REMOTE_VERSION}" | sort -V | head -n1)
+    if [[ "$SMALLEST_VERSION" == "$REMOTE_VERSION" ]]; then
+        msg_ok "You are running a newer version (v$CURRENT_VERSION) than the release (v$REMOTE_VERSION)."
+        msg_info "Skipping downgrade."
+    else
+        msg_warn "Update found! v$CURRENT_VERSION -> v$REMOTE_VERSION"
+        msg_info "Fetching release $LATEST_TAG..."
 
-if [[ "$SMALLEST_VERSION" == "$REMOTE_VERSION" ]]; then
-    msg_ok "You are running a newer version (v$CURRENT_VERSION) than the release (v$REMOTE_VERSION)."
-    msg_info "Skipping downgrade."
-    exit 0
-fi
+        # Construct the download link using the specific tag
+        DOWNLOAD_URL="https://raw.githubusercontent.com/FurqanHun/mpv-music/${LATEST_TAG}/mpv-music"
 
-msg_warn "Update found! v$CURRENT_VERSION -> v$REMOTE_VERSION"
-msg_info "Fetching release $LATEST_TAG..."
+        if ! curl -sL "$DOWNLOAD_URL" -o "$TEMP_DOWNLOAD"; then
+            msg_error "Failed to download the update."
+            exit 1
+        fi
 
-# Construct the download link using the specific tag
-DOWNLOAD_URL="https://raw.githubusercontent.com/FurqanHun/mpv-music/${LATEST_TAG}/mpv-music"
+        chmod +x "$TEMP_DOWNLOAD"
 
-if ! curl -sL "$DOWNLOAD_URL" -o "$TEMP_DOWNLOAD"; then
-    msg_error "Failed to download the update."
-    exit 1
-fi
+        if ! grep -q "bash" "$TEMP_DOWNLOAD"; then
+            msg_error "Downloaded file seems corrupt."
+            rm "$TEMP_DOWNLOAD"
+            exit 1
+        fi
 
-chmod +x "$TEMP_DOWNLOAD"
-
-if ! grep -q "bash" "$TEMP_DOWNLOAD"; then
-    msg_error "Downloaded file seems corrupt."
-    rm "$TEMP_DOWNLOAD"
-    exit 1
-fi
-
-if mv "$TEMP_DOWNLOAD" "$TARGET_PATH"; then
-    msg_ok "Update to v$REMOTE_VERSION successful!"
-
-    # --- CONFIG MIGRATION (String -> Array) ---
-    if [[ -f "$CONFIG_FILE" ]]; then
-        # Check if MUSIC_DIRS is defined but NOT as an array (does not start with '(' )
-        if grep -qE '^MUSIC_DIRS=[^(]' "$CONFIG_FILE"; then
-            msg_warn "Legacy config format detected (MUSIC_DIRS string)."
-            msg_info "Migrating to new Array format..."
-
-            cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
-
-            # Extract the old value safely by sourcing in a subshell
-            # suppress output to avoid noise
-            OLD_VAL=$(set +e; source "$CONFIG_FILE" &>/dev/null; echo "$MUSIC_DIRS")
-
-            TEMP_CONF=$(mktemp)
-
-            # remove the old line(s)
-            sed '/^MUSIC_DIRS=/d' "$CONFIG_FILE" > "$TEMP_CONF"
-
-            # append the new format
-            {
-                echo ""
-                echo "# Migrated by mpv-music-updater v$REMOTE_VERSION"
-                echo "MUSIC_DIRS=("
-                # Split the old string by spaces
-                IFS=' ' read -r -a DIRS <<< "$OLD_VAL"
-                for dir in "${DIRS[@]}"; do
-                    # Force quotes for safety
-                    echo "    \"$dir\""
-                done
-                echo ")"
-            } >> "$TEMP_CONF"
-
-            # 6. Apply
-            mv "$TEMP_CONF" "$CONFIG_FILE"
-            msg_ok "Config migrated successfully."
+        if mv "$TEMP_DOWNLOAD" "$TARGET_PATH"; then
+            msg_ok "Script update to v$REMOTE_VERSION successful!"
+        else
+            msg_error "Failed to replace file. Check permissions."
+            rm "$TEMP_DOWNLOAD"
+            exit 1
         fi
     fi
-
-    # --- MIGRATION CHECK (JSON -> JSONL) ---
-    if [[ -f "$CONFIG_DIR/music_index.json" ]]; then
-        echo ""
-        msg_warn "Legacy database format detected (.json)."
-        msg_warn "v0.15.0+ introduced a faster engine (.jsonl)."
-        echo -e "${YELLOW}Your library will automatically migrate to the new format the next time you run mpv-music.${NC}"
-        echo -e "${YELLOW}The old .json file will be removed upon success.${NC}"
-    fi
-
-else
-    msg_error "Failed to replace file. Check permissions."
-    rm "$TEMP_DOWNLOAD"
-    exit 1
 fi
+
+# --- CONFIG MIGRATION (String -> Array) ---
+if [[ -f "$CONFIG_FILE" ]]; then
+    # Check if MUSIC_DIRS is defined but NOT as an array (does not start with '(' )
+    if grep -qE '^MUSIC_DIRS=[^(]' "$CONFIG_FILE"; then
+        msg_warn "Legacy config format detected (MUSIC_DIRS string)."
+        msg_info "Migrating to new Array format..."
+
+        cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
+
+        # Extract the old value safely by sourcing in a subshell
+        # suppress output to avoid noise
+        OLD_VAL=$(set +e; source "$CONFIG_FILE" &>/dev/null; echo "$MUSIC_DIRS")
+
+        TEMP_CONF=$(mktemp)
+
+        # remove the old line(s)
+        sed '/^MUSIC_DIRS=/d' "$CONFIG_FILE" > "$TEMP_CONF"
+
+        # append the new format
+        {
+            echo ""
+            echo "# Migrated by mpv-music-updater v$REMOTE_VERSION"
+            echo "MUSIC_DIRS=("
+            # Split the old string by spaces
+            IFS=' ' read -r -a DIRS <<< "$OLD_VAL"
+            for dir in "${DIRS[@]}"; do
+                # Force quotes for safety
+                echo "    \"$dir\""
+            done
+            echo ")"
+        } >> "$TEMP_CONF"
+
+        # 6. Apply
+        mv "$TEMP_CONF" "$CONFIG_FILE"
+        msg_ok "Config migrated successfully."
+    fi
+fi
+
+# --- MIGRATION CHECK (JSON -> JSONL) ---
+if [[ -f "$CONFIG_DIR/music_index.json" ]]; then
+    echo ""
+    msg_warn "Legacy database format detected (.json)."
+    msg_warn "v0.15.0+ introduced a faster engine (.jsonl)."
+    echo -e "${YELLOW}Your library will automatically migrate to the new format the next time you run mpv-music.${NC}"
+    echo -e "${YELLOW}The old .json file will be removed upon success.${NC}"
+fi
+
+# --- INDEXER UPDATE LOGIC ---
+# Only check if indexer exists locally (Config dir OR Path)
+
+LOCAL_INDEXER=""
+
+if [[ -x "$CONFIG_DIR/mpv-music-indexer" ]]; then
+    LOCAL_INDEXER="$CONFIG_DIR/mpv-music-indexer"
+elif command -v mpv-music-indexer &>/dev/null; then
+    LOCAL_INDEXER="$(command -v mpv-music-indexer)"
+fi
+
+if [[ -n "$LOCAL_INDEXER" ]]; then
+    ARCH=$(uname -m)
+    ASSET_NAME=""
+    case "$ARCH" in
+        x86_64) ASSET_NAME="mpv-music-indexer-linux-x86_64" ;;
+        aarch64|arm64) ASSET_NAME="mpv-music-indexer-linux-aarch64" ;;
+        armv7l|armv7) ASSET_NAME="mpv-music-indexer-linux-armv7" ;;
+        *) ASSET_NAME="" ;; # Unknown/Unsupported for auto-update
+    esac
+
+    if [[ -n "$ASSET_NAME" ]]; then
+        msg_info "Checking Indexer ($LOCAL_INDEXER)..."
+
+        # Get Local Version
+        # Output format: "mpv-music-indexer 0.22.0" -> awk gets 2nd column
+        LOCAL_IDX_VER=$("$LOCAL_INDEXER" -V 2>/dev/null | awk '{print $2}')
+
+        if [[ -z "$LOCAL_IDX_VER" ]]; then
+            msg_warn "Could not detect local indexer version. Skipping."
+        elif [[ "$LOCAL_IDX_VER" == "$REMOTE_VERSION" ]]; then
+            msg_ok "Indexer is already up to date (v$LOCAL_IDX_VER)."
+        else
+            # Compare Versions (Downgrade Check)
+            SMALLEST_IDX=$(echo -e "${LOCAL_IDX_VER}\n${REMOTE_VERSION}" | sort -V | head -n1)
+
+            if [[ "$SMALLEST_IDX" == "$REMOTE_VERSION" ]]; then
+                msg_ok "Indexer is newer/same (v$LOCAL_IDX_VER vs v$REMOTE_VERSION). Skipping."
+            else
+                msg_warn "Indexer Update: v$LOCAL_IDX_VER -> v$REMOTE_VERSION"
+
+                # Download and Replace
+                TEMP_IDX="$CONFIG_DIR/mpv-music-indexer.new"
+                # Note: Binaries are release assets, not raw files
+                IDX_URL="https://github.com/FurqanHun/mpv-music/releases/download/${LATEST_TAG}/${ASSET_NAME}"
+
+                if curl -sL --fail "$IDX_URL" -o "$TEMP_IDX"; then
+                    chmod +x "$TEMP_IDX"
+
+                    # If local indexer was in PATH but not config dir, update where it lives?
+                    # Or just overwrite the specific path we found.
+                    if mv "$TEMP_IDX" "$LOCAL_INDEXER"; then
+                        msg_ok "Indexer updated successfully!"
+                    else
+                        msg_error "Failed to replace indexer binary (Permission denied?)."
+                        rm -f "$TEMP_IDX"
+                    fi
+                else
+                    msg_error "Failed to download indexer binary. Leaving old one."
+                    rm -f "$TEMP_IDX"
+                fi
+            fi
+        fi
+    fi
+fi
+
+exit 0

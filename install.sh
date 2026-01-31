@@ -88,9 +88,26 @@ fi
 
 # --- 5. Download Rust Indexer (Monke Engine) ---
 ARCH=$(uname -m)
+ASSET_NAME=""
 
-if [[ "$ARCH" == "x86_64" ]]; then
+case "$ARCH" in
+    x86_64)
+        ASSET_NAME="mpv-music-indexer-linux-x86_64"
+        ;;
+    aarch64|arm64)
+        ASSET_NAME="mpv-music-indexer-linux-aarch64"
+        ;;
+    armv7l|armv7)
+        ASSET_NAME="mpv-music-indexer-linux-armv7"
+        ;;
+    *)
+        ASSET_NAME="" # Unknown
+        ;;
+esac
+
+if [[ -n "$ASSET_NAME" ]]; then
     echo -e "\n${BLUE}[OPTIONAL]${NC} Install High-Performance Indexer?"
+    echo -e "Detected Architecture: ${GREEN}$ARCH${NC} ($ASSET_NAME)"
     echo -e "The Rust-based indexer is ${GREEN}significantly faster${NC}."
     read -rp "Install pre-compiled binary? [Y/n]: " RUST_CHOICE < /dev/tty
     RUST_CHOICE=${RUST_CHOICE:-Y}
@@ -113,28 +130,26 @@ if [[ "$ARCH" == "x86_64" ]]; then
 
         mkdir -p "$TARGET_BIN_DIR"
 
-        # We download the specific x86 asset, but save it as the generic name
-        RELEASE_ASSET_NAME="mpv-music-indexer-linux-x86_64"
         LOCAL_BINARY_NAME="mpv-music-indexer"
-        BINARY_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$LATEST_TAG/$RELEASE_ASSET_NAME"
+        BINARY_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$LATEST_TAG/$ASSET_NAME"
         DESTINATION_PATH="$TARGET_BIN_DIR/$LOCAL_BINARY_NAME"
 
-        echo "Downloading MPV Music Indexer ($RELEASE_ASSET_NAME)..."
+        echo "Downloading MPV Music Indexer ($ASSET_NAME)..."
 
         if curl -sL --fail "$BINARY_URL" -o "$DESTINATION_PATH"; then
             chmod +x "$DESTINATION_PATH"
             echo -e "${GREEN}[OK]${NC} Indexer installed to $DESTINATION_PATH"
         else
-            echo -e "${YELLOW}[WARN]${NC} Download failed (Asset '$RELEASE_ASSET_NAME' not found)."
+            echo -e "${YELLOW}[WARN]${NC} Download failed (Asset '$ASSET_NAME' not found)."
             echo "Falling back to Bash logic."
         fi
     else
         echo -e "${YELLOW}[INFO]${NC} Skipping binary installation."
     fi
 else
-    # Non-x86_64 handling
+    # Unsupported Architecture
     echo -e "\n${YELLOW}[INFO]${NC} Architecture detected: $ARCH"
-    echo "The pre-compiled indexer is currently x86_64 only."
+    echo "No pre-compiled binary found for your system."
     echo -e "If you want speed, build from source:"
     echo -e "${BLUE}  git clone https://github.com/$REPO_OWNER/$REPO_NAME${NC}"
     echo -e "${BLUE}  cd $REPO_NAME/crates/mpv-music-indexer && cargo install --path .${NC}"
