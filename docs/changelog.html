@@ -9,11 +9,11 @@
 
         <meta
             name="description"
-            content="Release notes and changelog for mpv-music. Track the latest features, bug fixes, and updates for the blazing-fast terminal music player written in Bash and Rust."
+            content="Release notes and changelog for mpv-music. Track the latest features, bug fixes, and updates."
         />
         <meta
             name="keywords"
-            content="mpv-music changelog, release notes, updates, version history, mpv-music versions, open source music player"
+            content="mpv-music changelog, release notes, updates, version history"
         />
         <link
             rel="canonical"
@@ -25,23 +25,12 @@
                 "@context": "https://schema.org",
                 "@type": "SoftwareApplication",
                 "name": "mpv-music",
-                "operatingSystem": "Linux, Windows (via WSL)",
+                "operatingSystem": "Linux",
                 "applicationCategory": "MultimediaApplication",
-                "description": "Open Source terminal-based music library manager for mpv.",
-                "license": "https://github.com/furqanhun/mpv-music/blob/main/LICENSE",
-                "softwareRequirements": "mpv, ffmpeg, fzf, bash",
-                "offers": {
-                    "@type": "Offer",
-                    "price": "0",
-                    "priceCurrency": "USD"
-                },
-                "author": {
-                    "@type": "Person",
-                    "name": "furqanhun"
-                }
+                "description": "Terminal-based music library manager.",
+                "author": { "@type": "Person", "name": "furqanhun" }
             }
         </script>
-        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
         <style>
             :root {
@@ -50,22 +39,19 @@
                 --accent: #00ff00;
                 --dim: #666666;
                 --link: #58a6ff;
-                --alert: #ffcc00; /* Yellow */
-                --danger: #ff0055; /* Red */
+                --alert: #ffcc00;
                 --code-bg: #1a1a1a;
             }
-
             body {
                 background-color: var(--bg);
                 color: var(--fg);
-                font-family: "Menlo", "Consolas", "Monaco", monospace;
+                font-family: "Menlo", "Consolas", monospace;
                 margin: 0;
                 padding: 2rem;
                 line-height: 1.6;
                 max-width: 800px;
                 margin: 0 auto;
             }
-
             header {
                 margin-bottom: 3rem;
                 border-bottom: 1px dashed var(--dim);
@@ -74,13 +60,11 @@
                 justify-content: space-between;
                 align-items: baseline;
             }
-
             h1 {
                 font-size: 1.5rem;
                 color: var(--accent);
                 margin: 0;
             }
-
             a {
                 color: var(--link);
                 text-decoration: none;
@@ -89,15 +73,12 @@
                 text-decoration: underline;
             }
 
-            /* Release Card Styles */
+            /* Release Cards */
             .release {
                 margin-bottom: 4rem;
-                animation: fadein 0.5s;
                 border-left: 2px solid #333;
                 padding-left: 1.5rem;
             }
-
-            /* Highlight latest release */
             .release:first-of-type {
                 border-left: 2px solid var(--accent);
             }
@@ -110,7 +91,6 @@
                 align-items: center;
                 gap: 10px;
             }
-
             .tag {
                 color: var(--fg);
                 font-weight: bold;
@@ -125,9 +105,7 @@
                 font-weight: bold;
                 font-size: 0.75rem;
                 text-transform: uppercase;
-                letter-spacing: 1px;
             }
-
             .latest-badge {
                 background: var(--accent);
                 color: #000;
@@ -136,27 +114,20 @@
                 font-weight: bold;
                 font-size: 0.75rem;
                 text-transform: uppercase;
-                letter-spacing: 1px;
             }
 
-            /* Markdown Content Styling */
+            /* Markdown Styles */
             .body h1,
-            .body h2,
-            .body h3 {
+            .body h2 {
                 color: var(--fg);
                 border-bottom: 1px solid #333;
                 padding-bottom: 0.3rem;
                 margin-top: 1.5rem;
                 font-size: 1.1rem;
             }
-
             .body ul {
                 padding-left: 1.5rem;
             }
-            .body li {
-                margin-bottom: 0.25rem;
-            }
-
             .body code {
                 background: var(--code-bg);
                 padding: 2px 6px;
@@ -164,20 +135,13 @@
                 font-size: 0.9em;
                 color: var(--alert);
             }
-
             .body pre {
                 background: var(--code-bg);
                 padding: 1rem;
                 overflow-x: auto;
                 border: 1px solid #333;
             }
-            .body pre code {
-                background: none;
-                padding: 0;
-                color: var(--fg);
-            }
 
-            /* Footer Styling */
             footer {
                 margin-top: 4rem;
                 border-top: 1px solid var(--dim);
@@ -186,23 +150,6 @@
                 color: var(--dim);
                 text-align: center;
                 margin-bottom: 2rem;
-            }
-
-            .loader {
-                text-align: center;
-                color: var(--dim);
-                margin-top: 4rem;
-            }
-
-            @keyframes fadein {
-                from {
-                    opacity: 0;
-                    transform: translateY(10px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
             }
         </style>
     </head>
@@ -213,81 +160,593 @@
         </header>
 
         <div id="changelog-container">
-            <div class="loader">
-                Fetching history from the GitHub Release API...
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.22.0" target="_blank" class="tag">v0.22.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 31, 2026</span>
             </div>
+            <div class="body">
+                <p>This release unlocks the full potential of the Rust indexer with multi-threaded parallel scanning, adds hardware-aware controls for HDD users, and exposes comprehensive configuration options for volume and video playback.</p>
+<h2>Features</h2>
+<ul>
+<li><strong>Parallel Indexing:</strong> The Rust indexer now utilizes all available CPU cores via <code>rayon</code>, delivering massive speed gains for SSD users</li>
+<li><strong>Serial Mode:</strong> Added <code>--serial</code> flag (and <code>SERIAL_MODE</code> config) to force single-threaded indexing, preventing thrashing on mechanical drives</li>
+<li><strong>Volume Control:</strong> Introduced <code>--volume</code> / <code>--vol</code> flag and <code>VOLUME</code> config setting to manage playback levels directly</li>
+<li><strong>Persistent Settings:</strong> Users can now permanently enable video scanning (<code>VIDEO_OK</code>) and serial mode via the config file</li>
+</ul>
+<h2>Improvements</h2>
+<ul>
+<li><strong>Lock Contention Fix:</strong> Optimized the Rust indexer's output strategy to buffer JSON serialization, eliminating thread blocking and maximizing throughput</li>
+<li><strong>Argument Parsing:</strong> Updated the wrapper script to correctly prioritize Config settings while allowing CLI overrides for all new flags</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.21.0" target="_blank" class="tag">v0.21.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 30, 2026</span>
+            </div>
+            <div class="body">
+                <p>This release introduces a high-performance Rust-based indexer for near-instant library scanning and refactors the project structure for better maintainability.</p>
+<h2>Features</h2>
+<ul>
+<li><strong>Rust Indexer:</strong> Implemented a high-speed, multi-threaded indexing binary (<code>mpv-music-indexer</code>) that replaces the legacy Bash loop</li>
+<li><strong>Hybrid Support:</strong> Added fallback logic to seamlessly switch between the Rust indexer and the legacy Bash implementation if the binary is missing</li>
+</ul>
+<h2>Improvements</h2>
+<ul>
+<li><strong>Installer:</strong> Updated installation logic to detect <code>x86_64</code> architecture and offer the pre-compiled Rust binary from GitHub Releases</li>
+<li><strong>Optimization:</strong> Enabled aggressive build optimizations (LTO, stripping) and streaming metadata retrieval for the Rust binary</li>
+<li><strong>Refactor:</strong> Restructured the monorepo by moving Rust code to <code>crates/</code> and modularizing the metadata script into distinct components</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.20.1" target="_blank" class="tag">v0.20.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 29, 2026</span>
+            </div>
+            <div class="body">
+                <p>This patch release optimizes the indexing engine by removing dead code and refines the installer for better usability.</p>
+<h2>Improvements</h2>
+<ul>
+<li><strong>Installer:</strong> Implemented batch directory addition, allowing multiple folders to be queued during setup before applying changes</li>
+<li><strong>Optimization:</strong> Removed unused <code>dirs_state</code> logic and <code>dirs_state.json</code> generation, reducing unnecessary file I/O and CPU cycles during scans</li>
+</ul>
+<h2>Fixes</h2>
+<ul>
+<li>Fixed path sanitization in the installer to properly handle drag-and-drop quotes without breaking paths containing apostrophes</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.20.0" target="_blank" class="tag">v0.20.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 29, 2026</span>
+            </div>
+            <div class="body">
+                <p>This release introduces interactive library management and completely rewrites the configuration engine to support complex paths.</p>
+<h2>Features</h2>
+<ul>
+<li>Implemented <code>--manage-dirs</code>, <code>--add-dir</code>, and <code>--remove-dir</code> CLI flags for direct library management</li>
+<li>Added interactive "Manage Directories" menu to add/remove folders directly from the UI</li>
+<li>Installer now intelligently prompts to add music directories during setup</li>
+</ul>
+<h2>Core Improvements</h2>
+<ul>
+<li>Refactored <code>MUSIC_DIRS</code> persistence to use native Bash arrays, fully supporting paths with spaces</li>
+<li>Implemented auto-migration in the updater to upgrade legacy string-based configs to the new array format</li>
+<li>Implemented "nuclear" save strategy to ensure config updates are appended safely without corruption</li>
+</ul>
+<h2>Fixes</h2>
+<ul>
+<li>Refactored config reload logic to ensure <code>build_music_index</code> always sees the latest state (fixed memory/disk desync)</li>
+<li>Fixed updater to properly source configuration and respect <code>LOG_MAX_SIZE_KB</code> settings</li>
+<li>Updated README with new usage instructions and installation steps</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.19.1" target="_blank" class="tag">v0.19.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 28, 2026</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>Fixed an issue where the temporary file cleanup routine ignored the log size configuration; it now strictly adheres to the limit (or disabled state) defined in the config.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.19.0" target="_blank" class="tag">v0.19.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 28, 2026</span>
+            </div>
+            <div class="body">
+                <h2>Enhancements</h2>
+<ul>
+<li>Improved debug and verbose logging system with timestamped file logging</li>
+<li>Implemented improved self-healing for index corruption</li>
+</ul>
+<h2>Performance</h2>
+<ul>
+<li>Optimized indexing using pure Bash and <code>find -printf</code> to remove process overhead</li>
+<li>Optimized index refresh using dual-stream reader to reduce memory usage during updates</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.18.1" target="_blank" class="tag">v0.18.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 28, 2026</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>Fixed video indexing lag <code>--video-ok</code> by limiting ffprobe duration/size in <code>get_audio_metadata</code>. As a result, general indexing <code>--reindex</code>,<code>--refresh-index</code> is now faster too.</li>
+<li>Wrapped interactive menu in a while loop to prevent accidental exits on invalid input.</li>
+</ul>
+<p>Honorary mention:
+- Added clean exit trap for SIGINT (Ctrl+C). (didn't really mentioned in commits so yeah)</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.18.0" target="_blank" class="tag">v0.18.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 27, 2026</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>Automatically validates index integrity on startup. It detects corruption (e.g., from power loss), tries to repair by removing the last line, or triggers a smart rebuild to prevent crashes. In a blink of an eye.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.17.3" target="_blank" class="tag">v0.17.3</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 26, 2026</span>
+            </div>
+            <div class="body">
+                <p>fix: improve stability for large libraries and weird filenames
+- Use piping for large playlists (avoids arg limit crash)
+- Preserve newlines/spaces in filenames (removed tr -d)
+- Allow GNU Compatible find (feature check instead of version check)</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.17.2" target="_blank" class="tag">v0.17.2</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 26, 2026</span>
+            </div>
+            <div class="body">
+                <h2>Bug Fixes</h2>
+<ul>
+<li>Fixed script exiting early (it still cleared temp files, but failed to print warn messages) when pressing ESC in interactive menus (fzf exit 130)</li>
+<li>Fixed argument parsing to handle spaces in filters correctly (replaced xargs with sed)</li>
+<li>Fixed regex filter escaping to prevent jq errors on special metadata</li>
+</ul>
+<h2>Enhancements</h2>
+<ul>
+<li>Overhauled UI with contextual emojis for tracks, videos, folders, and tags</li>
+<li>Implemented safer line-number based selection strategy for previews (fixes special char handling)</li>
+<li>Cleaned up fzf list views to hide raw data columns while preserving rich previews</li>
+<li>Removed unnecessary locale settings from clarification logic</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.17.0" target="_blank" class="tag">v0.17.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 26, 2026</span>
+            </div>
+            <div class="body">
+                <h2>Bug Fixes</h2>
+<ul>
+<li>Fixed empty fzf selection handling in dir mode, playlist mode, and CLI filter clarification</li>
+<li>Fixed CLI filters using MUSIC_INDEX_FILE instead of INDEX_TO_USE</li>
+<li>Fixed interactive filters running before custom directory index was built</li>
+<li>Fixed play_all_music using wrong index for custom directories</li>
+<li>Fixed empty clarification fzf selection not being handled</li>
+<li>Fixed indentation for playlist media_type in update_music_index</li>
+</ul>
+<h2>Enhancements</h2>
+<ul>
+<li>Added deferred interactive filter system with GENRE/ARTIST/ALBUM/TITLE_INTERACTIVE flags</li>
+<li>Removed redundant empty array checks that became dead code</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.16.2" target="_blank" class="tag">v0.16.2</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 25, 2026</span>
+            </div>
+            <div class="body">
+                <ul>
+<li><strong>Fix:</strong> Implemented a pre-flight check to prevent startup crashes caused by syntax errors in <code>mpv-music.conf</code>.</li>
+<li><strong>Refactor:</strong> Centralized <code>--config</code>, <code>--update</code>, and <code>--version</code> flag handling in the configuration module.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.16.1" target="_blank" class="tag">v0.16.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 25, 2026</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>someone wanted it so here it is, fixed the radio/mixes in yt, by forcing yes-playlist if list= detected in url</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.16.0" target="_blank" class="tag">v0.16.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 25, 2026</span>
+            </div>
+            <div class="body">
+                <h2>What's New</h2>
+<ul>
+<li><strong>Interactive URL Mode (Option 6):</strong> Introduced a dedicated input mode for URLs. This bypasses terminal parsing issues where links containing special characters (like <code>&amp;</code> in YouTube mixes) would break shell commands.</li>
+<li><strong>Multi-URL Support:</strong> Added the ability to pass multiple URLs or file paths as arguments (or via the new URL mode) to queue them sequentially.</li>
+</ul>
+<h2>Fixes &amp; Improvements</h2>
+<ul>
+<li><strong>Critical YouTube Playback Fix (JS Runtime):</strong> Implemented automatic detection for JavaScript runtimes (Deno, Node.js, QuickJS, Bun).</li>
+<li>
+<p><em>Context:</em> YouTube has updated their delivery methods (forcing SABR format), which now requires <code>yt-dlp</code> to execute JavaScript to bypass anti-bot protections. Without a valid runtime, playback was failing with <code>HTTP 403 Forbidden</code> errors. This update injects the necessary flags to ensure reliable streaming. (I personally haven't used yt-dlp in ages but knew about SABR format being forced, but didn't think desktop had started to do it too)</p>
+</li>
+<li>
+<p><strong>Improved Metadata Display:</strong> Changed the playback status fallback from <code>filename</code> to <code>media-title</code>. Streams will now display the actual video title (e.g., "Artist - Song") instead of the raw URL string. This doesn't affect offline media that doesn't have proper media title tags, as it will automatically fall back to the filename.</p>
+</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.15.1" target="_blank" class="tag">v0.15.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 24, 2026</span>
+            </div>
+            <div class="body">
+                <p>exactly what the title says, when the script was ran with <code>--reindex</code> or <code>--refresh-index</code> and the script detected the index missing or it would first create the auto index, and then run the command to reindex or refresh it. so i added a check to avoid that</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.15.0" target="_blank" class="tag">v0.15.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 24, 2026</span>
+            </div>
+            <div class="body">
+                <p>switched the index from json to jsonl for better performance and scalability</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.14.6" target="_blank" class="tag">v0.14.6</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 21, 2026</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>Improved the progress bar logic in indexing.</li>
+<li>Demoted some info messages</li>
+<li>Updater no longer downgrades, aka added semantic version check</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.14.5" target="_blank" class="tag">v0.14.5</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 21, 2026</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>Updated the generated configuration example to correctly reflect the new array syntax.</li>
+<li>Standardized logging with clean tags and reduced terminal noise.</li>
+<li>Switched fzf previews to TSV format to prevent breakage on filenames containing pipe characters.</li>
+<li>Unified interactive prompts and improved interrupt handling across CLI and Menu modes.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.14.1" target="_blank" class="tag">v0.14.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 18, 2026</span>
+            </div>
+            <div class="body">
+                <p>while building v0.14.0 through the build.sh it uhm ran the commands in the mpv default args, which then ofc broke the script, and this fixes the issue by dividing it into more vars and then merging in create config, while also making them string literal.</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.14.0" target="_blank" class="tag">v0.14.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 18, 2026</span>
+            </div>
+            <div class="body">
+                <p>enforce minimal TUI, silence spam, and fix config parsing</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.13.0" target="_blank" class="tag">v0.13.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 18, 2026</span>
+            </div>
+            <div class="body">
+                <p>split the file into modules for easier development/maintenance, however it doesn't effect the user</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.12.3" target="_blank" class="tag">v0.12.3</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 17, 2026</span>
+            </div>
+            <div class="body">
+                <p>changed parsing from comma to tab separator, and updated the updater logic to use tagged release instead of master branch</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.12.1" target="_blank" class="tag">v0.12.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">January 03, 2026</span>
+            </div>
+            <div class="body">
+                <p>Adds <code>--update</code>. This fetches a separate<code>mpv-music-updater</code> script to handle the upgrade.</p>
+<p>This approach ensures future architectural changes (like modularization) can be handled smoothly without breaking existing installations, and avoids race conditions caused by modifying an executing file.</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.11.3" target="_blank" class="tag">v0.11.3</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">August 14, 2025</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>Now handles <code>--help</code>, <code>--version</code>, and <code>--config</code> before main execution or index logic.</li>
+<li>Fixes the bug/regression introduced in v0.11.2 where some idiot tried halfassing the fix and caused regression with CLI filters.</li>
+<li>Restores correct CLI filter behavior for <code>--genre</code>, <code>--artist</code>, <code>--album</code>, <code>--title</code>, etc.</li>
+<li>Argument parsing and index setup order are now robust for all entry points.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.11.2" target="_blank" class="tag">v0.11.2</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">August 13, 2025</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>Fixed a bug where running <code>mpv-music --config</code> would incorrectly build an empty music index, even though only config editing was intended</li>
+<li>Now, <code>--config</code> and <code>--config=EDITOR</code> will only open the config file and exit—no more index creation, no find errors, just a clean setup experience</li>
+<li>Set <code>--audio-display=no</code> as a default mpv flag so embedded cover art is never shown or rendered, even with <code>--no-video</code></li>
+</ul>
+<p>No changes to other features. </p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.11.0" target="_blank" class="tag">v0.11.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">August 13, 2025</span>
+            </div>
+            <div class="body">
+                <h2>Major Upgrade!</h2>
+<ul>
+<li><strong>Tag Filtering:</strong> Filter music by genre, artist, album, or title via interactive menu or CLI flags.</li>
+<li><strong>Play All Mode:</strong> Instantly play all tracks, or all tracks matching your filters.</li>
+<li><strong>Improved Playlist Mode:</strong> Now uses indexed playlists for faster searches and selection.</li>
+<li><strong>New CLI Flags &amp; Expanded Menu:</strong> Access new features via CLI (<code>--genre</code>, <code>--artist</code>, <code>--album</code>, <code>--title</code>, <code>--play-all</code>, <code>--playlist</code>) and interactive menu.</li>
+<li><strong>Enhanced Logging, Error Handling, and UX:</strong> </li>
+<li>Verbose/debug modes, log rotation, configurable log file size.</li>
+<li>Better error messages and more polish throughout.</li>
+<li><strong>Help Text &amp; Code Cleanup:</strong> Help message updated for all features, code and comments cleaned up.</li>
+</ul>
+<p><strong>Note:</strong><br />
+- <strong>Recommended:</strong> Rebuild your music index after updating (<code>mpv-music --reindex</code>).
+- The configuration file now requires this line for logging.<br />
+  If set to 0, it won't store any logs (but will still display them if <code>--debug</code> is passed):
+  <code>sh
+  LOG_MAX_SIZE_KB=1024</code>
+  If upgrading, add this line to your config file, or delete your config and let the script regenerate it.</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.10.0" target="_blank" class="tag">v0.10.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">August 11, 2025</span>
+            </div>
+            <div class="body">
+                <h2>Highlights</h2>
+<ul>
+<li><strong>Playlist Mode:</strong> Select and play playlists (<code>.m3u</code>, <code>.m3u8</code>, <code>.pls</code>) directly from the interactive menu.</li>
+<li><strong>Much faster indexing:</strong> Dramatic speed improvements for large music libraries.</li>
+<li><strong>Metadata extraction:</strong> Now uses a single, efficient <code>jq</code> call for all tags.</li>
+<li><strong>Cleaner codebase:</strong> Unified extension filter logic and improved maintainability.</li>
+<li><strong>Updated help output and UI:</strong> Consistent interface across all modes.</li>
+</ul>
+<hr />
+<p><strong>Note:</strong><br />
+- It is recommended to rebuild your music index after updating.
+- The configuration file now requires this line for playlist extensions:
+  <code>sh
+  PLAYLIST_EXTS="m3u m3u8 pls"</code>
+  If upgrading, add this line to your config file, or remove your config and let the script regenerate it.</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.9.0" target="_blank" class="tag">v0.9.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">June 29, 2025</span>
+            </div>
+            <div class="body">
+                <p>feat: Enhance script robustness with temp file management and logging for v0.9.0</p>
+<ul>
+<li>Fix Album/Folder mode to utilize index</li>
+<li>Fix both modes to utilize temporary indexing for custom dirs</li>
+<li>Add centralized temporary file management with proper cleanup</li>
+<li>Implement verbose (-V) and debug logging capabilities</li>
+<li>Add log file rotation when size exceeds 1MB</li>
+<li>Improve signal handling with comprehensive traps</li>
+<li>Update help documentation to describe new options</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.8.0" target="_blank" class="tag">v0.8.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">June 29, 2025</span>
+            </div>
+            <div class="body">
+                <p>feat(config): add --config flag to edit configuration
+- Add <code>--config</code> flag to open the config in <strong>nano/vi</strong>
+- Support custom editor with <code>--config=EDITOR</code> syntax
+- Update help text to document new functionality
+- Fix function order by moving <code>create_config()</code> definition earlier</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.7.2" target="_blank" class="tag">v0.7.2</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">June 29, 2025</span>
+            </div>
+            <div class="body">
+                <p>fix(mode2): restore custom directory support in track mode
+- Fix regression in track mode where custom directories were ignored
+- Implement temporary indexing for custom directories in track mode
+- Maintain same preview interface for consistency</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.7.1" target="_blank" class="tag">v0.7.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">June 29, 2025</span>
+            </div>
+            <div class="body">
+                <p>feat(ui): add media type indicators to track listing</p>
+<ul>
+<li>Display icons for audio (🎵) and video (🎬) files in track selection mode</li>
+<li>Add media_type field to index file during build and update operations</li>
+<li>Update track selection mode to show file type in preview panel</li>
+<li>Require reindex for users upgrading from previous versions</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.7.0" target="_blank" class="tag">v0.7.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">June 28, 2025</span>
+            </div>
+            <div class="body">
+                <p>This milestone release consolidates all work since v0.4.0.</p>
+<ul>
+<li>Implements a new JSON-based indexing engine for massive performance gains, especially on large libraries.</li>
+<li>Overhauls the fzf interface to use the index, providing rich metadata previews for tracks and clean names for folders.</li>
+<li>Stabilizes the indexing system, making <code>--reindex</code> and <code>--refresh-index</code> reliable.</li>
+<li>Adds <code>jq</code> and <code>ffprobe</code> as required dependencies.</li>
+<li>Adds <code>mediainfo</code> as optional dependency.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.4.0" target="_blank" class="tag">v0.4.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">June 28, 2025</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>Introduced direct playback for local files and URLs as command-line arguments.</li>
+<li>Ensured MPV arguments from the command line are correctly applied to direct playback.</li>
+<li>Refactored argument parsing into a unified block for improved robustness and clarity.</li>
+<li>Added a warning if <code>yt-dlp</code> is not found for full URL support.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.3.0" target="_blank" class="tag">v0.3.0</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">June 27, 2025</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>Externalized music directories, MPV arguments, and extensions to config file.</li>
+<li>Added comments to improve script readability and documentation within config file.</li>
+<li>Introduced automatic default config file creation on first run.</li>
+<li>Improved 'find' command usage by introducing EFFECTIVE_MUSIC_DIRS for precedence.</li>
+</ul>
+            </div>
+        </div>
         </div>
 
         <footer>
             <p>
-                This changelog is automatically generated from the
-                <a
-                    href="https://github.com/furqanhun/mpv-music/releases"
-                    target="_blank"
-                    >GitHub Releases API</a
+                Generated statically via
+                <a href="https://github.com/furqanhun/mpv-music/releases"
+                    >GitHub</a
                 >.
             </p>
         </footer>
-
-        <script>
-            const container = document.getElementById("changelog-container");
-            // This endpoint fetches ALL releases (Stable + Pre-release)
-            const API_URL =
-                "https://api.github.com/repos/furqanhun/mpv-music/releases?per_page=100";
-
-            fetch(API_URL)
-                .then((res) => {
-                    if (!res.ok)
-                        throw new Error("GitHub API rate limit or error");
-                    return res.json();
-                })
-                .then((data) => {
-                    container.innerHTML = ""; // Clear loader
-
-                    if (data.length === 0) {
-                        container.innerHTML =
-                            "<p>No releases found. It's quiet... too quiet.</p>";
-                        return;
-                    }
-
-                    data.forEach((release, index) => {
-                        const date = new Date(
-                            release.published_at,
-                        ).toLocaleDateString(undefined, {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                        });
-
-                        // Logic: If it is prerelease, show YELLOW badge.
-                        // If it is the very first item AND not prerelease, show GREEN "LATEST" badge.
-                        let badge = "";
-                        if (release.prerelease) {
-                            badge = `<span class="prerelease">Pre-release</span>`;
-                        } else if (index === 0) {
-                            badge = `<span class="latest-badge">Latest</span>`;
-                        }
-
-                        // Parse Markdown to HTML
-                        const bodyHtml = marked.parse(release.body);
-
-                        const html = `
-                            <div class="release">
-                                <div class="meta">
-                                    <a href="${release.html_url}" target="_blank" class="tag">${release.tag_name}</a>
-                                    ${badge}
-                                    <span style="margin-left: auto;">${date}</span>
-                                </div>
-                                <div class="body">${bodyHtml}</div>
-                            </div>
-                        `;
-                        container.insertAdjacentHTML("beforeend", html);
-                    });
-                })
-                .catch((err) => {
-                    console.error(err);
-                    container.innerHTML = `<p style="color:red">Failed to load changelog.<br>GitHub API might be rate-limited.</p>`;
-                });
-        </script>
     </body>
 </html>
