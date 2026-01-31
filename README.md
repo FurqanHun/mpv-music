@@ -117,7 +117,7 @@ mpv-music
 
 > [!IMPORTANT]
 > Running `mpv-music` for the first time will automatically index `$HOME/Music`.
-> It is **recommended** that you first run `mpv-music --manage-dirs` to customize music directories before indexing (unless you only keep your music in `$HOME/Music`).
+> It is **recommended** that you first run `mpv-music --manage-dirs` to customize music directories before indexing (unless you only keep your music in `$HOME/Music`). And if your music is on an HDD, you may want to run `--serial` or set `SERIAL_MODE=true` in your config.
 
 That creates:
 - `~/.config/mpv-music/mpv-music.conf` (the actual config)
@@ -148,6 +148,8 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `--config` | Open config file in text editor (nano/vi) |
 | `--config=editor` | Open config in specified editor |
 | `--video-ok` | Include video files in scans |
+| `--volume` | Set the initial volume |
+|`--serial` | Force indexer to run serially (better for hdds) |
 | `--ext=mp3,ogg` | Override file extensions |
 | `--update` | Update the script to the latest version |
 | `--reindex` | Force rebuild the full index |
@@ -221,12 +223,12 @@ Searching the filesystem with find every time is slow, especially if you have a 
 * `--refresh-index` - Smart update (only processes new/modified files)
 
 > [!NOTE]
-> `--refresh-index` only works with bash logic, the way it worked didn't make sense for rust, as it would mean more work for the binary to do instead and hence it just reindexes everything.
+> `--refresh-index` currently uses the Bash logic to append new files. The Rust indexer is so fast that it simply rebuilds the entire index (equivalent to `--reindex`) to ensure consistency.
 
 > [!TIP]
 > Run these flags alongside `--video-ok` to include video files in the index.
 > Example: `mpv-music --video-ok --reindex`
-> As of right now you may also have to run `--video-ok` when running `refresh-index`. I will expose the `VIDEO_OK` variable in the config file, in future.
+> Or you can set `VIDEO_OK=true` in your config file.
 
 ---
 
@@ -251,6 +253,16 @@ BANNER_TEXT='\n╔══  MPV-MUSIC  ══╗\n'
 # Status Bar Logic (Complex MPV variables)
 # Uses single quotes to prevent early expansion.
 STATUS_MSG='▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${filename}} • ${time-pos} / ${duration} • (${percent-pos}%)'
+
+# --- Feature Flags ---
+# Set to true to include video files in library scans by default.
+VIDEO_OK=false
+
+# Set to true to force single-threaded indexing (good for HDDs).
+SERIAL_MODE=false
+
+# Default playback volume (0-130).
+VOLUME=100
 
 # --- MPV Arguments ---
 # Defined as a Bash Array for cleaner formatting and safety.

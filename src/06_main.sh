@@ -1,5 +1,4 @@
 # --- Global Variables (Initial values) ---
-VIDEO_OK=false
 CUSTOM_EXTS=""
 MPV_ARGS=()
 DIRECT_PLAY_TARGET="" # Will store the file path or URL if provided
@@ -131,8 +130,19 @@ while [[ $# -gt 0 ]]; do
     --debug) DEBUG=true; shift;;
     --video-ok) VIDEO_OK=true; shift;;
     --ext=*) CUSTOM_EXTS="${1#--ext=}"; shift;;
+    --serial) SERIAL_MODE=true; shift;;
     --refresh-index) ensure_index_integrity; build_ext_filter; update_music_index; exit 0;;
     --reindex) build_ext_filter; log_verbose "Forcing a complete rebuild of the music index."; build_music_index; exit 0;;
+    --vol=*|--volume=*) VOLUME="${1#*=}"; shift;;
+    --vol|--volume)
+        if [[ -n "${2:-}" && "$2" != -* ]]; then
+            VOLUME="$2"
+            shift 2
+        else
+            msg_error "Missing value for --volume."
+            exit 1
+        fi
+        ;;
     --add-dir)
         # Check if we have at least one valid argument
         if [[ -z "${2:-}" || "${2:-}" == -* ]]; then
@@ -280,6 +290,7 @@ fi
 
 # MERGE DEFAULTS: Always prepend defaults so user args don't wipe them out
 MPV_ARGS=("${MPV_DEFAULT_ARGS_ARRAY[@]}" "${MPV_ARGS[@]}")
+MPV_ARGS+=("--volume=$VOLUME")
 
 if [[ -n "$DIRECT_PLAY_TARGET" ]]; then
   handle_direct_play "$DIRECT_PLAY_TARGET"

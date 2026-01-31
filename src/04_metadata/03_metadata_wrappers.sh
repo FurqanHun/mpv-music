@@ -17,6 +17,11 @@ try_rust_indexer() {
         args+=("--video")
     fi
 
+    if [ "$SERIAL_MODE" = true ]; then
+            args+=("--serial")
+            log_verbose "Serial mode enabled. Indexer will not use parallelism."
+    fi
+
     # Directories must be last
     args+=("${MUSIC_DIRS_ARRAY[@]}")
 
@@ -63,6 +68,11 @@ build_temp_index() {
 
         if [[ "$VIDEO_OK" == true ]]; then
             args+=("--video")
+        fi
+
+        if [ "$SERIAL_MODE" = true ]; then
+                args+=("--serial")
+                log_verbose "Serial mode enabled. Indexer will not use parallelism."
         fi
 
         # Target Directory

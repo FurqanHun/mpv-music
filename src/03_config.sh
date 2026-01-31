@@ -37,6 +37,19 @@ create_config() {
 BANNER_TEXT='$BANNER'
 STATUS_MSG='$MPV_STATUS_MSG_DEFAULT'
 
+# Set to true to include video files in library scans by default.
+# (Command line flag: --video-ok)
+VIDEO_OK=$VIDEO_OK
+
+# Set to true to force single-threaded indexing.
+# Useful for mechanical HDDs to prevent thrashing.
+# (Command line flag: --serial)
+SERIAL_MODE=$SERIAL_MODE
+
+# Default playback volume (0-100)
+# You can override this per-run with --volume=50
+VOLUME=$VOLUME
+
 # Default MPV arguments (Bash Array - Double Quoted)
 # These will be used if no other MPV args are passed on the command line.
 # Example:
