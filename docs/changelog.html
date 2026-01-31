@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#101010" />
+
+        <title>mpv-music | Changelog</title>
+
+        <meta
+            name="description"
+            content="Release notes and changelog for mpv-music. Track the latest features, bug fixes, and updates for the blazing-fast terminal music player written in Bash and Rust."
+        />
+        <meta
+            name="keywords"
+            content="mpv-music changelog, release notes, updates, version history, mpv-music versions, open source music player"
+        />
+        <link
+            rel="canonical"
+            href="https://furqanhun.github.io/mpv-music/changelog.html"
+        />
+
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                "name": "mpv-music",
+                "operatingSystem": "Linux, Windows (via WSL)",
+                "applicationCategory": "MultimediaApplication",
+                "description": "Open Source terminal-based music library manager for mpv.",
+                "license": "https://github.com/furqanhun/mpv-music/blob/main/LICENSE",
+                "softwareRequirements": "mpv, ffmpeg, fzf, bash",
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "USD"
+                },
+                "author": {
+                    "@type": "Person",
+                    "name": "furqanhun"
+                }
+            }
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+        <style>
+            :root {
+                --bg: #101010;
+                --fg: #eeeeee;
+                --accent: #00ff00;
+                --dim: #666666;
+                --link: #58a6ff;
+                --alert: #ffcc00; /* Yellow */
+                --danger: #ff0055; /* Red */
+                --code-bg: #1a1a1a;
+            }
+
+            body {
+                background-color: var(--bg);
+                color: var(--fg);
+                font-family: "Menlo", "Consolas", "Monaco", monospace;
+                margin: 0;
+                padding: 2rem;
+                line-height: 1.6;
+                max-width: 800px;
+                margin: 0 auto;
+            }
+
+            header {
+                margin-bottom: 3rem;
+                border-bottom: 1px dashed var(--dim);
+                padding-bottom: 1rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+                color: var(--accent);
+                margin: 0;
+            }
+
+            a {
+                color: var(--link);
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+
+            /* Release Card Styles */
+            .release {
+                margin-bottom: 4rem;
+                animation: fadein 0.5s;
+                border-left: 2px solid #333;
+                padding-left: 1.5rem;
+            }
+
+            /* Highlight latest release */
+            .release:first-of-type {
+                border-left: 2px solid var(--accent);
+            }
+
+            .meta {
+                color: var(--dim);
+                font-size: 0.9rem;
+                margin-bottom: 1rem;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .tag {
+                color: var(--fg);
+                font-weight: bold;
+                font-size: 1.4rem;
+            }
+
+            .prerelease {
+                background: var(--alert);
+                color: #000;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-weight: bold;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .latest-badge {
+                background: var(--accent);
+                color: #000;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-weight: bold;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            /* Markdown Content Styling */
+            .body h1,
+            .body h2,
+            .body h3 {
+                color: var(--fg);
+                border-bottom: 1px solid #333;
+                padding-bottom: 0.3rem;
+                margin-top: 1.5rem;
+                font-size: 1.1rem;
+            }
+
+            .body ul {
+                padding-left: 1.5rem;
+            }
+            .body li {
+                margin-bottom: 0.25rem;
+            }
+
+            .body code {
+                background: var(--code-bg);
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 0.9em;
+                color: var(--alert);
+            }
+
+            .body pre {
+                background: var(--code-bg);
+                padding: 1rem;
+                overflow-x: auto;
+                border: 1px solid #333;
+            }
+            .body pre code {
+                background: none;
+                padding: 0;
+                color: var(--fg);
+            }
+
+            /* Footer Styling */
+            footer {
+                margin-top: 4rem;
+                border-top: 1px solid var(--dim);
+                padding-top: 1rem;
+                font-size: 0.8rem;
+                color: var(--dim);
+                text-align: center;
+                margin-bottom: 2rem;
+            }
+
+            .loader {
+                text-align: center;
+                color: var(--dim);
+                margin-top: 4rem;
+            }
+
+            @keyframes fadein {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>/changelog</h1>
+            <a href="index.html">← Back to Home</a>
+        </header>
+
+        <div id="changelog-container">
+            <div class="loader">
+                Fetching history from the GitHub Release API...
+            </div>
+        </div>
+
+        <footer>
+            <p>
+                This changelog is automatically generated from the
+                <a
+                    href="https://github.com/furqanhun/mpv-music/releases"
+                    target="_blank"
+                    >GitHub Releases API</a
+                >.
+            </p>
+        </footer>
+
+        <script>
+            const container = document.getElementById("changelog-container");
+            // This endpoint fetches ALL releases (Stable + Pre-release)
+            const API_URL =
+                "https://api.github.com/repos/furqanhun/mpv-music/releases?per_page=100";
+
+            fetch(API_URL)
+                .then((res) => {
+                    if (!res.ok)
+                        throw new Error("GitHub API rate limit or error");
+                    return res.json();
+                })
+                .then((data) => {
+                    container.innerHTML = ""; // Clear loader
+
+                    if (data.length === 0) {
+                        container.innerHTML =
+                            "<p>No releases found. It's quiet... too quiet.</p>";
+                        return;
+                    }
+
+                    data.forEach((release, index) => {
+                        const date = new Date(
+                            release.published_at,
+                        ).toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                        });
+
+                        // Logic: If it is prerelease, show YELLOW badge.
+                        // If it is the very first item AND not prerelease, show GREEN "LATEST" badge.
+                        let badge = "";
+                        if (release.prerelease) {
+                            badge = `<span class="prerelease">Pre-release</span>`;
+                        } else if (index === 0) {
+                            badge = `<span class="latest-badge">Latest</span>`;
+                        }
+
+                        // Parse Markdown to HTML
+                        const bodyHtml = marked.parse(release.body);
+
+                        const html = `
+                            <div class="release">
+                                <div class="meta">
+                                    <a href="${release.html_url}" target="_blank" class="tag">${release.tag_name}</a>
+                                    ${badge}
+                                    <span style="margin-left: auto;">${date}</span>
+                                </div>
+                                <div class="body">${bodyHtml}</div>
+                            </div>
+                        `;
+                        container.insertAdjacentHTML("beforeend", html);
+                    });
+                })
+                .catch((err) => {
+                    console.error(err);
+                    container.innerHTML = `<p style="color:red">Failed to load changelog.<br>GitHub API might be rate-limited.</p>`;
+                });
+        </script>
+    </body>
+</html>
