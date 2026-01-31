@@ -56,7 +56,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Find the latest release tag dynamically via API
-          LATEST_TAG=$(gh release view --json tagName --jq .tagName)
+          # LATEST_TAG=$(gh release view --json tagName --jq .tagName)
+          # pre-release
+          LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
 
           echo "Target: ${{ matrix.target }}"
           echo "Uploading to: $LATEST_TAG"
