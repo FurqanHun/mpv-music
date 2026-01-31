@@ -31,8 +31,13 @@ cargo build --release
 
 # The binary will be located at:
 # target/release/mpv-music-indexer
-
 ```
+
+### Pre-built Binaries
+
+Binaries for Linux (x86_64-unknown-linux-musl, aarch64-unknown-linux-musl, armv7l-unknown-linux-musleabihf) can be downloaded from the [GitHub releases page](https://github.com/FurqanHun/mpv-music/releases). Those binaries are statically linked and should work on most Linux distributions.
+
+Also, they're built using GitHub Actions. [Manual Indexer Build (All Arch)](https://github.com/FurqanHun/mpv-music/actions/workflows/indexer-build.yml)
 
 ## Usage
 
