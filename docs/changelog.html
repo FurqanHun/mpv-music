@@ -162,6 +162,26 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.22.1" target="_blank" class="tag">v0.22.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 01, 2026</span>
+            </div>
+            <div class="body">
+                <p>This patch resurrects direct playback functionality by fixing a critical execution oversight, implements a smart crash handler for outdated dependencies, and introduces utilities for rapid configuration resets.</p>
+<h2>Features</h2>
+<ul>
+<li><strong>Smart Crash Handler:</strong> If URL playback fails, the script now automatically checks for outdated <code>yt-dlp</code> versions—the primary cause of streaming errors—and alerts the user immediately</li>
+<li><strong>Config Reset:</strong> Introduced <code>--remove-config</code> (and <code>--rm-conf</code>) to safely delete the existing configuration file, allowing for a clean reset to defaults on the next launch</li>
+</ul>
+<h2>Fixes</h2>
+<ul>
+<li><strong>Direct Playback:</strong> Resolved a critical regression where the script would correctly prepare all MPV arguments for direct URLs/files but exit before actually executing the command</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.22.0" target="_blank" class="tag">v0.22.0</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">January 31, 2026</span>
