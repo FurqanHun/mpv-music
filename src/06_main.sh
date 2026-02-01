@@ -92,7 +92,44 @@ handle_direct_play() {
 
   log_verbose "Executing MPV with target: $target"
   log_debug "MPV Args: ${MPV_ARGS[*]}"
-  exit 0
+
+  mpv "${MPV_ARGS[@]}" "$target"
+
+  local mpv_exit_code=$?
+
+    # CRASH HANDLER
+    if [[ $mpv_exit_code -ne 0 && "$has_url" == true ]]; then
+        echo ""
+        msg_warn "MPV exited with error (Code: $mpv_exit_code)."
+        msg_info "Checking if yt-dlp is outdated..."
+
+        # Capture output of update check (redirect stderr to stdout)
+        # We ignore the exit code of yt-dlp -U because it returns 1 on package-managed systems
+        local update_output
+        update_output=$(yt-dlp -U 2>&1)
+
+        if [[ "$update_output" == *"Latest version:"* ]]; then
+            echo ""
+            msg_warn "YOUR YT-DLP IS OUTDATED!"
+
+            local curr_ver=$(echo "$update_output" | grep "Current version" | head -n1)
+            local new_ver=$(echo "$update_output" | grep "Latest version" | head -n1)
+
+            echo -e "  ${curr_ver}"
+            echo -e "  ${new_ver}"
+            echo ""
+            msg_note "YouTube constantly breaks older versions."
+            msg_note "Please update yt-dlp using your package manager (dnf, apt, pacman) or pip."
+            echo ""
+        elif [[ "$update_output" == *"up to date"* ]]; then
+             log_verbose "yt-dlp is up to date."
+        else
+             # Fallback if output format is weird
+             log_debug "yt-dlp update check output: $update_output"
+        fi
+    fi
+
+  exit $mpv_exit_code
 }
 
 # --- Early Argument Handling ---
