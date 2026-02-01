@@ -123,7 +123,7 @@ mpv-music
 
 > [!IMPORTANT]
 > Running `mpv-music` for the first time will automatically index `$HOME/Music`.
-> It is **recommended** that you first run `mpv-music --manage-dirs` to customize music directories before indexing (unless you only keep your music in `$HOME/Music`). And if your music is on an HDD, you may want to run `--serial` or set `SERIAL_MODE=true` in your config.
+> It is **recommended** that you first run `mpv-music --manage-dirs` to customize music directories before indexing (unless you only keep your music in `$HOME/Music`). And if your music is on an HDD, you may want to run `--serial` or set `SERIAL_MODE=true` in your config, using `mpv-music --config`.
 
 That creates:
 - `~/.config/mpv-music/mpv-music.conf` (the actual config)
@@ -153,6 +153,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `-v, --version` | Show the script version and exit |
 | `--config` | Open config file in text editor (nano/vi) |
 | `--config=editor` | Open config in specified editor |
+| `--remove-config`, `--rm-conf` | Remove config file |
 | `--video-ok` | Include video files in scans |
 | `--volume` | Set the initial volume |
 |`--serial` | Force indexer to run serially (better for hdds) |

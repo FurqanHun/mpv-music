@@ -15,6 +15,15 @@ for arg in "$@"; do
             "$EDITOR" "$CONFIG_FILE"
             exit 0
             ;;
+        --remove-config|--rm-conf)
+                if [[ -f "$CONFIG_FILE" ]]; then
+                    msg_warn "Deleting existing config: $CONFIG_FILE"
+                    rm "$CONFIG_FILE"
+                fi
+                msg_info "Config deleted."
+                msg_note "Config will be regenerated on next run."
+                exit 0
+                ;;
         --update)
             invoke_updater
             exit 0
