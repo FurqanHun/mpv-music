@@ -1,40 +1,3 @@
-# --- Pre-Flight Flag Check ---
-# We check these specific flags BEFORE sourcing the config file.
-# This ensures that if the config file is broken (syntax error),
-# you can still run --config to fix it or --update to patch the script.
-for arg in "$@"; do
-    case "$arg" in
-        --config|--config=*)
-            if [[ "$arg" == "--config="* ]]; then
-                EDITOR="${arg#--config=}"
-            else
-                if command -v nano &>/dev/null; then EDITOR="nano"
-                elif command -v vi &>/dev/null; then EDITOR="vi"
-                else msg_error "No editor found."; exit 1; fi
-            fi
-            "$EDITOR" "$CONFIG_FILE"
-            exit 0
-            ;;
-        --remove-config|--rm-conf)
-                if [[ -f "$CONFIG_FILE" ]]; then
-                    msg_warn "Deleting existing config: $CONFIG_FILE"
-                    rm "$CONFIG_FILE"
-                fi
-                msg_info "Config deleted."
-                msg_note "Config will be regenerated on next run."
-                exit 0
-                ;;
-        --update)
-            invoke_updater
-            exit 0
-            ;;
-        -v|--version)
-            echo "mpv-music v$VERSION"
-            exit 0
-            ;;
-    esac
-done
-
 # --- Create Config Function ---
 # Creates the configuration file for mpv-music.
 create_config() {
@@ -116,8 +79,46 @@ EOF
 
 # Check if config file exists, if not, create a default one
 if [[ ! -f "$CONFIG_FILE" ]]; then
+    log_verbose "Config file not found, creating default config..."
     create_config
 fi
+
+# --- Pre-Flight Flag Check ---
+# We check these specific flags BEFORE sourcing the config file.
+# This ensures that if the config file is broken (syntax error),
+# you can still run --config to fix it or --update to patch the script.
+for arg in "$@"; do
+    case "$arg" in
+        --config|--config=*)
+            if [[ "$arg" == "--config="* ]]; then
+                EDITOR="${arg#--config=}"
+            else
+                if command -v nano &>/dev/null; then EDITOR="nano"
+                elif command -v vi &>/dev/null; then EDITOR="vi"
+                else msg_error "No editor found."; exit 1; fi
+            fi
+            "$EDITOR" "$CONFIG_FILE"
+            exit 0
+            ;;
+        --remove-config|--rm-conf)
+                if [[ -f "$CONFIG_FILE" ]]; then
+                    msg_warn "Deleting existing config: $CONFIG_FILE"
+                    rm "$CONFIG_FILE"
+                fi
+                msg_info "Config deleted."
+                msg_note "Config will be regenerated on next run."
+                exit 0
+                ;;
+        --update)
+            invoke_updater
+            exit 0
+            ;;
+        -v|--version)
+            echo "mpv-music v$VERSION"
+            exit 0
+            ;;
+    esac
+done
 
 # Source the configuration file
 # This will set the variables like MUSIC_DIRS, MPV_DEFAULT_ARGS, etc.
