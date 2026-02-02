@@ -155,6 +155,14 @@ for arg in "$@"; do
             msg_note "Config will be regenerated on next run."
             exit 0
             ;;
+        --remove-log|--rm-log)
+            if [[ -f "$LOG_FILE" ]]; then
+                msg_warn "Deleting existing log: $LOG_FILE"
+                rm "$LOG_FILE"
+            fi
+            msg_info "Log deleted."
+            exit 0
+            ;;
         --update)
             invoke_updater
             exit 0

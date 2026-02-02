@@ -3,23 +3,12 @@
 # --- Help Function ---
 show_help() {
   cat <<EOF
-MPV Music Script (v$VERSION)
+MPV Music (v$VERSION)
 
 Usage:
+  mpv-music
   mpv-music [PATH_OR_URL_OR_DIR] [OPTIONS]
   mpv-music [FILTER_FLAGS] [--play-all]
-
-Examples:
-  # Interactive Modes
-  mpv-music                    # Start interactive menu to pick mode
-
-  # Direct Play & Filtering
-  mpv-music ~/Music/song.mp3   # Play a specific local file
-  mpv-music --genre="Rock"       # Interactively select from all Rock artists
-  mpv-music --artist="ado"      # Find all albums by Ado, then choose
-  mpv-music --album="cozy" --play-all # Play the album "Cozy" directly
-  mpv-music --title="beach"   # Display all tracks containing "Beach"
-  mpv-music -g "Electronic" -a "Daft Punk" -p # Play all tracks by Daft Punk in Electronic genre
 
 Options:
   -h, --help          Show this help message and exit
@@ -30,7 +19,10 @@ Options:
   -a, --artist [val]  Filter by artist. Opens interactive picker if no value is given.
   -b, --album [val]   Filter by album. Opens interactive picker if no value is given.
   -t, --title [val]   Filter by title.
-  --config[=EDITOR]   Open config file in an editor.
+  --config [EDITOR]   Open config file in an editor.
+  --log [VIEWER]      Set log level.
+  --remove-config     Remove config file.
+  --remove-log        Remove log file.
   --video-ok          Include video file formats in scans.
   --update            Update mpv-music to the latest version
   --reindex           Force a complete rebuild of the music index.
