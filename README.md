@@ -168,7 +168,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `--add-dir [path]` | Add a/multiple new music directories |
 | `--remove-dir [path]` | Remove a/multiple music directories |
 | `-V, --verbose` | Increase verbosity, printing additional information |
-| `--debug` | Print detailed debug messages |
+| `--debug` | Print full system trace and detailed debug messages |
 | `-g, --genre [val]` | Filter by genre. Opens picker if no value given |
 | `-a, --artist [val]` | Filter by artist. Opens picker if no value given |
 | `-b, --album [val]` | Filter by album. Opens picker if no value given |
@@ -195,7 +195,8 @@ mpv-music -p -a ado                     # play all tracks by Ado
 mpv-music -g -a "Daft Punk" -p         # pick genre, then play all Daft Punk
 mpv-music --volume=50 --shuffle        # custom mpv flags
 mpv-music --reindex                    # rebuild the index from scratch
-mpv-music --verbose --debug            # run with full logging enabled
+mpv-music --debug                      # run with full logging enabled
+mpv-music --verbose                    # prints verbose messages
 mpv-music --add-dir /path/to/music /path/to/music2 # Add multiple directories
 mpv-music --remove-dir /path/to/music /path/to/music2 # Remove multiple directories
 mpv-music --manage-dirs                  # Manage directories
@@ -273,6 +274,12 @@ SERIAL_MODE=false
 
 # Default playback volume (0-130).
 VOLUME=100
+
+# --- Dependencies Config ---
+# Latest versions of yt-dlp need the 'ejs' component from GitHub to handle YouTube.
+# If your yt-dlp is "bundled" (has everything inside), set this to "false".
+# If you get playback errors (especially on apt/dnf installs), set this to "true".
+YTDLP_EJS_REMOTE_GITHUB=false
 
 # --- MPV Arguments ---
 # Defined as a Bash Array for cleaner formatting and safety.

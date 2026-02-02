@@ -1288,8 +1288,6 @@ Usage:
 Examples:
   # Interactive Modes
   mpv-music                    # Start interactive menu to pick mode
-  mpv-music /path/to/music     # Interactively pick tracks/albums from a specific directory
-  mpv-music -l                 # Go directly to interactive Playlist Mode
 
   # Direct Play & Filtering
   mpv-music ~/Music/song.mp3   # Play a specific local file
@@ -1314,7 +1312,7 @@ Options:
   --reindex           Force a complete rebuild of the music index.
   --refresh-index     Update index with file changes (smarter, faster).
   -V, --verbose       Increase verbosity level.
-  --debug             Print debug messages (saves to log with -V).
+  --debug             Print debug messages and enable system tracing.
 
 Interactive Modes (when run with no arguments):
   1) Directory Mode:    Pick entire folders to play.
@@ -1322,6 +1320,8 @@ Interactive Modes (when run with no arguments):
   3) Playlist Mode:     Pick and play saved playlists (.m3u, etc.).
   4) Tag Filter Mode:   Filter by Genre, then Artist, then Album.
   5) Play All Mode:     Instantly play all indexed tracks.
+  6) Play URL (Stream)  Stream a URL to MPV using yt-dlp.
+  7) Manage Directories Manage music directories to index.
 
 Note: Requires GNU find, fzf, jq, and ffprobe.
 EOF
