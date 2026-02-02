@@ -56,7 +56,14 @@ handle_direct_play() {
           MPV_ARGS+=("--ytdl-format=bestaudio/best")
       fi
 
-      log_verbose "YouTube URL detected. Checking for JS runtimes..."
+      log_verbose "YouTube URL detected."
+
+      if [[ "$YTDLP_EJS_REMOTE_GITHUB" == "true" ]]; then
+            log_verbose "Enabling remote EJS component (source: GitHub)..."
+            ytdl_opts+="remote-components=ejs:github,"
+        fi
+
+      log_verbose "Checking for JS runtimes..."
 
       if command -v deno &>/dev/null; then
          log_verbose "Deno found (yt-dlp default)."
@@ -126,6 +133,15 @@ handle_direct_play() {
         else
              # Fallback if output format is weird
              log_debug "yt-dlp update check output: $update_output"
+        fi
+
+        if [[ "$has_youtube" == true && "$YTDLP_EJS_REMOTE_GITHUB" == "false" ]]; then
+            echo ""
+            msg_note "   If you installed yt-dlp via a package manager (apt/dnf/pacman)"
+            msg_note "   instead of the official GitHub binary, it might be missing components."
+            msg_note "   Try enabling the remote fix in your config:"
+            msg_note "   YTDLP_EJS_REMOTE_GITHUB=true"
+            echo ""
         fi
     fi
 

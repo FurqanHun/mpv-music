@@ -59,6 +59,26 @@ SERIAL_MODE=$SERIAL_MODE
 # You can override this per-run with --volume=50
 VOLUME=$VOLUME
 
+# Latest versions of yt-dlp need the 'ejs' component from GitHub to handle YouTube.
+# If your yt-dlp is "bundled" (has everything inside), set this to "false".
+# If you get playback errors, set this to "true".
+YTDLP_EJS_REMOTE_GITHUB=$YTDLP_EJS_REMOTE_GITHUB
+
+# Audio extensions (space-separated)
+# These are used when --video-ok is NOT specified.
+AUDIO_EXTS="$AUDIO_EXTS_DEFAULT"
+
+# Video extensions (space-separated)
+# These are added to AUDIO_EXTS when --video-ok IS specified.
+VIDEO_EXTS="$VIDEO_EXTS_DEFAULT"
+
+# Playlist extensions (space-separated)
+PLAYLIST_EXTS="$PLAYLIST_EXTS_DEFAULT"
+
+# Max log file size in Kilobytes (KB) before rotating.
+# Default is 5120 (5MB).
+LOG_MAX_SIZE_KB=5120
+
 # Default MPV arguments (Bash Array - Double Quoted)
 # These will be used if no other MPV args are passed on the command line.
 # Example:
@@ -78,21 +98,6 @@ MPV_DEFAULT_ARGS=(
     "--term-playing-msg=\$(tput clear)\$BANNER_TEXT"
     "--term-status-msg=\$STATUS_MSG"
 )
-
-# Audio extensions (space-separated)
-# These are used when --video-ok is NOT specified.
-AUDIO_EXTS="$AUDIO_EXTS_DEFAULT"
-
-# Video extensions (space-separated)
-# These are added to AUDIO_EXTS when --video-ok IS specified.
-VIDEO_EXTS="$VIDEO_EXTS_DEFAULT"
-
-# Playlist extensions (space-separated)
-PLAYLIST_EXTS="$PLAYLIST_EXTS_DEFAULT"
-
-# Max log file size in Kilobytes (KB) before rotating.
-# Default is 5120 (5MB).
-LOG_MAX_SIZE_KB=5120
 
 # Default music directories (Bash Array - Double Quoted)
 # You can add multiple paths,

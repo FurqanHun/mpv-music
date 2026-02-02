@@ -13,6 +13,7 @@ VIDEO_OK=false
 INDEXER_BIN=""
 SERIAL_MODE=false
 VOLUME=100
+YTDLP_EJS_REMOTE_GITHUB=false
 
 if command -v mpv-music-indexer >/dev/null 2>&1; then
     INDEXER_BIN="$(command -v mpv-music-indexer)"

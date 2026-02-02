@@ -70,8 +70,11 @@ In short, it focuses on library indexing for super-fast access to your music col
 * **JS Runtime** - for YouTube playback (Deno, Node.js, QuickJS, or Bun). Deno is recommended.
 
 > [!NOTE]
-  > YouTube playback now requires a JS runtime to bypass anti-bot protections.
-  > `mpv-music` automatically detects and configures **Deno**, **Node**, **QuickJS**, or **Bun** for `yt-dlp`.
+> YouTube playback now requires a JS runtime to bypass anti-bot protections.
+> `mpv-music` automatically detects and configures **Deno**, **Node**, **QuickJS**, or **Bun** for `yt-dlp`.
+>
+> If you installed yt-dlp via a package manager (apt/dnf/pacman) instead of the official GitHub binary, it might be missing components. Try enabling the remote fix in your config (`mpv-music --config`):
+> `YTDLP_EJS_REMOTE_GITHUB=true`
 
 ---
 
