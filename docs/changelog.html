@@ -162,6 +162,26 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.22.2" target="_blank" class="tag">v0.22.2</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 02, 2026</span>
+            </div>
+            <div class="body">
+                <p>This patch ensures compatibility with package-managed <code>yt-dlp</code> installations by handling missing components and resolves critical API rate limits for the project website.</p>
+<h2>Features</h2>
+<ul>
+<li><strong>EJS Remote Fix:</strong> Added <code>YTDLP_EJS_REMOTE_GITHUB</code> config option (default: <code>false</code>) to fetch missing EJS runtimes on demand, fixing playback for <code>apt</code>/<code>dnf</code> installed versions that lack internal components</li>
+<li><strong>Proactive Diagnostics:</strong> The crash handler now specifically detects errors caused by missing runtimes and advises the user to enable the remote fix</li>
+</ul>
+<h2>Fixes</h2>
+<ul>
+<li><strong>Docs Stability:</strong> Replaced client-side GitHub API calls with static JSON generation (<code>latest.json</code>), permanently eliminating "API Rate Limit Exceeded" errors for the documentation site</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.22.1" target="_blank" class="tag">v0.22.1</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">February 01, 2026</span>
