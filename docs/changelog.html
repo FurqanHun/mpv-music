@@ -162,6 +162,29 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.0" target="_blank" class="tag">v0.23.0</a>
+                <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">February 02, 2026</span>
+            </div>
+            <div class="body">
+                <p>This milestone release marks the transition to Stable, introducing a dual-channel update system, granular playback controls, and integrated management tools for logs and configuration.</p>
+<h2>Features</h2>
+<ul>
+<li><strong>Stable Channel:</strong> The installer and updater now default to the Stable channel for reliability, with a dedicated <code>--dev</code> flag for accessing bleeding-edge pre-releases</li>
+<li><strong>Smart Playback Control:</strong> Exposed <code>SHUFFLE</code> and <code>LOOP_MODE</code> variables in <code>mpv-music.conf</code>, allowing users to define default behavior without modifying complex argument arrays</li>
+<li><strong>Management Tools:</strong> Added <code>--log</code> and <code>--config</code> flags with intelligent editor resolution (detecting <code>nvim</code>, <code>nano</code>, <code>code</code>, etc.) for instant access to logs and settings</li>
+<li><strong>CLI Overrides:</strong> Implemented a priority-based argument injection system ("Sandwich Strategy"), ensuring CLI flags like <code>--no-shuffle</code> or <code>--loop-playlist=5</code> always override config defaults</li>
+</ul>
+<h2>Improvements</h2>
+<ul>
+<li><strong>Channel Switching:</strong> The updater now detects Stable/Dev channel switches and triggers a safety protocol to wipe incompatible configurations before installing</li>
+<li><strong>Editor Resolution:</strong> Unified logic for opening files, prioritizing read-only pagers (<code>less</code>) for logs while respecting the user's <code>$EDITOR</code> for configuration</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.22.3" target="_blank" class="tag">v0.22.3</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">February 02, 2026</span>

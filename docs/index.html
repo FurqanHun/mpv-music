@@ -47,6 +47,7 @@
                 --dim: #666666;
                 --link: #58a6ff;
                 --alert: #ffcc00;
+                --dev-color: #ff00ff;
             }
 
             body {
@@ -116,17 +117,29 @@
                 user-select: none;
             }
 
+            /* Dual Channel Styles */
             .release-info {
                 font-size: 0.85rem;
                 color: var(--dim);
                 text-align: right;
                 margin-bottom: 2rem;
                 font-family: monospace;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 4px;
+            }
+            .release-row {
+                display: flex;
+                gap: 8px;
             }
             .release-tag {
                 color: var(--alert);
                 font-weight: bold;
                 text-decoration: none;
+            }
+            .release-tag.dev {
+                color: var(--dev-color);
             }
             .release-tag:hover {
                 background: none;
@@ -224,13 +237,24 @@
             </div>
 
             <div class="release-info">
-                Latest Version:
-                <a
-                    id="release-link"
-                    href="https://github.com/furqanhun/mpv-music/releases"
-                    class="release-tag"
-                    >Checking...</a
-                >
+                <div class="release-row">
+                    <span>Stable:</span>
+                    <a
+                        id="stable-link"
+                        href="https://github.com/furqanhun/mpv-music/releases"
+                        class="release-tag"
+                        >Checking...</a
+                    >
+                </div>
+                <div class="release-row">
+                    <span>Latest:</span>
+                    <a
+                        id="dev-link"
+                        href="https://github.com/furqanhun/mpv-music/releases/latest"
+                        class="release-tag dev"
+                        >...</a
+                    >
+                </div>
             </div>
 
             <h2>Why?</h2>
@@ -318,20 +342,38 @@
                         throw new Error("Network response was not ok");
                     return response.json();
                 })
-                .then((release) => {
-                    const tag = release.tag_name;
-                    const url = release.html_url;
+                .then((data) => {
+                    // 🦍 STABLE
+                    const stableEl = document.getElementById("stable-link");
+                    if (data.stable) {
+                        stableEl.textContent = data.stable.tag_name;
+                        stableEl.href = data.stable.html_url;
+                    } else {
+                        stableEl.textContent = "n/a";
+                    }
 
-                    const linkEl = document.getElementById("release-link");
-                    linkEl.textContent = tag;
-                    linkEl.href = url;
+                    // 🦍 LATEST (DEV)
+                    const devEl = document.getElementById("dev-link");
+                    if (data.dev) {
+                        devEl.textContent = data.dev.tag_name;
+                        devEl.href = data.dev.html_url;
 
-                    if (release.prerelease) linkEl.textContent += " (pre)";
+                        // If Dev matches Stable exactly, mark it visually
+                        if (
+                            data.stable &&
+                            data.dev.tag_name === data.stable.tag_name
+                        ) {
+                            devEl.textContent += " (same)";
+                            devEl.style.opacity = "0.5";
+                        }
+                    } else {
+                        devEl.textContent = "n/a";
+                    }
                 })
                 .catch((error) => {
                     console.error("Error fetching release:", error);
-                    document.getElementById("release-link").textContent =
-                        "v0.0.0-trustmebro";
+                    document.getElementById("stable-link").textContent =
+                        "Error";
                 });
         </script>
     </body>
