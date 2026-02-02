@@ -162,8 +162,25 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
-                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.1" target="_blank" class="tag">v0.23.1</a>
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.2" target="_blank" class="tag">v0.23.2</a>
                 <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">February 02, 2026</span>
+            </div>
+            <div class="body">
+                <p>This patch refactors the initialization logic to fix logging leaks and argument parsing bugs.</p>
+<h3>Fixes &amp; Improvements</h3>
+<ul>
+<li><strong>Zombie Logs Killed:</strong> The configuration file is now sourced <strong>before</strong> argument parsing. This ensures settings like <code>LOG_MAX_SIZE_KB=0</code> apply immediately, preventing the script from creating unwanted log files during operations like <code>--remove-log</code> or <code>--config</code>.</li>
+<li><strong>Refactored Parsing:</strong> Switched the pre-flight check from a <code>for</code> loop to a <code>while</code> loop to correctly handle multi-part flags.</li>
+<li><strong>Black Hole Fix:</strong> Implemented a pass-through mechanism to strictly preserve unknown arguments (like <code>-a</code>, <code>-p</code>, URLs) during the pre-flight check, ensuring they reach the main execution loop intact. This shit was a side affect of using switching to while loop.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.1" target="_blank" class="tag">v0.23.1</a>
+                
                 <span style="margin-left: auto;">February 02, 2026</span>
             </div>
             <div class="body">
