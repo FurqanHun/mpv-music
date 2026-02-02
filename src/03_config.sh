@@ -89,6 +89,14 @@ fi
 # you can still run --config to fix it or --update to patch the script.
 for arg in "$@"; do
     case "$arg" in
+        -V|--verbose) VERBOSE=true; shift;;
+        --debug)
+            DEBUG=true
+            VERBOSE=true
+            # Enable Bash Tracing
+            set -x
+            shift
+            ;;
         --config|--config=*)
             if [[ "$arg" == "--config="* ]]; then
                 EDITOR="${arg#--config=}"
@@ -143,11 +151,6 @@ else
     exit 1
 fi
 
-if [ -n "${MPV_DEFAULT_ARGS+x}" ]; then
-    MPV_DEFAULT_ARGS_ARRAY=("${MPV_DEFAULT_ARGS[@]}")
-else
-    MPV_DEFAULT_ARGS_ARRAY=()
-fi
 IFS=' ' read -ra AUDIO_EXTS_ARRAY <<< "$AUDIO_EXTS"
 IFS=' ' read -ra VIDEO_EXTS_ARRAY <<< "$VIDEO_EXTS"
 IFS=' ' read -ra PLAYLIST_EXTS_ARRAY <<< "$PLAYLIST_EXTS"
@@ -160,6 +163,30 @@ elif [[ "$LOG_MAX_SIZE_KB" -eq 0 ]]; then
     FILE_LOGGING_DISABLED=true
     # This message will only appear if -V is on, which is fine.
     log_verbose "LOG_MAX_SIZE_KB is 0. All logging to file is disabled."
+fi
+
+if [[ "$DEBUG" == "true" ]]; then
+    safe_simple_args=$(printf "%q " "${MPV_ARGS_SIMPLE[@]}")
+    MPV_DEFAULT_ARGS=(
+        $safe_simple_args
+        "--term-playing-msg=$BANNER_TEXT"
+        "--term-status-msg=$STATUS_MSG"
+        "--msg-level=ytdl_hook=trace"
+    )
+    msg_warn "DEBUG MODE ENABLED"
+    log_debug "--- SYSTEM INFO ---"
+    log_debug "OS: $(uname -sr)"
+    log_debug "MPV: $(mpv --version | head -n 1)"
+    log_debug "YT-DLP: $(yt-dlp --version 2>/dev/null || echo 'NOT FOUND')"
+    log_debug "FFMPEG: $(ffmpeg -version | head -n 1)"
+    log_debug "Script Version: $VERSION"
+    log_debug "-------------------"
+fi
+
+if [ -n "${MPV_DEFAULT_ARGS+x}" ]; then
+    MPV_DEFAULT_ARGS_ARRAY=("${MPV_DEFAULT_ARGS[@]}")
+else
+    MPV_DEFAULT_ARGS_ARRAY=()
 fi
 
 # --- Config Management Functions ---

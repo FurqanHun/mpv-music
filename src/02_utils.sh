@@ -3,16 +3,23 @@ rotate_log() {
   # Safe expansion: Default to 0 if unset
   if [[ "$FILE_LOGGING_DISABLED" == true ]] || [[ "${LOG_MAX_SIZE_KB:-0}" == "0" ]]; then return; fi
 
-  # Check size every time
+  # Check size only if file exists
   if [[ -f "$LOG_FILE" ]]; then
-    local max_size_kb="${LOG_MAX_SIZE_KB:-0}" # Safe expansion
+    local max_size_kb="${LOG_MAX_SIZE_KB:-0}"
     local current_size_kb
     current_size_kb=$(du -k "$LOG_FILE" | cut -f1)
 
     if [[ "$current_size_kb" -gt "$max_size_kb" ]]; then
       # wipe it clean
       : > "$LOG_FILE"
-      log_debug "Log file limit ($max_size_kb KB) reached. File wiped."
+
+      local timestamp
+      timestamp=$(date +'%Y-%m-%d %H:%M:%S')
+      echo -e "[$timestamp] [DEBUG] Log file limit ($max_size_kb KB) reached. File wiped." >> "$LOG_FILE"
+
+      if [[ "$DEBUG" == true ]]; then
+          echo -e "${YELLOW}[DEBUG] Log file limit reached. File wiped.${NC}" >&2
+      fi
     fi
   fi
 }
@@ -33,36 +40,40 @@ FILE_LOGGING_DISABLED=false
 # Standardized message helpers
 msg_error() {
     echo -e "${RED}[ERROR]${NC} $1" >&2
-    # Safe expansion: ${LOG_MAX_SIZE_KB:-0} defaults to 0 if variable is unset
-    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        rotate_log
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] $1" >> "$LOG_FILE"
     fi
 }
 
 msg_warn() {
     echo -e "${YELLOW}[WARN]${NC}  $1" >&2
-    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        rotate_log
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [WARN]  $1" >> "$LOG_FILE"
     fi
 }
 
 msg_success() {
     echo -e "${GREEN}[OK]${NC}    $1" >&2
-    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        rotate_log
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [OK]    $1" >> "$LOG_FILE"
     fi
 }
 
 msg_info() {
     echo -e "${BLUE}[INFO]${NC}  $1" >&2
-    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        rotate_log
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [INFO]  $1" >> "$LOG_FILE"
     fi
 }
 
 msg_note() {
     echo -e "${CYAN}[NOTE]${NC}  $1" >&2
-    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        rotate_log
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [NOTE]  $1" >> "$LOG_FILE"
     fi
 }
@@ -76,8 +87,9 @@ log_verbose() {
         echo -e "$message" >&2
     fi
 
-    # File Output (Always log verbose to file unless disabled)
-    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
+    # File Output
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        rotate_log
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] $message" >> "$LOG_FILE"
     fi
 }
@@ -91,8 +103,9 @@ log_debug() {
         echo -e "$message" >&2
     fi
 
-    # File Output (Always log debug to file unless disabled)
-    if [[ "$FILE_LOGGING_DISABLED" == false && "${LOG_MAX_SIZE_KB:-0}" != "0" ]]; then
+    # File Output
+    if [[ "$FILE_LOGGING_DISABLED" == false ]]; then
+        rotate_log
         echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] $message" >> "$LOG_FILE"
     fi
 }

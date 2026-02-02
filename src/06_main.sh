@@ -179,8 +179,6 @@ INDEX_TO_USE="$MUSIC_INDEX_FILE" # Default to the main index
 # Iterate through all arguments to identify direct play target, script options, or mpv flags
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -V|--verbose) VERBOSE=true; shift;;
-    --debug) DEBUG=true; shift;;
     --video-ok) VIDEO_OK=true; shift;;
     --ext=*) CUSTOM_EXTS="${1#--ext=}"; shift;;
     --serial) SERIAL_MODE=true; shift;;
