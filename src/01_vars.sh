@@ -14,6 +14,9 @@ INDEXER_BIN=""
 SERIAL_MODE=false
 VOLUME=100
 YTDLP_EJS_REMOTE_GITHUB=false
+SHUFFLE_MODE=true
+# Options: "playlist", "track", "no", "inf", or a number (e.g. "5")
+LOOP_MODE="inf"
 
 if command -v mpv-music-indexer >/dev/null 2>&1; then
     INDEXER_BIN="$(command -v mpv-music-indexer)"
@@ -27,8 +30,6 @@ BANNER="\n╔══  MPV-MUSIC  ══╗\n"
 # MPV_ARGS_DEFAULT=(--loop-playlist=inf --shuffle --no-video --audio-display=no --msg-level=cplayer=warn --display-tags= "--term-playing-msg='\${BANNER}'" "--term-status-msg='▶ \${?metadata/artist:\${metadata/artist} - }\${?metadata/title:\${metadata/title}}\${!metadata/title:\${filename}} • \${time-pos} / \${duration} • (\${percent-pos}%)'")
 MPV_STATUS_MSG_DEFAULT='▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${media-title}} • ${time-pos} / ${duration} • (${percent-pos}%)'
 MPV_ARGS_SIMPLE=(
-    --loop-playlist=inf
-    --shuffle
     --no-video
     --audio-display=no
     --msg-level=cplayer=warn

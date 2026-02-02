@@ -6,8 +6,20 @@ create_config() {
     cat <<EOF > "$CONFIG_FILE"
 # mpv-music configuration file
 
-BANNER_TEXT='$BANNER'
-STATUS_MSG='$MPV_STATUS_MSG_DEFAULT'
+# --- Playback Control ---
+# Shuffle playlist by default? (true/false)
+# (CLI flags: --shuffle / --no-shuffle)
+SHUFFLE=$SHUFFLE_MODE
+
+# Looping Behavior
+# Options:
+#   "playlist" - Loop the entire queue endlessly (default)
+#   "track"    - Loop the current track endlessly (Repeat One)
+#   "no"       - Play once and stop
+#   "inf"      - Explicit infinite loop (same as playlist)
+#   "5"        - Loop 5 times (any number works)
+# (CLI flags: --loop, --repeat, --no-loop)
+LOOP_MODE="$LOOP_MODE"
 
 # Set to true to include video files in library scans by default.
 # (Command line flag: --video-ok)
@@ -41,6 +53,9 @@ PLAYLIST_EXTS="$PLAYLIST_EXTS_DEFAULT"
 # Max log file size in Kilobytes (KB) before rotating.
 # Default is 5120 (5MB).
 LOG_MAX_SIZE_KB=5120
+
+BANNER_TEXT='$BANNER'
+STATUS_MSG='$MPV_STATUS_MSG_DEFAULT'
 
 # Default MPV arguments (Bash Array - Double Quoted)
 # These will be used if no other MPV args are passed on the command line.
@@ -97,26 +112,51 @@ for arg in "$@"; do
             set -x
             shift
             ;;
-        --config|--config=*)
-            if [[ "$arg" == "--config="* ]]; then
-                EDITOR="${arg#--config=}"
-            else
-                if command -v nano &>/dev/null; then EDITOR="nano"
-                elif command -v vi &>/dev/null; then EDITOR="vi"
-                else msg_error "No editor found."; exit 1; fi
+        --config|--config=*|--log|--log=*)
+            key="${1%%=*}"
+            val="${1#*=}"
+            target_file=""
+            read_only_mode="false"
+
+            # Handle value extraction (Equals vs Space)
+            if [[ "$val" == "$key" ]]; then
+                val=""
+                # Check next arg
+                if [[ -n "${2:-}" && "$2" != -* ]]; then
+                    val="$2"
+                    shift # Eat the extra argument
+                fi
             fi
-            "$EDITOR" "$CONFIG_FILE"
+
+            # Setup targets based on flag
+            if [[ "$key" == "--config" ]]; then
+                target_file="$CONFIG_FILE"
+                read_only_mode="false"
+            elif [[ "$key" == "--log" ]]; then
+                target_file="$LOG_FILE"
+                read_only_mode="true"
+            fi
+
+            # one function call handles defaults for both
+            opener=$(resolve_editor "$val" "$read_only_mode")
+
+            if [[ -f "$target_file" ]]; then
+                log_verbose "Opening $target_file with $opener..."
+                "$opener" "$target_file"
+            else
+                msg_warn "File not found: $target_file"
+            fi
             exit 0
             ;;
         --remove-config|--rm-conf)
-                if [[ -f "$CONFIG_FILE" ]]; then
-                    msg_warn "Deleting existing config: $CONFIG_FILE"
-                    rm "$CONFIG_FILE"
-                fi
-                msg_info "Config deleted."
-                msg_note "Config will be regenerated on next run."
-                exit 0
-                ;;
+            if [[ -f "$CONFIG_FILE" ]]; then
+                msg_warn "Deleting existing config: $CONFIG_FILE"
+                rm "$CONFIG_FILE"
+            fi
+            msg_info "Config deleted."
+            msg_note "Config will be regenerated on next run."
+            exit 0
+            ;;
         --update)
             invoke_updater
             exit 0

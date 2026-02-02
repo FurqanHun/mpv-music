@@ -278,3 +278,29 @@ reload_config_state() {
         log_verbose "No config file found. Using defaults."
     fi
 }
+
+# Helper: Resolve which editor/viewer to use
+resolve_editor() {
+    local explicit="$1"
+    local prefer_readonly="${2:-false}"
+
+    if [[ -n "$explicit" ]]; then
+        echo "$explicit"
+        return
+    fi
+
+    if [[ "$prefer_readonly" == "true" ]]; then
+        # Prioritize 'less' (Pager) -> 'vi' -> 'nano'
+        # We ignore $EDITOR here because we don't want to edit logs by default.
+        if command -v less &>/dev/null; then echo "less"
+        elif command -v vi &>/dev/null; then echo "vi"
+        else echo "nano"; fi
+    else
+        # Prioritize $EDITOR -> 'nano' -> 'vi'
+        # We want the user's preferred editor here.
+        if [[ -n "$EDITOR" ]]; then echo "$EDITOR"
+        elif command -v nano &>/dev/null; then echo "nano"
+        elif command -v vi &>/dev/null; then echo "vi"
+        else echo "vi"; fi
+    fi
+}

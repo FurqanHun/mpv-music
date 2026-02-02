@@ -184,6 +184,11 @@ while [[ $# -gt 0 ]]; do
     --serial) SERIAL_MODE=true; shift;;
     --refresh-index) ensure_index_integrity; build_ext_filter; update_music_index; exit 0;;
     --reindex) build_ext_filter; log_verbose "Forcing a complete rebuild of the music index."; build_music_index; exit 0;;
+    --shuffle) SHUFFLE=true; shift ;;
+    --no-shuffle) SHUFFLE=false; shift ;;
+    --loop|--loop-playlist) LOOP_MODE="playlist"; shift;;
+    --repeat|--loop-track|--loop-file) LOOP_MODE="track"; shift;;
+    --no-loop) LOOP_MODE="no"; shift;;
     --vol=*|--volume=*) VOLUME="${1#*=}"; shift;;
     --vol|--volume)
         if [[ -n "${2:-}" && "$2" != -* ]]; then
@@ -339,9 +344,38 @@ if [[ "$TITLE_INTERACTIVE" == true ]]; then
     exit 0
 fi
 
-# MERGE DEFAULTS: Always prepend defaults so user args don't wipe them out
-MPV_ARGS=("${MPV_DEFAULT_ARGS_ARRAY[@]}" "${MPV_ARGS[@]}")
-MPV_ARGS+=("--volume=$VOLUME")
+# MERGE
+final_args=()
+for arg in "${MPV_DEFAULT_ARGS_ARRAY[@]}"; do
+    if [[ "$arg" == "--shuffle" ]] || [[ "$arg" == "--loop-playlist"* ]] || [[ "$arg" == "--loop-file"* ]]; then
+        continue
+    fi
+    final_args+=("$arg")
+done
+
+if [[ "$SHUFFLE" == "true" ]]; then
+    final_args+=("--shuffle")
+fi
+
+case "$LOOP_MODE" in
+    playlist|inf) final_args+=("--loop-playlist=inf") ;;
+    track|file)   final_args+=("--loop-file=inf") ;;
+    no|off|false) final_args+=("--loop-playlist=no" "--loop-file=no") ;;
+    *)
+        # Numeric support (e.g. LOOP_MODE="5")
+        if [[ "$LOOP_MODE" =~ ^[0-9]+$ ]]; then
+             final_args+=("--loop-playlist=$LOOP_MODE")
+        fi
+        ;;
+esac
+
+final_args+=("--volume=$VOLUME")
+
+# Append Raw User Flags (The Override)
+# MPV_ARGS contains everything that fell into the *) wildcard loop
+final_args+=("${MPV_ARGS[@]}")
+
+MPV_ARGS=("${final_args[@]}")
 
 if [[ -n "$DIRECT_PLAY_TARGET" ]]; then
   handle_direct_play "$DIRECT_PLAY_TARGET"
