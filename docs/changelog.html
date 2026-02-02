@@ -169,15 +169,17 @@
             <div class="body">
                 <p>This patch release focuses on developer tooling and stability, completely overhauling the debug infrastructure and fixing edge-case crashes during setup.</p>
 <h3>Ehancements</h3>
-<p>The <code>--debug</code> flag has been transformed from a silent toggle into a full system tracer:
-- <strong>Full Visibility:</strong> Now enables Bash tracing (<code>set -x</code>) and MPV internal hooks (<code>ytdl_hook=trace</code>) for granular execution details.
-- <strong>System Diagnostics:</strong> Automatically dumps OS, MPV, FFmpeg, and yt-dlp versions on startup to aid troubleshooting.
-- <strong>Log Preservation:</strong> Modified MPV arguments to prevent screen clearing in debug mode, ensuring logs remain visible in the terminal.
-- <strong>Logic Fixes:</strong> Now each verbose/messages runs the <code>rotate_log()</code> before writing to log file.</p>
+<p>The <code>--debug</code> flag has been transformed from a silent toggle into a full system tracer:</p>
+<ul>
+<li><strong>Full Visibility:</strong> Now enables Bash tracing (<code>set -x</code>) and MPV internal hooks (<code>ytdl_hook=trace</code>) for granular execution details.</li>
+<li><strong>System Diagnostics:</strong> Automatically dumps OS, MPV, FFmpeg, and yt-dlp versions on startup to aid troubleshooting.</li>
+<li><strong>Log Preservation:</strong> Modified MPV arguments to prevent screen clearing in debug mode, ensuring logs remain visible in the terminal.</li>
+</ul>
 <h3>Fixes</h3>
 <ul>
 <li><strong>Config Initialization:</strong> Fixed a crash where running <code>mpv-music --config</code> would fail if the configuration file did not already exist. The configuration generator is now prioritized in the boot sequence.</li>
 <li><strong>Documentation:</strong> Updated <code>README.md</code> and CLI help (<code>--help</code>) to accurately reflect new dependency configurations and debug behaviors.</li>
+<li><strong>Logic Fixes:</strong> Now each verbose/messages runs the <code>rotate_log()</code> before writing to log file.</li>
 </ul>
             </div>
         </div>
