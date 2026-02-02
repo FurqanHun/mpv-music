@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # File: mpv-music-updater
-# Usage: ./mpv-music-updater <path_to_existing_script>
+# Usage: ./mpv-music-updater <path_to_existing_script> [--stable|--dev]
 
 set -euo pipefail
 
 TARGET_PATH="$1"
+shift
+
 # REPO_BASE="https://raw.githubusercontent.com/FurqanHun/mpv-music/master"
-API_URL="https://api.github.com/repos/FurqanHun/mpv-music/releases"
 TEMP_DOWNLOAD="$HOME/.config/mpv-music/mpv-music.new"
 CONFIG_DIR="$HOME/.config/mpv-music"
 CONFIG_FILE="$CONFIG_DIR/mpv-music.conf"
@@ -30,16 +31,65 @@ cleanup() {
 }
 trap cleanup EXIT
 
-msg_info "Checking for updates..."
+# PARSE FLAGS & DETECT CHANNEL
+FORCE_CHANNEL=""
+WIPE_REQUIRED=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dev) FORCE_CHANNEL="dev"; shift ;;
+        --stable) FORCE_CHANNEL="stable"; shift ;;
+        *) shift ;;
+    esac
+done
+
+if [[ -f "$TARGET_PATH" ]]; then
+    CURRENT_VERSION=$(grep '^VERSION=' "$TARGET_PATH" | cut -d'"' -f2)
+else
+    CURRENT_VERSION="0.0.0"
+fi
+
+# Heuristic detection
+if [[ "$CURRENT_VERSION" == *"-"* || "$CURRENT_VERSION" == *"alpha"* || "$CURRENT_VERSION" == *"beta"* ]]; then
+    CURRENT_CHANNEL="dev"
+else
+    CURRENT_CHANNEL="stable"
+fi
+
+TARGET_CHANNEL="${FORCE_CHANNEL:-$CURRENT_CHANNEL}"
+
+# SWITCHING LOGIC
+if [[ "$CURRENT_CHANNEL" != "$TARGET_CHANNEL" ]]; then
+    echo ""
+    msg_warn "CHANNEL SWITCH: ${CURRENT_CHANNEL^^} -> ${TARGET_CHANNEL^^}"
+    msg_warn "This will DELETE your existing config and database to prevent conflicts."
+    read -rp "Proceed? [y/N]: " CONFIRM < /dev/tty
+    if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+        msg_info "Update cancelled."
+        exit 0
+    fi
+    WIPE_REQUIRED=true
+fi
+
+msg_info "Checking for updates ($TARGET_CHANNEL)..."
+
+if [[ "$TARGET_CHANNEL" == "dev" ]]; then
+    # Dev: Absolute latest tag
+    API_URL="https://api.github.com/repos/FurqanHun/mpv-music/releases"
+    JQ_FILTER=".[0].tag_name // empty"
+else
+    # Stable: Latest stable release
+    API_URL="https://api.github.com/repos/FurqanHun/mpv-music/releases/latest"
+    JQ_FILTER=".tag_name // empty"
+fi
 
 if ! LATEST_JSON=$(curl -sL "$API_URL"); then
     msg_error "Failed to check for updates (API request failed)."
     exit 1
 fi
 
-# Use jq to grab the FIRST item in the array (.[0])
-# This works for pre-releases, drafts, stable, everything.
-LATEST_TAG=$(echo "$LATEST_JSON" | jq -r '.[0].tag_name // empty')
+# Use dynamic filter
+LATEST_TAG=$(echo "$LATEST_JSON" | jq -r "$JQ_FILTER")
 
 if [[ -z "$LATEST_TAG" || "$LATEST_TAG" == "null" ]]; then
     msg_error "Could not find a valid tag in the release list."
@@ -48,32 +98,30 @@ fi
 
 REMOTE_VERSION="${LATEST_TAG#v}"
 
-if [[ -f "$TARGET_PATH" ]]; then
-    CURRENT_VERSION=$(grep '^VERSION=' "$TARGET_PATH" | cut -d'"' -f2)
-else
-    CURRENT_VERSION="0.0.0"
-fi
-
 # --- VERSION COMPARISON LOGIC ---
 
-if [[ "$REMOTE_VERSION" == "$CURRENT_VERSION" ]]; then
+# Force update if wiping
+if [[ "$REMOTE_VERSION" == "$CURRENT_VERSION" && "$WIPE_REQUIRED" == "false" ]]; then
     msg_ok "You are already using the latest version (v$CURRENT_VERSION)."
-    # We still check indexer below even if script matches,
-    # just in case user has old binary with new script manually
+    # We still check indexer below even if script matches
 else
-    # Downgrade Prevention
-    # Sort versions numerically/semantically.
-    # If the smallest (top) version is the REMOTE one, we are already newer.
-    SMALLEST_VERSION=$(echo -e "${CURRENT_VERSION}\n${REMOTE_VERSION}" | sort -V | head -n1)
+    # Downgrade Prevention (Skip if wiping, we force install)
+    if [[ "$WIPE_REQUIRED" == "false" ]]; then
+        SMALLEST_VERSION=$(echo -e "${CURRENT_VERSION}\n${REMOTE_VERSION}" | sort -V | head -n1)
 
-    if [[ "$SMALLEST_VERSION" == "$REMOTE_VERSION" ]]; then
-        msg_ok "You are running a newer version (v$CURRENT_VERSION) than the release (v$REMOTE_VERSION)."
-        msg_info "Skipping downgrade."
-    else
-        msg_warn "Update found! v$CURRENT_VERSION -> v$REMOTE_VERSION"
+        if [[ "$SMALLEST_VERSION" == "$REMOTE_VERSION" ]]; then
+            msg_ok "You are running a newer version (v$CURRENT_VERSION) than the release (v$REMOTE_VERSION)."
+            msg_info "Skipping downgrade."
+            # Logic flow continues to indexer check...
+        else
+            msg_warn "Update found! v$CURRENT_VERSION -> v$REMOTE_VERSION"
+        fi
+    fi
+
+    # Only download if versions differ OR we are wiping
+    if [[ "$SMALLEST_VERSION" != "$REMOTE_VERSION" || "$WIPE_REQUIRED" == "true" ]]; then
         msg_info "Fetching release $LATEST_TAG..."
 
-        # Construct the download link using the specific tag
         DOWNLOAD_URL="https://raw.githubusercontent.com/FurqanHun/mpv-music/${LATEST_TAG}/mpv-music"
 
         if ! curl -sL "$DOWNLOAD_URL" -o "$TEMP_DOWNLOAD"; then
@@ -97,6 +145,15 @@ else
             exit 1
         fi
     fi
+fi
+
+if [[ "$WIPE_REQUIRED" == "true" ]]; then
+    if [[ -d "$CONFIG_DIR" ]]; then
+        rm -rf "$CONFIG_DIR"
+        msg_ok "Configuration and database wiped."
+    fi
+    msg_info "Update complete. Run 'mpv-music' to re-initialize."
+    exit 0
 fi
 
 # --- CONFIG MIGRATION (String -> Array) ---

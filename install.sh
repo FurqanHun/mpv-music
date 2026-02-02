@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # File: install.sh
-# Usage: curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash
+# Usage:
+#   Stable: curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash
+#   Dev:    curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash -s -- --dev
 
 set -euo pipefail
 
 REPO_OWNER="FurqanHun"
 REPO_NAME="mpv-music"
 DEFAULT_INSTALL_DIR="$HOME/.local/bin"
-API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases"
+DEFAULT_CONFIG_DIR="$HOME/.config/mpv-music"
 
 # Colors
 GREEN='\033[0;32m'
@@ -16,7 +18,22 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+# --- 0. Parse Arguments ---
+DEV_MODE=false
+for arg in "$@"; do
+    if [[ "$arg" == "--dev" ]]; then
+        DEV_MODE=true
+        break
+    fi
+done
+
 echo -e "${BLUE}🎧 mpv-music Installer${NC}"
+
+if [[ "$DEV_MODE" == "true" ]]; then
+    echo -e "${YELLOW}[DEV MODE ENABLED]${NC} Will install the absolute latest version (including pre-releases)."
+else
+    echo -e "${GREEN}[STABLE MODE]${NC} Installing latest stable release."
+fi
 
 # --- 1. Interactive Path Selection ---
 echo -e "\nWhere would you like to install the script?"
@@ -44,7 +61,22 @@ if [[ ! -w "$INSTALL_DIR" ]]; then
     exit 1
 fi
 
-# --- 2. Dependency Check ---
+# --- 2. Existing Config Check ---
+# Only relevant if config exists
+if [[ -d "$DEFAULT_CONFIG_DIR" ]]; then
+    echo -e "\n${YELLOW}[WARN]${NC} Existing configuration/database found at: $DEFAULT_CONFIG_DIR"
+    echo "If you are switching versions (Stable <-> Dev), the database might be incompatible."
+    read -rp "Do you want to WIPE the existing config and index? [y/N]: " WIPE_CHOICE < /dev/tty
+
+    if [[ "$WIPE_CHOICE" =~ ^[Yy]$ ]]; then
+        rm -rf "$DEFAULT_CONFIG_DIR"
+        echo -e "${GREEN}[OK]${NC} Configuration wiped."
+    else
+        echo -e "${BLUE}[INFO]${NC} Keeping existing configuration."
+    fi
+fi
+
+# --- 3. Dependency Check ---
 echo -e "\n${BLUE}[INFO]${NC} Checking dependencies..."
 MISSING_DEPS=()
 # 'jq' is mandatory for the script to function
@@ -60,20 +92,40 @@ if [[ ${#MISSING_DEPS[@]} -gt 0 ]]; then
     exit 1
 fi
 
-# --- 3. Fetch Latest Version ---
-echo -e "\n${BLUE}[INFO]${NC} Fetching latest version info..."
-# Get the first tag from the list (works for Pre-releases too)
-LATEST_JSON=$(curl -sL "$API_URL")
-LATEST_TAG=$(echo "$LATEST_JSON" | jq -r '.[0].tag_name // empty')
+# --- 4. Fetch Latest Version ---
+echo -e "\n${BLUE}[INFO]${NC} Fetching version info..."
+
+if [[ "$DEV_MODE" == "true" ]]; then
+    # Dev Mode: Fetch from /releases (list) and take the first one (newest tag)
+    API_ENDPOINT="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases"
+    JQ_FILTER=".[0].tag_name // empty"
+else
+    # Stable Mode: Fetch from /releases/latest (GitHub logic for latest stable)
+    API_ENDPOINT="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
+    JQ_FILTER=".tag_name // empty"
+fi
+
+LATEST_JSON=$(curl -sL "$API_ENDPOINT")
+# Handle potential API errors or rate limits
+if echo "$LATEST_JSON" | grep -q "API rate limit"; then
+    echo -e "${RED}[ERROR]${NC} GitHub API rate limit exceeded. Please try again later."
+    exit 1
+fi
+
+LATEST_TAG=$(echo "$LATEST_JSON" | jq -r "$JQ_FILTER")
 
 if [[ -z "$LATEST_TAG" || "$LATEST_TAG" == "null" ]]; then
-    echo -e "${RED}[ERROR]${NC} Could not find any releases on GitHub."
+    if [[ "$DEV_MODE" == "false" ]]; then
+        echo -e "${RED}[ERROR]${NC} No stable releases found. Try running with --dev to install a pre-release."
+    else
+        echo -e "${RED}[ERROR]${NC} Could not find any releases on GitHub."
+    fi
     exit 1
 fi
 
 echo -e "${GREEN}[OK]${NC} Found version: $LATEST_TAG"
 
-# --- 4. Download File ---
+# --- 5. Download File ---
 BASE_URL="https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/$LATEST_TAG"
 INSTALLED_SCRIPT="$INSTALL_DIR/mpv-music"
 
@@ -86,7 +138,7 @@ else
     exit 1
 fi
 
-# --- 5. Download Rust Indexer (Monke Engine) ---
+# --- 6. Download Rust Indexer (Monke Engine) ---
 ARCH=$(uname -m)
 ASSET_NAME=""
 
@@ -155,7 +207,7 @@ else
     echo -e "${BLUE}  cd $REPO_NAME/crates/mpv-music-indexer && cargo install --path .${NC}"
 fi
 
-# --- 6. Initial Configuration (BATCH MODE) ---
+# --- 7. Initial Configuration (BATCH MODE) ---
 echo -e "\n${BLUE}[INFO]${NC} Initial Setup"
 echo "Would you like to add music directories now?"
 read -rp "[y/N]: " SETUP_CHOICE < /dev/tty
@@ -197,7 +249,7 @@ if [[ "$SETUP_CHOICE" =~ ^[Yy]$ ]]; then
     fi
 fi
 
-# --- 7. PATH Check ---
+# --- 8. PATH Check ---
 echo -e "\n${BLUE}[INFO]${NC} Verifying PATH..."
 if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
     echo -e "${YELLOW}[WARN] $INSTALL_DIR is NOT in your PATH.${NC}"

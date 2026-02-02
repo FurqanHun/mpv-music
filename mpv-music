@@ -417,8 +417,6 @@ STATUS_MSG='$MPV_STATUS_MSG_DEFAULT'
 # These will be used if no other MPV args are passed on the command line.
 # Example:
 # MPV_DEFAULT_ARGS=(
-#     --loop-playlist=inf
-#     --shuffle
 #     --no-video
 #     --audio-display=no
 #     --msg-level=cplayer=warn

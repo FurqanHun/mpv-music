@@ -154,12 +154,18 @@ mpv-music [FILTER_FLAGS] [--play-all]
 |--------|-------------|
 | `-h, --help` | Show the help message and exit |
 | `-v, --version` | Show the script version and exit |
-| `--config` | Open config file in text editor (nano/vi) |
-| `--config=editor` | Open config in specified editor |
+| `--config [editor]` | Open config file (default: nano/vi, or pass `nvim`/`zed`) |
 | `--remove-config`, `--rm-conf` | Remove config file |
+| `--log [viewer]` | Open log file (default: less, or pass `nvim`/`cat`) |
+| `--rm-log` | Remove log file |
 | `--video-ok` | Include video files in scans |
-| `--volume` | Set the initial volume |
-|`--serial` | Force indexer to run serially (better for hdds) |
+| `--volume [value]` | Set the initial volume |
+| `--shuffle` | Enable shuffling |
+| `--no-shuffle` | Disable shuffling |
+| `--loop` | Enable looping |
+| `--no-loop` | Disable looping |
+| `--repeat` | Loop current track (Repeat One) |
+| `--serial` | Force indexer to run serially (better for hdds) |
 | `--ext=mp3,ogg` | Override file extensions |
 | `--update` | Update the script to the latest version |
 | `--reindex` | Force rebuild the full index |
@@ -256,6 +262,54 @@ If a config file does not exist, mpv-music will create one at startup. To custom
 ```bash
 # mpv-music configuration
 
+# --- Playback Control ---
+# Shuffle playlist by default? (true/false)
+# (CLI flags: --shuffle / --no-shuffle)
+SHUFFLE=true
+
+# Looping Behavior
+# Options:
+#   "playlist" - Loop the entire queue endlessly (default)
+#   "track"    - Loop the current track endlessly (Repeat One)
+#   "no"       - Play once and stop
+#   "inf"      - Explicit infinite loop (same as playlist)
+#   "5"        - Loop 5 times (any number works)
+# (CLI flags: --loop, --repeat, --no-loop)
+LOOP_MODE="inf"
+
+# Set to true to include video files in library scans by default.
+# (Command line flag: --video-ok)
+VIDEO_OK=false
+
+# Set to true to force single-threaded indexing.
+# Useful for mechanical HDDs to prevent thrashing.
+# (Command line flag: --serial)
+SERIAL_MODE=false
+
+# Default playback volume (0-100)
+# You can override this per-run with --volume=50
+VOLUME=100
+
+# Latest versions of yt-dlp need the 'ejs' component from GitHub to handle YouTube.
+# If your yt-dlp is "bundled" (has everything inside), set this to "false".
+# If you get playback errors, set this to "true".
+YTDLP_EJS_REMOTE_GITHUB=false
+
+# Audio extensions (space-separated)
+# These are used when --video-ok is NOT specified.
+AUDIO_EXTS="mp3 flac wav m4a aac ogg opus wma alac aiff amr"
+
+# Video extensions (space-separated)
+# These are added to AUDIO_EXTS when --video-ok IS specified.
+VIDEO_EXTS="mp4 mkv webm avi mov flv wmv mpeg mpg 3gp ts vob m4v"
+
+# Playlist extensions (space-separated)
+PLAYLIST_EXTS="m3u m3u8 pls"
+
+# Max log file size in Kilobytes (KB) before rotating.
+# Default is 5120 (5MB).
+LOG_MAX_SIZE_KB=5120
+
 # --- Visual Customization ---
 # Banner text (displayed at start of track)
 # Uses ANSI escape codes or simple text, which is directly passed to mpv
@@ -265,27 +319,9 @@ BANNER_TEXT='\n╔══  MPV-MUSIC  ══╗\n'
 # Uses single quotes to prevent early expansion.
 STATUS_MSG='▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${filename}} • ${time-pos} / ${duration} • (${percent-pos}%)'
 
-# --- Feature Flags ---
-# Set to true to include video files in library scans by default.
-VIDEO_OK=false
-
-# Set to true to force single-threaded indexing (good for HDDs).
-SERIAL_MODE=false
-
-# Default playback volume (0-130).
-VOLUME=100
-
-# --- Dependencies Config ---
-# Latest versions of yt-dlp need the 'ejs' component from GitHub to handle YouTube.
-# If your yt-dlp is "bundled" (has everything inside), set this to "false".
-# If you get playback errors (especially on apt/dnf installs), set this to "true".
-YTDLP_EJS_REMOTE_GITHUB=false
-
 # --- MPV Arguments ---
 # Defined as a Bash Array for cleaner formatting and safety.
 MPV_DEFAULT_ARGS=(
-    --loop-playlist=inf
-    --shuffle
     --no-video
     --audio-display=no
     --msg-level=cplayer=warn
@@ -294,14 +330,6 @@ MPV_DEFAULT_ARGS=(
     "--term-playing-msg=$(tput clear)$BANNER_TEXT"
     "--term-status-msg=$STATUS_MSG"
 )
-
-# File Extensions
-AUDIO_EXTS="mp3 flac wav m4a aac ogg opus wma alac aiff amr"
-VIDEO_EXTS="mp4 mkv webm avi mov flv wmv mpeg mpg 3gp ts vob m4v"
-PLAYLIST_EXTS="m3u m3u8 pls"
-
-# Log Rotation (set to 0 to disable file logging)
-LOG_MAX_SIZE_KB=5120
 
 # Music Directories (double quotes separated)
 MUSIC_DIRS=(
