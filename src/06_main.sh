@@ -199,7 +199,7 @@ while [[ $# -gt 0 ]]; do
             exit 1
         fi
         ;;
-    --add-dir)
+    --add-dir | --add-dirs)
         # Check if we have at least one valid argument
         if [[ -z "${2:-}" || "${2:-}" == -* ]]; then
             msg_error "Missing argument for --add-dir."
@@ -221,7 +221,7 @@ while [[ $# -gt 0 ]]; do
         exit 0
         ;;
 
-    --remove-dir)
+    --remove-dir | --remove-dirs | --rm-dir | --rm-dirs)
         if [[ -z "${2:-}" || "${2:-}" == -* ]]; then
             msg_error "Missing argument for --remove-dir."
             exit 1

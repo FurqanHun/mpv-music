@@ -181,8 +181,12 @@ invoke_updater() {
 
         # Pass control to the updater
         # We use 'exec' so this script process ends and the updater takes over PID
-        local channel="${1:-stable}"
-        local flag="--${channel##--}"
+        local channel="${1:-}"
+        local flag=""
+
+        if [[ -n "$channel" ]]; then
+            flag="--${channel##--}"
+        fi
         log_verbose "Launching updater..."
         exec "$local_updater" "$current_script_path" "$flag"
     else
