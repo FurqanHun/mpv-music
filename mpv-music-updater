@@ -157,8 +157,6 @@ if [[ "$WIPE_REQUIRED" == "true" ]]; then
 
         msg_ok "Configuration and database wiped (Indexer preserved)."
     fi
-    msg_info "Update complete. Run 'mpv-music' to re-initialize."
-    exit 0
 fi
 
 # --- CONFIG MIGRATION (String -> Array) ---
