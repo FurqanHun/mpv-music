@@ -150,8 +150,12 @@ fi
 
 if [[ "$WIPE_REQUIRED" == "true" ]]; then
     if [[ -d "$CONFIG_DIR" ]]; then
-        rm -rf "$CONFIG_DIR"
-        msg_ok "Configuration and database wiped."
+        rm -f "$CONFIG_FILE" \
+            "$CONFIG_DIR/music_index.json" \
+            "$CONFIG_DIR/music_index.jsonl" \
+            "$CONFIG_DIR/mpv-music.log"
+
+        msg_ok "Configuration and database wiped (Indexer preserved)."
     fi
     msg_info "Update complete. Run 'mpv-music' to re-initialize."
     exit 0
