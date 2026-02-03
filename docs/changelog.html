@@ -162,8 +162,50 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
-                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.3" target="_blank" class="tag">v0.23.3</a>
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.5" target="_blank" class="tag">v0.23.5</a>
                 <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">February 03, 2026</span>
+            </div>
+            <div class="body">
+                <p>This patch resolves iterator invalidation, updater logic, and missing flags</p>
+<ul>
+<li><strong>CLI Parsing:</strong> Fixed a critical "Iterator Invalidation" (positional desync) bug in the pre-flight check by switching to a robust <code>while</code> loop. Flags like <code>-p</code> before <code>--config</code> no longer crash the script.</li>
+<li><strong>Updater:</strong> Fixed <code>invoke_updater</code> to correctly handle <code>dev</code>/<code>stable</code> arguments without forcing a default, allowing the updater script to auto-detect channels properly.</li>
+<li><strong>UX:</strong> Added support for plural flags <code>--add-dirs</code> and <code>--remove-dirs</code>.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.5-dev" target="_blank" class="tag">v0.23.5-dev</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 03, 2026</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>Fixed updater and it's call in <code>invoke_updater()</code>, plus <code>--update</code> for multi channel.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.4-dev" target="_blank" class="tag">v0.23.4-dev</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 03, 2026</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>The reason why i switched from for loop to while loop was this, as argument handling is done better with while loops, but ofc i messed it up somehow then reverted back to for loop in v0.23.3. This seems to have fixed it but imma test it first later on.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.3" target="_blank" class="tag">v0.23.3</a>
+                
                 <span style="margin-left: auto;">February 03, 2026</span>
             </div>
             <div class="body">
