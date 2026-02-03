@@ -191,7 +191,13 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         --update)
-            invoke_updater
+            channel=""
+            if [[ "${2:-}" == "dev" || "${2:-}" == "--dev" ]]; then
+                channel="dev"
+            elif [[ "${2:-}" == "stable" || "${2:-}" == "--stable" ]]; then
+                channel="stable"
+            fi
+            invoke_updater "$channel"
             exit 0
             ;;
         -v|--version)

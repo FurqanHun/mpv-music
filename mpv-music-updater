@@ -105,6 +105,7 @@ if [[ "$REMOTE_VERSION" == "$CURRENT_VERSION" && "$WIPE_REQUIRED" == "false" ]];
     msg_ok "You are already using the latest version (v$CURRENT_VERSION)."
     # We still check indexer below even if script matches
 else
+    SMALLEST_VERSION=""
     # Downgrade Prevention (Skip if wiping, we force install)
     if [[ "$WIPE_REQUIRED" == "false" ]]; then
         SMALLEST_VERSION=$(echo -e "${CURRENT_VERSION}\n${REMOTE_VERSION}" | sort -V | head -n1)
@@ -119,7 +120,7 @@ else
     fi
 
     # Only download if versions differ OR we are wiping
-    if [[ "$SMALLEST_VERSION" != "$REMOTE_VERSION" || "$WIPE_REQUIRED" == "true" ]]; then
+    if [[ "$WIPE_REQUIRED" == "true" || "${SMALLEST_VERSION:-}" != "$REMOTE_VERSION" ]]; then
         msg_info "Fetching release $LATEST_TAG..."
 
         DOWNLOAD_URL="https://raw.githubusercontent.com/FurqanHun/mpv-music/${LATEST_TAG}/mpv-music"
