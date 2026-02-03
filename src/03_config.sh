@@ -123,8 +123,8 @@ ARGS_TO_KEEP+=("$1")
 # We check these specific flags BEFORE sourcing the config file.
 # This ensures that if the config file is broken (syntax error),
 # you can still run --config to fix it or --update to patch the script.
-while [[ $# -gt 0 ]]; do
-    case "$1" in
+for arg in "$@"; do
+    case "$arg" in
         -V|--verbose) VERBOSE=true; shift;;
         --debug)
             DEBUG=true
@@ -183,8 +183,10 @@ while [[ $# -gt 0 ]]; do
             if [[ -f "$LOG_FILE" ]]; then
                 msg_warn "Deleting existing log: $LOG_FILE"
                 rm "$LOG_FILE"
+                msg_info "Log deleted."
+            else
+                msg_warn "File not found: $LOG_FILE"
             fi
-            msg_info "Log deleted."
             exit 0
             ;;
         --update)
@@ -195,13 +197,8 @@ while [[ $# -gt 0 ]]; do
             echo "mpv-music v$VERSION"
             exit 0
             ;;
-        *)
-            shift
-            ;;
     esac
 done
-
-set -- "${ARGS_TO_KEEP[@]}"
 
 if [[ $CONFIG_STATUS -ne 0 ]]; then
     msg_error "Your configuration file ($CONFIG_FILE) has syntax errors." >&2
