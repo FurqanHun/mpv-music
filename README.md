@@ -7,6 +7,12 @@
 
 It indexes your music collection into a lightning-fast library, providing fuzzy searching (via `skim`), metadata-rich previews, and deep integration with `mpv` for high-quality playback.
 
+> [!WARNING]
+> This README has not yet been fully updated for the new Rust-native architecture (v0.24+).
+> mpv-music has now migrated from the legacy Bash hybrid system to a unified Rust core.
+> For the archived Bash-based version, see:
+> https://github.com/FurqanHun/mpv-music/tree/mpv-music-sh-archive
+
 ---
 
 ## Table of Contents
