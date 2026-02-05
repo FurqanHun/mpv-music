@@ -162,8 +162,46 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/0.24.0-dev.6" target="_blank" class="tag">0.24.0-dev.6</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 05, 2026</span>
+            </div>
+            <div class="body">
+                <p>This is a <strong>Development Preview</strong> of the upcoming Rust-native version of mpv-music. We have officially swapped the legacy Bash hybrid engine for a high-performance Rust core. This dev build is intended for testing the new architecture, TUI responsiveness, and the new indexing logic.</p>
+<h3>Major Improvements (Dev-Preview)</h3>
+<ul>
+<li><strong>Single Unified Binary:</strong> No more separate indexer and script. The player and the scanner are now one efficient, statically-linked executable.</li>
+<li><strong>Integrated Rust TUI:</strong> Replaced external <code>fzf</code> with a native <code>skim</code> interface. Expec integrated metadata previews, and a more responsive UI.</li>
+<li><strong>MUSL Portability:</strong> This build is statically linked with <code>musl</code>, meaning it should run on almost any Linux distro without GLIBC version conflicts.</li>
+<li><strong>XDG Compliance:</strong> Now properly utilizes standard system paths for a cleaner <code>$HOME</code>:<ul>
+<li><strong>Config:</strong> <code>~/.config/mpv-music/</code></li>
+<li><strong>Index/Data:</strong> <code>~/.local/share/mpv-music/</code></li>
+<li><strong>Logs:</strong> <code>~/.local/share/mpv-music/</code></li>
+</ul>
+</li>
+</ul>
+<h3>New Features to Test</h3>
+<ul>
+<li><strong>In-App Settings:</strong> Manage your music directories and configuration directly from the TUI menu.</li>
+<li><strong>Revised Logging:</strong> Added a cleaner file-logging system that overwrites by default to save space.</li>
+<li><strong>CLI Filtering:</strong> Test the new <code>-a</code> (artist), <code>-g</code> (genre), and <code>-b</code> (album) flags for direct filtering. (new as in implementation is a bit different)</li>
+<li><strong>Search &amp; Stream URL:</strong> Now you can search on youtube too :)</li>
+</ul>
+<h3>Technical Notes</h3>
+<ul>
+<li><strong>Dev Build Status:</strong> Some legacy Bash flags may still be missing or in progress. Use <code>mpv-music --help</code> to see currently implemented features.</li>
+<li><strong>Config Change:</strong> Your old <code>.conf</code> files are incompatible with this version. A fresh <code>config.toml</code> will be generated on your first run. Also the config defaultts aren'tt sane yet... Imma change i later on (for now you get my config as default ig)</li>
+<li><strong>MSRV:</strong> Requires Rust <strong>1.93.0+</strong> if building from source.</li>
+</ul>
+<h3>Testing the Build</h3>
+<p>Download the binary for your architecture, make it executable (<code>chmod +x</code>), and run it. Please report any crashes or TUI glitches on the issue tracker!</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.5" target="_blank" class="tag">v0.23.5</a>
-                <span class="latest-badge">Latest</span>
+                
                 <span style="margin-left: auto;">February 03, 2026</span>
             </div>
             <div class="body">
