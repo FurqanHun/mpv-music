@@ -1,5 +1,3 @@
-# --- Rust Noise (The 178MB Folder) ---
-src/mpv-music-indexer/target/
 target/
 **/*.rs.bk
 
