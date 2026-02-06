@@ -95,6 +95,28 @@ struct Cli {
     #[arg(long, help = "Allow video files")]
     video_ok: bool,
 
+    #[arg(
+            long = "loop",
+            num_args = 0..=1,
+            default_missing_value = "inf",
+            help = "Enable looping ('inf', 'no', 'track', or a NUMBER)"
+        )]
+    loop_arg: Option<String>,
+
+    #[arg(long, help = "Disable all looping")]
+    no_loop: bool,
+
+    #[arg(long, help = "Loop the current track (Repeat One)")]
+    repeat: bool,
+
+    #[arg(
+        short = 'e',
+        long,
+        value_name = "EXT1,EXT2",
+        help = "Override allowed extensions"
+    )]
+    ext: Option<String>,
+
     // filters (comma supported)
     #[arg(
         short = 'g',
@@ -120,8 +142,13 @@ struct Cli {
     )]
     album: Option<Option<String>>,
 
-    #[arg(short = 't', long, help = "Filter by Title (Partial)")]
-    title: Option<String>,
+    #[arg(
+            short = 't',
+            long,
+            num_args = 0..=1,
+            help = "Filter by Title (Partial). Opens TUI if no value given."
+        )]
+    title: Option<Option<String>>,
 
     // sys
     #[arg(short = 'v', long, action = clap::ArgAction::Count, help = "Display Verbose Information")]
@@ -553,6 +580,24 @@ fn main() -> Result<()> {
         println!("Update logic not implemented yet.");
         return Ok(());
     }
+    if let Some(ref mode) = args.loop_arg {
+        cfg.loop_mode = mode.clone(); // Handles "inf", "5", etc.
+    }
+    if args.no_loop {
+        cfg.loop_mode = "no".to_string();
+    }
+    if args.repeat {
+        cfg.loop_mode = "track".to_string();
+    }
+
+    // Handle Extension Overrides
+    if let Some(ref extensions) = args.ext {
+        cfg.audio_exts = extensions
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+    }
 
     // dir management
     let mut config_changed = false;
@@ -589,37 +634,55 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // direct play
-    if let Some(target) = args.target {
-        log::info!("Playing direct target: {}", target);
-        player::play(&target, &cfg)?;
-        return Ok(());
-    }
+    // direct play and normal session
+    let mut tracks: Vec<indexer::Track>;
 
-    if let Some(query_opt) = args.search {
-        run_search_mode(&cfg, query_opt)?;
-        return Ok(());
-    }
+    if let Some(target) = args.target.clone() {
+        let path = PathBuf::from(&target);
 
-    // load index
-    let (mut tracks, was_repaired) = indexer::load_index()?;
+        if path.is_dir() {
+            log::info!("Session started for directory: {:?}", path);
+            let target_canonical = std::fs::canonicalize(&path).unwrap_or(path.clone());
+            let target_str = target_canonical.to_string_lossy();
 
-    if args.reindex {
-        log::info!("Rebuilding index (Full)...");
-        tracks = indexer::scan(&cfg, true)?;
-        indexer::save(&tracks)?;
-    } else if args.refresh_index || was_repaired {
-        if was_repaired {
-            log::info!("Index corruption healed. Syncing...");
+            // temp session
+            let mut temp_cfg = cfg.clone();
+            temp_cfg.music_dirs = vec![target_canonical.clone()];
+
+            tracks = indexer::scan(&temp_cfg, true)?;
+
+            if tracks.is_empty() {
+                eprintln!("No music files found in: {}", target_str);
+                return Ok(());
+            }
+            // logic falls through so filters and main menu work for this session
         } else {
-            log::info!("Refreshing index...");
+            // standard file/URL playback
+            player::play(&target, &cfg)?;
+            return Ok(());
         }
-        tracks = indexer::scan(&cfg, false)?;
-        indexer::save(&tracks)?;
-    } else if tracks.is_empty() {
-        log::info!("Index empty. First scan...");
-        tracks = indexer::scan(&cfg, true)?;
-        indexer::save(&tracks)?;
+    } else {
+        let (mut loaded_tracks, was_repaired) = indexer::load_index()?;
+
+        if args.reindex {
+            log::info!("Rebuilding index (Full)...");
+            loaded_tracks = indexer::scan(&cfg, true)?;
+            indexer::save(&loaded_tracks)?;
+        } else if args.refresh_index || was_repaired {
+            if was_repaired {
+                log::info!("Index corruption healed. Syncing...");
+            } else {
+                log::info!("Refreshing index...");
+            }
+            loaded_tracks = indexer::scan(&cfg, false)?;
+            indexer::save(&loaded_tracks)?;
+        } else if loaded_tracks.is_empty() {
+            log::info!("Index empty. First scan...");
+            loaded_tracks = indexer::scan(&cfg, true)?;
+            indexer::save(&loaded_tracks)?;
+        }
+
+        tracks = loaded_tracks;
     }
 
     if tracks.is_empty() {
@@ -638,6 +701,10 @@ fn main() -> Result<()> {
     }
     if let Some(None) = args.album {
         run_tag_mode(&tracks, &cfg, Some("album"))?;
+        return Ok(());
+    }
+    if let Some(None) = args.title {
+        run_track_mode(&tracks, &cfg)?;
         return Ok(());
     }
 
@@ -1130,7 +1197,11 @@ fn apply_cli_filters(tracks: &[indexer::Track], args: &Cli, exact: bool) -> Vec<
     let genre_terms = prepare_terms(&args.genre);
     let artist_terms = prepare_terms(&args.artist);
     let album_terms = prepare_terms(&args.album);
-    let title_term = args.title.as_ref().map(|t| t.to_lowercase());
+    let title_term = args
+        .title
+        .as_ref()
+        .and_then(|t| t.as_ref())
+        .map(|s| s.to_lowercase());
 
     tracks
         .iter()

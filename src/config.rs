@@ -3,7 +3,7 @@ use directories::{ProjectDirs, UserDirs};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     pub shuffle: bool,
     pub loop_mode: String, // "playlist", "track", "no", "inf", "5"
