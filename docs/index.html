@@ -5,15 +5,15 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="theme-color" content="#101010" />
 
-        <title>mpv-music | another mpv wrapper</title>
+        <title>mpv-music | Native Rust Music Player</title>
 
         <meta
             name="description"
-            content="A blazing-fast terminal-based music library browser for mpv written in Bash and Rust, also known as 'mpv music' and 'mpvmusic'"
+            content="A blazing-fast terminal-based music library browser for mpv written in Rust. (Previously Bash)."
         />
         <meta
             name="keywords"
-            content="mpv-music, mpv, cli, terminal, music player, linux, bash, fzf, rust, terminal music player, mpv wrapper, mpvmusic, library manager, music, mpv music"
+            content="mpv-music, mpv, cli, terminal, music player, linux, rust, tui, mpv wrapper, mpvmusic, library manager, music, mpv music"
         />
         <link rel="canonical" href="https://furqanhun.github.io/mpv-music/" />
 
@@ -22,11 +22,11 @@
                 "@context": "https://schema.org",
                 "@type": "SoftwareApplication",
                 "name": "mpv-music",
-                "operatingSystem": "Linux, Windows (via WSL)",
+                "operatingSystem": "Linux, macOS",
                 "applicationCategory": "MultimediaApplication",
-                "description": "Open Source terminal-based music library manager for mpv.",
+                "description": "Open Source terminal-based music library manager for mpv (Rust Rewrite).",
                 "license": "https://github.com/furqanhun/mpv-music/blob/main/LICENSE",
-                "softwareRequirements": "mpv, ffmpeg, fzf, bash",
+                "softwareRequirements": "mpv, yt-dlp",
                 "offers": {
                     "@type": "Offer",
                     "price": "0",
@@ -117,12 +117,20 @@
                 user-select: none;
             }
 
+            .sub-link {
+                font-size: 0.85rem;
+                color: var(--dim);
+                text-align: center;
+                display: block;
+                margin-bottom: 2rem;
+            }
+
             /* Dual Channel Styles */
             .release-info {
                 font-size: 0.85rem;
                 color: var(--dim);
                 text-align: right;
-                margin-bottom: 2rem;
+                margin-bottom: 1rem;
                 font-family: monospace;
                 display: flex;
                 flex-direction: column;
@@ -225,20 +233,28 @@
 
             <p>
                 Music for your terminal.<br />
-                Local library management.<br />
-                Powered by <code>mpv</code>, <code>fzf</code>, Rust, and
-                Bash.<span class="cursor"></span>
+                Now completely rewritten in <strong>Rust</strong> 🦀.<br />
+                Currently in <strong>Dev/Alpha</strong> status.<span
+                    class="cursor"
+                ></span>
             </p>
 
             <div class="cmd-block">
                 curl -sL
                 https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh
-                | bash
+                | bash -s -- --dev
             </div>
+
+            <a
+                href="https://github.com/FurqanHun/mpv-music/releases"
+                target="_blank"
+                class="sub-link"
+                >Or download binary manually (Releases)</a
+            >
 
             <div class="release-info">
                 <div class="release-row">
-                    <span>Stable:</span>
+                    <span>Stable (Bash Archive):</span>
                     <a
                         id="stable-link"
                         href="https://github.com/furqanhun/mpv-music/releases"
@@ -247,7 +263,7 @@
                     >
                 </div>
                 <div class="release-row">
-                    <span>Latest:</span>
+                    <span>Latest (Rust Dev):</span>
                     <a
                         id="dev-link"
                         href="https://github.com/furqanhun/mpv-music/releases/latest"
@@ -259,28 +275,28 @@
 
             <h2>Why?</h2>
             <p>
-                Because GUIs are bloated. And it's painful to run
-                <code>find</code> to search for files.
+                Because GUIs are bloated. The old Bash script was good, but
+                <strong>Rust</strong> is instant.
             </p>
 
             <h2>Manifesto</h2>
             <ul>
                 <li>
-                    <strong>Hybrid Engine:</strong> High-performance
-                    <strong>Rust</strong> indexer for speed,
-                    <strong>Bash</strong> for glue.
+                    <strong>Native Rust Engine:</strong> No more external
+                    indexers. The entire app is a single, static binary.
                 </li>
                 <li>
-                    <strong>Keyboard Driven:</strong> Fuzzy find (fzf)
+                    <strong>Keyboard Driven:</strong> Fuzzy find (skim)
                     everything.
                 </li>
                 <li>
-                    <strong>Universal:</strong> Plays local files and URLs
-                    (those supported by yt-dlp) seamlessly.
+                    <strong>Universal:</strong> Plays local files and URLs (via
+                    yt-dlp) seamlessly.
                 </li>
                 <li>
-                    <strong>No Databases:</strong> I mean JSONL is kind of a
-                    Database, but fast.
+                    <strong>Forgiving:</strong> Smart shortcuts (`-l`, `-a`,
+                    `-g`) that auto-play single matches or open menus if
+                    ambiguous.
                 </li>
             </ul>
 
@@ -288,9 +304,12 @@
             <p>Run <code>mpv-music</code> to launch the menu, or use args:</p>
             <ul>
                 <li>
-                    <code>mpv-music -a "Daft Punk"</code> (Filter by artist)
+                    <code>mpv-music -a "Daft Punk"</code> (Filter by artist,
+                    instant-play if 1 match)
                 </li>
-                <li><code>mpv-music -p</code> (Play all shuffle)</li>
+                <li>
+                    <code>mpv-music -l "Gym"</code> (Play playlist directly)
+                </li>
                 <li>
                     <code>mpv-music "https://youtu.be/..."</code> (Stream URL)
                 </li>
@@ -300,14 +319,6 @@
                 <h1>mpv-music</h1>
                 <p>
                     <a href="changelog.html">Changelog</a> •
-                    <a
-                        href="https://github.com/FurqanHun/mpv-music/tree/master/crates/mpv-music-indexer"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >Indexer Engine</a
-                    >
-                </p>
-                <p>
                     <a
                         href="https://github.com/furqanhun/mpv-music"
                         target="_blank"
@@ -343,7 +354,7 @@
                     return response.json();
                 })
                 .then((data) => {
-                    // 🦍 STABLE
+                    // STABLE (Bash)
                     const stableEl = document.getElementById("stable-link");
                     if (data.stable) {
                         stableEl.textContent = data.stable.tag_name;
@@ -352,7 +363,7 @@
                         stableEl.textContent = "n/a";
                     }
 
-                    // 🦍 LATEST (DEV)
+                    // LATEST (DEV)
                     const devEl = document.getElementById("dev-link");
                     if (data.dev) {
                         devEl.textContent = data.dev.tag_name;

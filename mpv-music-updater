@@ -33,12 +33,12 @@ echo -e "If you wish to remove the legacy version and its data, here is where ev
 
 # 1. The Script itself
 if [[ -n "$TARGET_PATH" && -f "$TARGET_PATH" ]]; then
-    echo -e "Main Script:     ${YELLOW}$TARGET_PATH${NC}"
+    echo -e "   Main Script:     ${YELLOW}$TARGET_PATH${NC}"
 fi
 
 # 2. Config Folder
 if [[ -d "$CONFIG_DIR" ]]; then
-    echo -e "Config Directory: ${YELLOW}$CONFIG_DIR${NC}"
+    echo -e "   Config Directory: ${YELLOW}$CONFIG_DIR${NC}"
 
     # Check for specific files inside
     [[ -f "$CONFIG_DIR/mpv-music.conf" ]] && echo -e "   Config File:    ${YELLOW}mpv-music.conf${NC}"

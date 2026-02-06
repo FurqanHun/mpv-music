@@ -103,7 +103,12 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
     chmod +x mpv-music
     mv mpv-music ~/.local/bin/
     ```
+or Alternatively, you can use the followiing command and let the script handle the process
 
+```bash
+curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash -s -- --dev
+```
+    
 ### From Source
 Requires Rust **1.93.0+**.
 ```bash
