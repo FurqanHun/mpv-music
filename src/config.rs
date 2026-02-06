@@ -52,11 +52,11 @@ impl Default for Config {
         Self {
             shuffle: true,
             loop_mode: "inf".to_string(),
-            volume: 60,
+            volume: 100,
             music_dirs,
             video_ok: false,
-            serial_mode: true,
-            ytdlp_ejs_remote_github: true,
+            serial_mode: false,
+            ytdlp_ejs_remote_github: false,
             ytdlp_useragent:
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0"
                     .to_string(),

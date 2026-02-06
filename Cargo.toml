@@ -1,6 +1,6 @@
 [package]
 name = "mpv-music"
-version = "0.24.0-dev.6"
+version = "0.24.0-dev.7"
 edition = "2024"
 rust-version = "1.93.0"
 authors = ["FurqanHun <furqanhun@proton.me>"]

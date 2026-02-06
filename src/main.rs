@@ -537,6 +537,7 @@ fn main() -> Result<()> {
     }
     if args.update {
         println!("Update logic not implemented yet.");
+        println!("GitHub releases: https://github.com/FurqanHun/mpv-music/releases");
         return Ok(());
     }
     if let Some(ref mode) = args.loop_arg {

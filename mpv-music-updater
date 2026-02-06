@@ -1,278 +1,57 @@
 #!/usr/bin/env bash
-# File: mpv-music-updater
-# Usage: ./mpv-music-updater <path_to_existing_script> [--stable|--dev]
+# File: mpv-music-updater (Archival Version)
 
 set -euo pipefail
 
-TARGET_PATH="$1"
-shift
-
-# REPO_BASE="https://raw.githubusercontent.com/FurqanHun/mpv-music/master"
-TEMP_DOWNLOAD="$HOME/.config/mpv-music/mpv-music.new"
+TARGET_PATH="${1:-}"
 CONFIG_DIR="$HOME/.config/mpv-music"
-CONFIG_FILE="$CONFIG_DIR/mpv-music.conf"
 
-# --- Colors & Helpers ---
+# --- Colors ---
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-msg_info()  { echo -e "${BLUE}[INFO]${NC}  $1"; }
-msg_ok()    { echo -e "${GREEN}[OK]${NC}    $1"; }
-msg_warn()  { echo -e "${YELLOW}[WARN]${NC}  $1"; }
-msg_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-
 # --- SELF-DESTRUCT TRAP ---
-# Ensure this script deletes itself regardless of success or failure
 cleanup() {
     rm -f "$0"
 }
 trap cleanup EXIT
 
-# PARSE FLAGS & DETECT CHANNEL
-FORCE_CHANNEL=""
-WIPE_REQUIRED=false
+echo -e "${YELLOW}========================================================${NC}"
+echo -e "${RED}NOTICE: The Bash version of mpv-music is now ARCHIVED.${NC}"
+echo -e "${GREEN}A high-performance Rust rewrite is currently in progress!${NC}"
+echo -e "${YELLOW}========================================================${NC}"
 
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --dev) FORCE_CHANNEL="dev"; shift ;;
-        --stable) FORCE_CHANNEL="stable"; shift ;;
-        *) shift ;;
-    esac
-done
+echo -e "\n${BLUE}[NEW VERSION]${NC}"
+echo -e "To install the new Rust build, visit the main repository:"
+echo -e "${BLUE}https://github.com/FurqanHun/mpv-music${NC}"
 
-if [[ -f "$TARGET_PATH" ]]; then
-    CURRENT_VERSION=$(grep '^VERSION=' "$TARGET_PATH" | cut -d'"' -f2)
-else
-    CURRENT_VERSION="0.0.0"
+echo -e "\n${BLUE}[EXISTING DATA]${NC}"
+echo -e "If you wish to remove the legacy version and its data, here is where everything is stored:"
+
+# 1. The Script itself
+if [[ -n "$TARGET_PATH" && -f "$TARGET_PATH" ]]; then
+    echo -e "Main Script:     ${YELLOW}$TARGET_PATH${NC}"
 fi
 
-# Heuristic detection
-if [[ "$CURRENT_VERSION" == *"-"* || "$CURRENT_VERSION" == *"alpha"* || "$CURRENT_VERSION" == *"beta"* ]]; then
-    CURRENT_CHANNEL="dev"
-else
-    CURRENT_CHANNEL="stable"
+# 2. Config Folder
+if [[ -d "$CONFIG_DIR" ]]; then
+    echo -e "Config Directory: ${YELLOW}$CONFIG_DIR${NC}"
+
+    # Check for specific files inside
+    [[ -f "$CONFIG_DIR/mpv-music.conf" ]] && echo -e "   Config File:    ${YELLOW}mpv-music.conf${NC}"
+    [[ -f "$CONFIG_DIR/music_index.jsonl" ]] && echo -e "   Index File:       ${YELLOW}music_index.jsonl${NC}"
+    [[ -f "$CONFIG_DIR/music_index.json" ]] && echo -e "   Old Index (if somehow it survived):       ${YELLOW}music_index.json${NC}"
+    [[ -f "$CONFIG_DIR/mpv-music-indexer" ]] && echo -e "   Indexer:        ${YELLOW}mpv-music-indexer${NC}"
+    [[ -f "$CONFIG_DIR/mpv-music.log" ]] && echo -e "   Log File:       ${YELLOW}mpv-music.log${NC}"
 fi
 
-TARGET_CHANNEL="${FORCE_CHANNEL:-$CURRENT_CHANNEL}"
+echo -e "\n${BLUE}[MIGRATION COMMAND]${NC}"
+echo -e "Run this to install the latest Rust Dev version:"
+echo -e "${GREEN}curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash -s -- --dev${NC}"
 
-# SWITCHING LOGIC
-if [[ "$CURRENT_CHANNEL" != "$TARGET_CHANNEL" ]]; then
-    echo ""
-    msg_warn "CHANNEL SWITCH: ${CURRENT_CHANNEL^^} -> ${TARGET_CHANNEL^^}"
-    msg_warn "This will DELETE your existing config and database to prevent conflicts."
-    read -rp "Proceed? [y/N]: " CONFIRM < /dev/tty
-    if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
-        msg_info "Update cancelled."
-        exit 0
-    fi
-    WIPE_REQUIRED=true
-fi
-
-msg_info "Checking for updates ($TARGET_CHANNEL)..."
-
-if [[ "$TARGET_CHANNEL" == "dev" ]]; then
-    # Dev: Absolute latest tag
-    API_URL="https://api.github.com/repos/FurqanHun/mpv-music/releases"
-    JQ_FILTER=".[0].tag_name // empty"
-else
-    # Stable: Latest stable release
-    API_URL="https://api.github.com/repos/FurqanHun/mpv-music/releases/latest"
-    JQ_FILTER=".tag_name // empty"
-fi
-
-if ! LATEST_JSON=$(curl -sL "$API_URL"); then
-    msg_error "Failed to check for updates (API request failed)."
-    exit 1
-fi
-
-# Use dynamic filter
-LATEST_TAG=$(echo "$LATEST_JSON" | jq -r "$JQ_FILTER")
-
-if [[ -z "$LATEST_TAG" || "$LATEST_TAG" == "null" ]]; then
-    msg_error "Could not find a valid tag in the release list."
-    exit 1
-fi
-
-REMOTE_VERSION="${LATEST_TAG#v}"
-
-# --- VERSION COMPARISON LOGIC ---
-
-# Force update if wiping
-if [[ "$REMOTE_VERSION" == "$CURRENT_VERSION" && "$WIPE_REQUIRED" == "false" ]]; then
-    msg_ok "You are already using the latest version (v$CURRENT_VERSION)."
-    # We still check indexer below even if script matches
-else
-    SMALLEST_VERSION=""
-    # Downgrade Prevention (Skip if wiping, we force install)
-    if [[ "$WIPE_REQUIRED" == "false" ]]; then
-        SMALLEST_VERSION=$(echo -e "${CURRENT_VERSION}\n${REMOTE_VERSION}" | sort -V | head -n1)
-
-        if [[ "$SMALLEST_VERSION" == "$REMOTE_VERSION" ]]; then
-            msg_ok "You are running a newer version (v$CURRENT_VERSION) than the release (v$REMOTE_VERSION)."
-            msg_info "Skipping downgrade."
-            # Logic flow continues to indexer check...
-        else
-            msg_warn "Update found! v$CURRENT_VERSION -> v$REMOTE_VERSION"
-        fi
-    fi
-
-    # Only download if versions differ OR we are wiping
-    if [[ "$WIPE_REQUIRED" == "true" || "${SMALLEST_VERSION:-}" != "$REMOTE_VERSION" ]]; then
-        msg_info "Fetching release $LATEST_TAG..."
-
-        DOWNLOAD_URL="https://raw.githubusercontent.com/FurqanHun/mpv-music/${LATEST_TAG}/mpv-music"
-
-        if ! curl -sL "$DOWNLOAD_URL" -o "$TEMP_DOWNLOAD"; then
-            msg_error "Failed to download the update."
-            exit 1
-        fi
-
-        chmod +x "$TEMP_DOWNLOAD"
-
-        if ! grep -q "bash" "$TEMP_DOWNLOAD"; then
-            msg_error "Downloaded file seems corrupt."
-            rm "$TEMP_DOWNLOAD"
-            exit 1
-        fi
-
-        if mv "$TEMP_DOWNLOAD" "$TARGET_PATH"; then
-            msg_ok "Script update to v$REMOTE_VERSION successful!"
-        else
-            msg_error "Failed to replace file. Check permissions."
-            rm "$TEMP_DOWNLOAD"
-            exit 1
-        fi
-    fi
-fi
-
-if [[ "$WIPE_REQUIRED" == "true" ]]; then
-    if [[ -d "$CONFIG_DIR" ]]; then
-        rm -f "$CONFIG_FILE" \
-            "$CONFIG_DIR/music_index.json" \
-            "$CONFIG_DIR/music_index.jsonl" \
-            "$CONFIG_DIR/mpv-music.log"
-
-        msg_ok "Configuration and database wiped (Indexer preserved)."
-    fi
-fi
-
-# --- CONFIG MIGRATION (String -> Array) ---
-if [[ -f "$CONFIG_FILE" ]]; then
-    # Check if MUSIC_DIRS is defined but NOT as an array (does not start with '(' )
-    if grep -qE '^MUSIC_DIRS=[^(]' "$CONFIG_FILE"; then
-        msg_warn "Legacy config format detected (MUSIC_DIRS string)."
-        msg_info "Migrating to new Array format..."
-
-        cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
-
-        # Extract the old value safely by sourcing in a subshell
-        # suppress output to avoid noise
-        OLD_VAL=$(set +e; source "$CONFIG_FILE" &>/dev/null; echo "$MUSIC_DIRS")
-
-        TEMP_CONF=$(mktemp)
-
-        # remove the old line(s)
-        sed '/^MUSIC_DIRS=/d' "$CONFIG_FILE" > "$TEMP_CONF"
-
-        # append the new format
-        {
-            echo ""
-            echo "# Migrated by mpv-music-updater v$REMOTE_VERSION"
-            echo "MUSIC_DIRS=("
-            # Split the old string by spaces
-            IFS=' ' read -r -a DIRS <<< "$OLD_VAL"
-            for dir in "${DIRS[@]}"; do
-                # Force quotes for safety
-                echo "    \"$dir\""
-            done
-            echo ")"
-        } >> "$TEMP_CONF"
-
-        # 6. Apply
-        mv "$TEMP_CONF" "$CONFIG_FILE"
-        msg_ok "Config migrated successfully."
-    fi
-fi
-
-# --- MIGRATION CHECK (JSON -> JSONL) ---
-if [[ -f "$CONFIG_DIR/music_index.json" ]]; then
-    echo ""
-    msg_warn "Legacy database format detected (.json)."
-    msg_warn "v0.15.0+ introduced a faster engine (.jsonl)."
-    echo -e "${YELLOW}Your library will automatically migrate to the new format the next time you run mpv-music.${NC}"
-    echo -e "${YELLOW}The old .json file will be removed upon success.${NC}"
-fi
-
-# --- INDEXER UPDATE LOGIC ---
-# Only check if indexer exists locally (Config dir OR Path)
-
-LOCAL_INDEXER=""
-
-if [[ -x "$CONFIG_DIR/mpv-music-indexer" ]]; then
-    LOCAL_INDEXER="$CONFIG_DIR/mpv-music-indexer"
-elif command -v mpv-music-indexer &>/dev/null; then
-    LOCAL_INDEXER="$(command -v mpv-music-indexer)"
-fi
-
-if [[ -n "$LOCAL_INDEXER" ]]; then
-    ARCH=$(uname -m)
-    ASSET_NAME=""
-    case "$ARCH" in
-        x86_64) ASSET_NAME="mpv-music-indexer-linux-x86_64" ;;
-        aarch64|arm64) ASSET_NAME="mpv-music-indexer-linux-aarch64" ;;
-        armv7l|armv7) ASSET_NAME="mpv-music-indexer-linux-armv7" ;;
-        *) ASSET_NAME="" ;; # Unknown/Unsupported for auto-update
-    esac
-
-    if [[ -n "$ASSET_NAME" ]]; then
-        msg_info "Checking Indexer ($LOCAL_INDEXER)..."
-
-        # Get Local Version
-        LOCAL_IDX_VER=$("$LOCAL_INDEXER" -V 2>/dev/null | awk '{print $2}')
-
-        if [[ -z "$LOCAL_IDX_VER" ]]; then
-            msg_warn "Could not detect local indexer version. Skipping."
-        else
-            TOML_URL="https://raw.githubusercontent.com/FurqanHun/mpv-music/${LATEST_TAG}/crates/mpv-music-indexer/Cargo.toml"
-            REMOTE_IDX_VER=$(curl -sL "$TOML_URL" | grep '^version =' | head -n1 | cut -d'"' -f2)
-
-            if [[ -z "$REMOTE_IDX_VER" ]]; then
-                 # Fallback to script version if TOML fails (rare)
-                 msg_warn "Could not read remote indexer version. Skipping."
-            elif [[ "$LOCAL_IDX_VER" == "$REMOTE_IDX_VER" ]]; then
-                msg_ok "Indexer is already up to date (v$LOCAL_IDX_VER)."
-            else
-                # Compare Versions (Downgrade Check)
-                SMALLEST_IDX=$(echo -e "${LOCAL_IDX_VER}\n${REMOTE_IDX_VER}" | sort -V | head -n1)
-
-                if [[ "$SMALLEST_IDX" == "$REMOTE_IDX_VER" ]]; then
-                    msg_ok "Indexer is newer/same (v$LOCAL_IDX_VER vs Remote v$REMOTE_IDX_VER). Skipping."
-                else
-                    msg_warn "Indexer Update: v$LOCAL_IDX_VER -> v$REMOTE_IDX_VER"
-
-                    # Download and Replace
-                    TEMP_IDX="$CONFIG_DIR/mpv-music-indexer.new"
-                    IDX_URL="https://github.com/FurqanHun/mpv-music/releases/download/${LATEST_TAG}/${ASSET_NAME}"
-
-                    if curl -sL --fail "$IDX_URL" -o "$TEMP_IDX"; then
-                        chmod +x "$TEMP_IDX"
-                        if mv "$TEMP_IDX" "$LOCAL_INDEXER"; then
-                            msg_ok "Indexer updated successfully!"
-                        else
-                            msg_error "Failed to replace indexer binary (Permission denied?)."
-                            rm -f "$TEMP_IDX"
-                        fi
-                    else
-                        msg_error "Failed to download indexer binary. Leaving old one."
-                        rm -f "$TEMP_IDX"
-                    fi
-                fi
-            fi
-        fi
-    fi
-fi
-
+echo -e "\n${YELLOW}The update script will now clean itself up. Goodbye!${NC}"
+sleep 1
 exit 0
