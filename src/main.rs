@@ -89,8 +89,13 @@ struct Cli {
     #[arg(short = 'p', long, help = "Play all tracks immediately")]
     play_all: bool,
 
-    #[arg(short = 'l', long, help = "Open Playlist Mode")]
-    playlist: bool,
+    #[arg(
+            short = 'l',
+            long,
+            num_args = 0..=1,
+            help = "Open Playlist Mode. Opens picker if no value given."
+        )]
+    playlist: Option<Option<String>>,
 
     #[arg(long, help = "Allow video files")]
     video_ok: bool,
@@ -146,7 +151,7 @@ struct Cli {
             short = 't',
             long,
             num_args = 0..=1,
-            help = "Filter by Title (Partial). Opens TUI if no value given."
+            help = "Filter by Title (Partial). Opens Track Mode if no value given."
         )]
     title: Option<Option<String>>,
 
@@ -383,8 +388,7 @@ fn main() -> Result<()> {
         None
     };
 
-    //utility flags
-
+    // utility flags
     let log_file_path = log_dir.join("mpv-music.log");
     if args.remove_log {
         if log_file_path.exists() {
@@ -440,13 +444,6 @@ fn main() -> Result<()> {
     let mut cfg = config::load(config_path_override.clone())?;
 
     // init logger
-    // let log_filter = if args.debug {
-    //     "mpv_music=debug, warn"
-    // } else if args.verbose > 0 {
-    //     "mpv_music=info, warn"
-    // } else {
-    //     "warn"
-    // };
     let log_filter = if cfg.enable_file_logging {
         if args.debug {
             "mpv_music=debug, warn"
@@ -463,39 +460,7 @@ fn main() -> Result<()> {
         }
     };
 
-    // pre rotation logic
-    // let log_file_path = log_dir.join("mpv-music.log");
-    // let max_kb = cfg.log_max_size_kb;
-
-    // if max_kb > 0 && log_file_path.exists() {
-    //     if let Ok(metadata) = std::fs::metadata(&log_file_path) {
-    //         let size_kb = metadata.len() / 1024;
-    //         if size_kb > max_kb {
-    //             let _ = std::fs::File::create(&log_file_path);
-    //             println!(
-    //                 "Log size ({}KB) exceeded {}KB. File wiped.",
-    //                 size_kb, max_kb
-    //             );
-    //         }
-    //     }
-    // }
-
     std::fs::create_dir_all(&log_dir)?;
-    // let mut logger = Logger::try_with_str(log_filter)?;
-
-    // if max_kb > 0 {
-    //     logger = logger
-    //         .log_to_file(
-    //             FileSpec::default()
-    //                 .directory(&log_dir)
-    //                 .basename("mpv-music")
-    //                 .suffix("log")
-    //                 .use_timestamp(false),
-    //         )
-    //         .write_mode(WriteMode::Direct);
-    // } else if args.verbose > 0 || args.debug {
-    //     println!("Log size limit is 0. File logging disabled; logs will only be displayed.");
-    // }
     let mut logger = Logger::try_with_str(log_filter)?.format_for_stderr(|w, _now, record| {
         let level = record.level();
         write!(
@@ -519,17 +484,11 @@ fn main() -> Result<()> {
                     .suffix("log")
                     .use_timestamp(false),
             )
-            // File gets the detailed format (with time) by default
             .format_for_files(flexi_logger::opt_format)
             .write_mode(WriteMode::Direct);
     }
 
     let is_interactive = args.target.is_none() || args.refresh_index;
-    // if (args.verbose > 0 || args.debug) && !is_interactive {
-    //     logger = logger.duplicate_to_stderr(flexi_logger::Duplicate::Info);
-    // } else if args.debug && is_interactive {
-    //     logger = logger.duplicate_to_stderr(flexi_logger::Duplicate::Error);
-    // }
     if args.debug {
         logger = logger.duplicate_to_stderr(flexi_logger::Duplicate::All);
     } else if args.verbose > 0 {
@@ -590,7 +549,6 @@ fn main() -> Result<()> {
         cfg.loop_mode = "track".to_string();
     }
 
-    // Handle Extension Overrides
     if let Some(ref extensions) = args.ext {
         cfg.audio_exts = extensions
             .split(',')
@@ -626,7 +584,6 @@ fn main() -> Result<()> {
         if run_manage_dirs_mode(&mut cfg)? {
             config::save(&cfg)?;
             println!("Configuration saved.");
-
             println!("Syncing index with new directories...");
             let tracks = indexer::scan(&cfg, false)?;
             indexer::save(&tracks)?;
@@ -634,7 +591,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // direct play and normal session
+    // tracks population (session vs persistence)
     let mut tracks: Vec<indexer::Track>;
 
     if let Some(target) = args.target.clone() {
@@ -645,7 +602,6 @@ fn main() -> Result<()> {
             let target_canonical = std::fs::canonicalize(&path).unwrap_or(path.clone());
             let target_str = target_canonical.to_string_lossy();
 
-            // temp session
             let mut temp_cfg = cfg.clone();
             temp_cfg.music_dirs = vec![target_canonical.clone()];
 
@@ -655,9 +611,7 @@ fn main() -> Result<()> {
                 eprintln!("No music files found in: {}", target_str);
                 return Ok(());
             }
-            // logic falls through so filters and main menu work for this session
         } else {
-            // standard file/URL playback
             player::play(&target, &cfg)?;
             return Ok(());
         }
@@ -690,46 +644,62 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // filter shortcuts
+    // enry point shortcuts
     if let Some(None) = args.genre {
+        log::info!("Empty genre flag. Opening Genre Picker.");
         run_tag_mode(&tracks, &cfg, Some("genre"))?;
         return Ok(());
     }
     if let Some(None) = args.artist {
+        log::info!("Empty artist flag. Opening Artist Picker.");
         run_tag_mode(&tracks, &cfg, Some("artist"))?;
         return Ok(());
     }
     if let Some(None) = args.album {
+        log::info!("Empty album flag. Opening Album Picker.");
         run_tag_mode(&tracks, &cfg, Some("album"))?;
         return Ok(());
     }
     if let Some(None) = args.title {
+        log::info!("Empty title flag. Opening Track Mode.");
         run_track_mode(&tracks, &cfg)?;
+        return Ok(());
+    }
+    if let Some(None) = args.search {
+        log::info!("Empty search flag. Opening YouTube Search.");
+        run_search_mode(&cfg, None)?;
+        return Ok(());
+    }
+    if let Some(None) = args.playlist {
+        log::info!("Empty playlist flag. Opening Playlist Picker.");
+        run_playlist_mode(&tracks, &cfg)?;
         return Ok(());
     }
 
     // main search and filter logic
     if args.genre.is_some() || args.artist.is_some() || args.album.is_some() || args.title.is_some()
     {
-        // multi val check
         let is_multi_value_search = args
             .artist
             .as_ref()
-            .map_or(false, |o| o.as_ref().map_or(false, |s| s.contains(',')))
+            .and_then(|o| o.as_ref())
+            .map_or(false, |s| s.contains(','))
             || args
                 .genre
                 .as_ref()
-                .map_or(false, |o| o.as_ref().map_or(false, |s| s.contains(',')))
+                .and_then(|o| o.as_ref())
+                .map_or(false, |s| s.contains(','))
             || args
                 .album
                 .as_ref()
-                .map_or(false, |o| o.as_ref().map_or(false, |s| s.contains(',')));
+                .and_then(|o| o.as_ref())
+                .map_or(false, |s| s.contains(','));
 
         // stage 1: exact match
         let mut filtered = if !is_multi_value_search {
             apply_cli_filters(&tracks, &args, true)
         } else {
-            Vec::new() // force skipping
+            Vec::new()
         };
 
         // stage 2: partial match / ambiguity handling
@@ -745,7 +715,6 @@ fn main() -> Result<()> {
             // identify active tag
             let mut unique_options: HashSet<String> = HashSet::new();
             let mut active_key = "";
-
             if args.artist.is_some() {
                 active_key = "artist";
             } else if args.genre.is_some() {
@@ -800,6 +769,12 @@ fn main() -> Result<()> {
             return Ok(());
         }
 
+        if filtered.len() == 1 {
+            log::info!("Single match found. Playing directly.");
+            player::play(&filtered[0].path, &cfg)?;
+            return Ok(());
+        }
+
         println!("Found {} matching tracks.", filtered.len());
         if args.play_all {
             let paths: Vec<String> = filtered.iter().map(|t| t.path.clone()).collect();
@@ -810,11 +785,29 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // main modes
+    // default modes
     if args.play_all {
         let paths: Vec<String> = tracks.iter().map(|t| t.path.clone()).collect();
         player::play_files(&paths, &cfg)?;
-    } else if args.playlist {
+    } else if let Some(maybe_val) = args.playlist {
+        if let Some(playlist_name) = maybe_val {
+            let name_lower = playlist_name.to_lowercase();
+            let matches: Vec<&indexer::Track> = tracks
+                .iter()
+                .filter(|t| {
+                    t.media_type == "playlist" && t.title.to_lowercase().contains(&name_lower)
+                })
+                .collect();
+
+            if matches.len() == 1 {
+                log::info!(
+                    "Single playlist match found: {}. Playing directly.",
+                    matches[0].title
+                );
+                player::play(&matches[0].path, &cfg)?;
+                return Ok(());
+            }
+        }
         run_playlist_mode(&tracks, &cfg)?;
     } else {
         run_main_menu(&mut tracks, &mut cfg)?;
