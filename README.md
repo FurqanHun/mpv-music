@@ -7,11 +7,12 @@
 
 It indexes your music collection into a lightning-fast library, providing fuzzy searching (via `skim`), metadata-rich previews, and deep integration with `mpv` for high-quality playback.
 
-> [!WARNING]
-> This README has not yet been fully updated for the new Rust-native architecture (v0.24+).
-> mpv-music has now migrated from the legacy Bash hybrid system to a unified Rust core.
-> For the archived Bash-based version, see:
-> https://github.com/FurqanHun/mpv-music/tree/mpv-music-sh-archive
+> [!NOTE]
+> **This is the documentation for the Rust-native rewrite (v0.24+).**
+> mpv-music has migrated from the legacy Bash hybrid system to a unified Rust core.
+>
+> If you are looking for the archived **Bash-based version**, see:
+> [mpv-music-sh-archive](https://github.com/FurqanHun/mpv-music/tree/mpv-music-sh-archive)
 
 ---
 
@@ -90,7 +91,7 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 * **Linux:** Native. The script is built and tested primarily for Linux (GNU tools).
 * **WSL (Windows Subsystem for Linux):** Fully Supported. This is the recommended way to run it on Windows.
 * **macOS / BSD:** It should work fine on macOS and BSD systems (haven't tested it, please do... any feedback is appreciated).
-* **Windows (Native/Git Bash):** Not Supported. As one of the libraries used `skim` (which as of version 2.0.2) doesn't support windows.
+* **Windows (Native/Git Bash):** Not Supported. As one of the libraries used `skim` (which as of version 2.0.2) doesn't support windows. According to [Issue #293](https://github.com/lotabout/skim/issues/293) They're working on it. Or at least will be a priority after tthe ratatui rewrite. Until then `mpv-music` will not work on Windows.
 
 > [!Tip]
 > You can use WSL (Windows Subsystem for Linux) to run `mpv-music` on Windows.
@@ -135,7 +136,7 @@ That creates:
 
 - Logs: `~/.local/share/mpv-music/mpv-music.log`
 
-The project now respects XDG standards. and only uses config folder to dump all as a fallback.
+The project now respects XDG standards. and only uses config folder to dump all as a fallback. And by `directories` library used does support config/data dirs in windows/mac.
 
 ---
 
@@ -155,42 +156,42 @@ mpv-music [FILTER_FLAGS] [--play-all]
 ### Options:
 
 | Option | Description |
-|--------|-------------|
-| `-h, --help` | Show the help message and exit |
-| `-v, --version` | Show the script version and exit |
-| `--config [editor]` | Open config file (default: nano/vi, or pass `nvim`/`zed`) |
-| `--remove-config`, `--rm-conf` | Remove config file |
-| `--log [viewer]` | Open log file (default: less, or pass `nvim`/`cat`) |
-| `--rm-log` | Remove log file |
-| `--video-ok` | Include video files in scans |
-| `--volume [value]` | Set the initial volume |
-| `--shuffle` | Enable shuffling |
-| `--no-shuffle` | Disable shuffling |
-| `--loop` | Enable looping |
-| `--no-loop` | Disable looping |
-| `--repeat` | Loop current track (Repeat One) |
-| `--serial` | Force indexer to run serially (better for hdds) |
-| `--ext=mp3,ogg` | Override file extensions |
-| `--update` | Update the script to the latest version |
-| `--reindex` | Force rebuild the full index |
-| `--refresh-index` | Update index without wiping it |
-| `--manage-dirs` | Open the directory management UI directly |
-| `--add-dir [path]` | Add a/multiple new music directories |
-| `--remove-dir [path]` | Remove a/multiple music directories |
-| `-V, --verbose` | Increase verbosity, printing additional information |
-| `--debug` | Print full system trace and detailed debug messages |
-| `-g, --genre [val]` | Filter by genre. Opens picker if no value given |
-| `-a, --artist [val]` | Filter by artist. Opens picker if no value given |
-| `-b, --album [val]` | Filter by album. Opens picker if no value given |
-| `-t, --title [val]` | Filter by track title |
-| `-p, --play-all` | Play all tracks matching filters directly |
-| `-l, --playlist` | Go directly to playlist mode |
-
-_There are some flags missing in the rewrite now, but i'll soon add them. Please run `mpv-music --help` to see the available flags._
+| :--- | :--- |
+| `[TARGET]` | Directly play a file, directory, or URL |
+| `-r`, `--refresh-index` | Update index (incremental scan). Detects new/changed files. |
+| `--reindex` | Force a full re-scan of the library. |
+| `-u`, `--update` | Update the application. |
+| `--add-dir <PATH>...` | Add directory (e.g. `--add-dir /music /other`). |
+| `--remove-dir <PATH>...` | Remove directory (aliases: `--rm-dir`). |
+| `--manage-dirs` | Open the Interactive Directory Manager. |
+| `-c`, `--config [<EDITOR>]` | Edit config file. |
+| `--remove-config` | Delete config file (Reset) (aliases: `--rm-conf`). |
+| `--log [<PAGER>]` | View logs. |
+| `--remove-log` | Delete log file (aliases: `--rm-log`). |
+| `-p`, `--play-all` | Play all tracks immediately. |
+| `-l`, `--playlist [<VAL>]` | Open Playlist Mode. Opens picker if no value given. |
+| `--video-ok` | Allow video files. |
+| `--loop [<LOOP_ARG>]` | Enable looping (`inf`, `no`, `track`, or a NUMBER). |
+| `--no-loop` | Disable all looping. |
+| `--repeat` | Loop the current track (Repeat One). |
+| `-e`, `--ext <EXT_LIST>` | Override allowed extensions (e.g. `-e mp3,flac`). |
+| `-g`, `--genre [<GENRE>]` | Filter by Genre (e.g. `-g 'Pop,Rock'`). |
+| `-a`, `--artist [<ARTIST>]` | Filter by Artist (e.g. `-a 'ado,gentle'`). |
+| `-b`, `--album [<ALBUM>]` | Filter by Album. |
+| `-t`, `--title [<TITLE>]` | Filter by Title (Partial). Opens Track Mode if no value given. |
+| `-v`, `--verbose` | Display Verbose Information. |
+| `-d`, `--debug` | Debug mode. |
+| `--volume <VOLUME>` | Set volume (0-100). |
+| `-s`, `--shuffle` | Shuffle. |
+| `--no-shuffle` | No Shuffle. |
+| `--serial` | Force serial (single-threaded) processing. |
+| `--search [<SEARCH>]` | Search YouTube directly (aliases: `--yt`). |
+| `-h`, `--help` | Print help. |
+| `-V`, `--version` | Print version. |
 
 Any mpv flag also works: `--no-video`, `--volume=50`, `--shuffle`, etc.
 
-Instead of using hte log rotation method now log is overwritten each time the program is run. And you can turn the logging off by setting `enable_file_logging = false` in your config.
+Instead of using the log rotation method now log is overwritten each time the program is run. And you can turn the logging off by setting `enable_file_logging = false` in your config.
 
 ### Examples:
 
@@ -219,7 +220,7 @@ mpv-music --manage-dirs                  # Manage directories
 
 Your music library is indexed to:
 
-- Where ever our sysetm has defined i should go, for modern linux systems it should be at `~/.config/mpv-music/music_index.jsonl`
+- Where ever our sysetm has defined program data should go, for modern linux systems it should be at `~/.local/share/mpv-music/music_index.jsonl`
 
 ### Why?
 
@@ -252,17 +253,31 @@ mpv-music --config
 **Options:**
 
 ```toml
+# --- General Playback ---
 shuffle = true
-loop_mode = "inf"
-volume = 60
+loop_mode = "inf"  # Options: "playlist" (same as inf), "track", "no", "inf", "5" (number of loops)
+volume = 100
+
+# --- Library Management ---
 music_dirs = [
-    "/home/qan/Music",
+    "/home/user/Music",
+    "/mnt/storage/songs",
 ]
-video_ok = false
-serial_mode = true
-ytdlp_ejs_remote_github = true
+video_ok = false    # Set to true to include video files in the index
+serial_mode = false # Set to true to force single-threaded scanning (better for HDDs)
+
+# --- YT-DLP / Networking ---
+# Set to true if you installed yt-dlp via package manager (apt/pacman). 
+# Keep false if you downloaded the binary directly from GitHub.
+ytdlp_ejs_remote_github = false 
 ytdlp_useragent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0"
-enable_file_logging = false
+
+# --- Logging ---
+# If true, INFO/WARN logs are saved to file. 
+# If false, logs are only shown on screen when running with --verbose or --debug.
+enable_file_logging = true
+
+# --- File Extensions ---
 audio_exts = [
     "mp3",
     "flac",
@@ -296,12 +311,16 @@ playlist_exts = [
     "m3u8",
     "pls",
 ]
+
+# --- MPV Arguments ---
+# These flags are passed directly to the mpv process.
 mpv_default_args = [
     "--no-video",
     "--audio-display=no",
     "--msg-level=cplayer=warn",
     "--display-tags=",
     "--no-term-osd-bar",
+    # Custom Now Playing UI
     "--term-playing-msg=╔══  MPV-MUSIC  ══╗",
     "--term-status-msg=▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${media-title}} • ${time-pos} / ${duration} • (${percent-pos}%)",
 ]
@@ -313,12 +332,13 @@ mpv_default_args = [
 ## Development
 
 - **Source Code:** Located in `src/`.
-  * `config.rs`
-  * `dep_check.rs`
-  * `indexer.rs`
-  * `main.rs`
-  * `player.rs`
-  * `search.rs`
+  * **`main.rs`**: Entry point. Handles CLI argument parsing, **TUI orchestration** (skim), and the main application loop.
+  * **`config.rs`**: Manages configuration loading, validation, and defaults (Toml).
+  * **`indexer.rs`**: The core library scanner. Uses `walkdir`, `rayon` (parallelism), and `lofty` for metadata.
+  * **`player.rs`**: Wraps the `mpv` process, handling playback control and status flags.
+  * **`search.rs`**: **YouTube Backend.** Wraps `yt-dlp` to fetch search results and stream URLs.
+  * **`dep_check.rs`**: Validates runtime dependencies (mpv, yt-dlp) and environment health.
+
 ---
 
 ## License
