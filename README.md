@@ -334,33 +334,45 @@ mpv_default_args = [
 
 <details>
 <summary><strong>Q. Why rewrite it in Rust? The Bash version worked fine.</strong></summary>
+
 The Bash version was a hack that grew too big. Spawning subshells to parse metadata is slow. Managing `fzf` integration through pipes is fragile (kinda, it's not really a problem, but for the smooth experience it is). And it was a parsing hell ngl.
+
 </details>
 
 <details>
 <summary><strong>Q. Why not use a "real" database like SQLite?</strong></summary>
+
 Because you don't need it. Your music library is likely under 100,000 tracks. A flat JSONL (JSON Lines) file is:
+
 1. **Human readable:** You can `cat` or `grep` it.
 2. **Fast enough:** We load and parse 20,000 lines in milliseconds.
-3. **Corruption proof:** If one line gets corrupted, you only lose one song, not the whole database And is easily detectable, plus with the refresh index it's automatically fixed.
+3. **Corruption proof:** If one line gets corrupted, you only lose one song, not the whole database. And it is easily detectable—plus with `refresh-index`, it's automatically fixed.
+
 </details>
+
 <a name="windows-support"></a>
 <details>
 <summary><strong>Q. Why doesn't it work on Windows?</strong></summary>
+
 Blame the TUI library. We use `skim` (a Rust port of fzf) for the interface. As of v2.0.2, it does not support Windows natively. Once `skim` adds support, Windows support will happen. Until then, use WSL. They are working on it, or at least Windows support will be prioritized after the rewrite with `ratatui` ([Issue #293](https://github.com/lotabout/skim/issues/293)). That being said, I did see some development for Windows support in their PRs, and the testing was recently made cross-platform.
+
 </details>
 
 <details>
 <summary><strong>Q. YouTube playback isn't working!</strong></summary>
+
 That is likely not a bug in `mpv-music`. YouTube is constantly fighting `yt-dlp`.
+
 1. Update `yt-dlp` (`yt-dlp -U`).
 2. Make sure you have a JS runtime (Node, Deno, Bun) installed. YouTube now requires executing JavaScript to decipher video signatures. `mpv-music` tries to auto-detect this, but it can't perform miracles.
-3. If you installed `yt-dlp`, from other sources than official binaries hen consider enabling `ytdlp_ejs_remote_github = true in config.toml`
-4. Or you can try changing the `ytdlp_useragent =` in config.
+3. If you installed `yt-dlp`, from other sources than official binaries then consider enabling `ytdlp_ejs_remote_github = true` in `config.toml`.
+4. Or you can try changing the `ytdlp_useragent` in config.
+
 </details>
 
 <details>
 <summary><strong>Q. mpv-music isn't picking up metadata for video files or some other audio formats?</strong></summary>
+
 The original `mpv-music` utilized `ffprobe` to parse metadata from everything. The Rust version uses `lofty` (native Rust library) for metadata parsing, which is infinitely faster (in some sense) but supports fewer formats (mostly Audio).
 
 Currently supported formats by `lofty`:
