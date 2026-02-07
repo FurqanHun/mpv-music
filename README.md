@@ -25,6 +25,7 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 - [Usage](#usage)
 - [Indexing](#indexing)
 - [Configuration](#configuration)
+- [FAQ](#faq)
 - [Development](#development)
 - [License](#license)
 - [GenAI Disclosure](#genai-disclosure)
@@ -91,7 +92,7 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 * **Linux:** Native. The script is built and tested primarily for Linux (GNU tools).
 * **WSL (Windows Subsystem for Linux):** Fully Supported. This is the recommended way to run it on Windows.
 * **macOS / BSD:** It should work fine on macOS and BSD systems (haven't tested it, please do... any feedback is appreciated).
-* **Windows (Native/Git Bash):** Not Supported. As one of the libraries used `skim` (which as of version 2.0.2) doesn't support windows. According to [Issue #293](https://github.com/lotabout/skim/issues/293) They're working on it. Or at least will be a priority after tthe ratatui rewrite. Until then `mpv-music` will not work on Windows.
+* **Windows (Native/Git Bash):** Not Supported. Check [FAQ](#windows-support).
 
 > [!Tip]
 > You can use WSL (Windows Subsystem for Linux) to run `mpv-music` on Windows.
@@ -326,6 +327,62 @@ mpv_default_args = [
 ]
 
 ```
+
+---
+
+## FAQ
+
+<details>
+<summary><strong>Q. Why rewrite it in Rust? The Bash version worked fine.</strong></summary>
+The Bash version was a hack that grew too big. Spawning subshells to parse metadata is slow. Managing `fzf` integration through pipes is fragile (kinda, it's not really a problem, but for the smooth experience it is). And it was a parsing hell ngl.
+</details>
+
+<details>
+<summary><strong>Q. Why not use a "real" database like SQLite?</strong></summary>
+Because you don't need it. Your music library is likely under 100,000 tracks. A flat JSONL (JSON Lines) file is:
+1. **Human readable:** You can `cat` or `grep` it.
+2. **Fast enough:** We load and parse 20,000 lines in milliseconds.
+3. **Corruption proof:** If one line gets corrupted, you only lose one song, not the whole database And is easily detectable, plus with the refresh index it's automatically fixed.
+</details>
+<a name="windows-support"></a>
+<details>
+<summary><strong>Q. Why doesn't it work on Windows?</strong></summary>
+Blame the TUI library. We use `skim` (a Rust port of fzf) for the interface. As of v2.0.2, it does not support Windows natively. Once `skim` adds support, Windows support will happen. Until then, use WSL. They are working on it, or at least Windows support will be prioritized after the rewrite with `ratatui` ([Issue #293](https://github.com/lotabout/skim/issues/293)). That being said, I did see some development for Windows support in their PRs, and the testing was recently made cross-platform.
+</details>
+
+<details>
+<summary><strong>Q. YouTube playback isn't working!</strong></summary>
+That is likely not a bug in `mpv-music`. YouTube is constantly fighting `yt-dlp`.
+1. Update `yt-dlp` (`yt-dlp -U`).
+2. Make sure you have a JS runtime (Node, Deno, Bun) installed. YouTube now requires executing JavaScript to decipher video signatures. `mpv-music` tries to auto-detect this, but it can't perform miracles.
+3. If you installed `yt-dlp`, from other sources than official binaries hen consider enabling `ytdlp_ejs_remote_github = true in config.toml`
+4. Or you can try changing the `ytdlp_useragent =` in config.
+</details>
+
+<details>
+<summary><strong>Q. mpv-music isn't picking up metadata for video files or some other audio formats?</strong></summary>
+The original `mpv-music` utilized `ffprobe` to parse metadata from everything. The Rust version uses `lofty` (native Rust library) for metadata parsing, which is infinitely faster (in some sense) but supports fewer formats (mostly Audio).
+
+Currently supported formats by `lofty`:
+
+| File Format | Metadata Format(s)           |
+|-------------|------------------------------|
+| AAC (ADTS)  | `ID3v2`, `ID3v1`             |
+| Ape         | `APE`, `ID3v2`\*, `ID3v1`    |
+| AIFF        | `ID3v2`, `Text Chunks`       |
+| FLAC        | `Vorbis Comments`, `ID3v2`\* |
+| MP3         | `ID3v2`, `ID3v1`, `APE`      |
+| MP4         | `iTunes-style ilst`          |
+| MPC         | `APE`, `ID3v2`\*, `ID3v1`\*  |                        
+| Opus        | `Vorbis Comments`            |
+| Ogg Vorbis  | `Vorbis Comments`            |
+| Speex       | `Vorbis Comments`            |
+| WAV         | `ID3v2`, `RIFF INFO`         |
+| WavPack     | `APE`, `ID3v1`               |
+
+For unsupported formats, the indexer falls back to filename parsing. I may implement an opt-in `ffprobe` fallback in the future if there is demand, but right now there's me and one other person I know of that actually uses this and we don't need it.
+
+</details>
 
 ---
 
