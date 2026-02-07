@@ -1,13 +1,19 @@
+> [!WARNING]
+> **This project is archived and no longer maintained.**
+> More specifically, this is the legacy **Bash** version.
+>
+> Consider using the new high-performance **Rust** version in master: [mpv-music](https://github.com/FurqanHun/mpv-music)
+
 # mpv-music
 
-[![version](https://img.shields.io/github/v/release/FurqanHun/mpv-music?include_prereleases&color=blue)](https://github.com/FurqanHun/mpv-music/releases)
-[![mpv-music-indexer build status](https://github.com/FurqanHun/mpv-music/actions/workflows/indexer-build.yml/badge.svg)](https://github.com/FurqanHun/mpv-music/actions/workflows/indexer-build.yml)
+[![Bash Version](https://img.shields.io/badge/Bash%20Version-v0.23.5-yellow)](https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.5)
+[![mpv-music-indexer](https://img.shields.io/badge/mpv--music--indexer-v0.2.0-yellow)](https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.5)
+[![Rust Version](https://img.shields.io/github/v/release/FurqanHun/mpv-music?include_prereleases&color=blue&label=Rust%20Version)](https://github.com/FurqanHun/mpv-music/releases)
 
 **mpv-music** is a blazing-fast terminal music player and library browser built on mpv.  
 Provides instant playback, fuzzy searching (fzf), metadata-rich previews, and fully configurable CLI controls with no background daemon needed.
 
 In short, it focuses on library indexing for super-fast access to your music collection with a clean terminal UI, passing your selection to mpv with config-defined arguments.
-
 
 ---
 
@@ -96,7 +102,7 @@ Run this command to install the latest stable release automatically.
 It will check dependencies and ask you where to install the script.
 
 ```bash
-curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash
+curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/mpv-music-sh-archive/install.sh | bash
 ```
 
 ### Option 2: Manual Install

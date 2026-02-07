@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # File: install.sh
-# Usage:
-#   Stable: curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash
-#   Dev:    curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash -s -- --dev
+# Usage: curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/mpv-music-sh-archive/install.sh | bash
 
 set -euo pipefail
 
 REPO_OWNER="FurqanHun"
 REPO_NAME="mpv-music"
+TARGET_VERSION="v0.23.5" # Locked Legacy Version
+
 DEFAULT_INSTALL_DIR="$HOME/.local/bin"
 DEFAULT_CONFIG_DIR="$HOME/.config/mpv-music"
 
@@ -18,22 +18,19 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# --- 0. Parse Arguments ---
-DEV_MODE=false
-for arg in "$@"; do
-    if [[ "$arg" == "--dev" ]]; then
-        DEV_MODE=true
-        break
-    fi
-done
+echo -e "${BLUE}🎧 mpv-music (Legacy Bash) Installer${NC}"
 
-echo -e "${BLUE}🎧 mpv-music Installer${NC}"
-
-if [[ "$DEV_MODE" == "true" ]]; then
-    echo -e "${YELLOW}[DEV MODE ENABLED]${NC} Will install the absolute latest version (including pre-releases)."
-else
-    echo -e "${GREEN}[STABLE MODE]${NC} Installing latest stable release."
-fi
+# --- 0. Legacy Notice ---
+echo -e "${YELLOW}======================================================${NC}"
+echo -e "${YELLOW} NOTICE: This Bash version is ARCHIVED and DEPRECATED.${NC}"
+echo -e " You are installing the final Bash release: ${GREEN}$TARGET_VERSION${NC}"
+echo -e ""
+echo -e " A complete rewrite in Rust (faster, cleaner) is available."
+echo -e " We highly recommend installing that instead:"
+echo -e " ${BLUE}https://github.com/FurqanHun/mpv-music${NC}"
+echo -e "${YELLOW}======================================================${NC}"
+echo ""
+read -rp "Press ENTER to continue with Legacy Install (or Ctrl+C to abort)..."
 
 # --- 1. Interactive Path Selection ---
 echo -e "\nWhere would you like to install the script?"
@@ -62,10 +59,8 @@ if [[ ! -w "$INSTALL_DIR" ]]; then
 fi
 
 # --- 2. Existing Config Check ---
-# Only relevant if config exists
 if [[ -d "$DEFAULT_CONFIG_DIR" ]]; then
     echo -e "\n${YELLOW}[WARN]${NC} Existing configuration/database found at: $DEFAULT_CONFIG_DIR"
-    echo "If you are switching versions (Stable <-> Dev), the database might be incompatible."
     read -rp "Do you want to WIPE the existing config and index? [y/N]: " WIPE_CHOICE < /dev/tty
 
     if [[ "$WIPE_CHOICE" =~ ^[Yy]$ ]]; then
@@ -79,8 +74,8 @@ fi
 # --- 3. Dependency Check ---
 echo -e "\n${BLUE}[INFO]${NC} Checking dependencies..."
 MISSING_DEPS=()
-# 'jq' is mandatory for the script to function
-for dep in mpv curl jq fzf find; do
+# 'jq' removed as we don't need to parse GitHub API for hardcoded versions
+for dep in mpv curl fzf find; do
     if ! command -v "$dep" &>/dev/null; then
         MISSING_DEPS+=("$dep")
     fi
@@ -92,53 +87,22 @@ if [[ ${#MISSING_DEPS[@]} -gt 0 ]]; then
     exit 1
 fi
 
-# --- 4. Fetch Latest Version ---
-echo -e "\n${BLUE}[INFO]${NC} Fetching version info..."
+# --- 4. Download Main Script ---
+echo -e "\n${BLUE}[INFO]${NC} Downloading mpv-music $TARGET_VERSION..."
 
-if [[ "$DEV_MODE" == "true" ]]; then
-    # Dev Mode: Fetch from /releases (list) and take the first one (newest tag)
-    API_ENDPOINT="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases"
-    JQ_FILTER=".[0].tag_name // empty"
-else
-    # Stable Mode: Fetch from /releases/latest (GitHub logic for latest stable)
-    API_ENDPOINT="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
-    JQ_FILTER=".tag_name // empty"
-fi
-
-LATEST_JSON=$(curl -sL "$API_ENDPOINT")
-# Handle potential API errors or rate limits
-if echo "$LATEST_JSON" | grep -q "API rate limit"; then
-    echo -e "${RED}[ERROR]${NC} GitHub API rate limit exceeded. Please try again later."
-    exit 1
-fi
-
-LATEST_TAG=$(echo "$LATEST_JSON" | jq -r "$JQ_FILTER")
-
-if [[ -z "$LATEST_TAG" || "$LATEST_TAG" == "null" ]]; then
-    if [[ "$DEV_MODE" == "false" ]]; then
-        echo -e "${RED}[ERROR]${NC} No stable releases found. Try running with --dev to install a pre-release."
-    else
-        echo -e "${RED}[ERROR]${NC} Could not find any releases on GitHub."
-    fi
-    exit 1
-fi
-
-echo -e "${GREEN}[OK]${NC} Found version: $LATEST_TAG"
-
-# --- 5. Download File ---
-BASE_URL="https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/$LATEST_TAG"
+# Using raw.githubusercontent with the hardcoded tag
+BASE_URL="https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/$TARGET_VERSION"
 INSTALLED_SCRIPT="$INSTALL_DIR/mpv-music"
 
-echo "Downloading mpv-music..."
 if curl -sL "$BASE_URL/mpv-music" -o "$INSTALLED_SCRIPT"; then
     chmod +x "$INSTALLED_SCRIPT"
     echo -e "${GREEN}[OK]${NC} Script installed."
 else
-    echo -e "${RED}[ERROR]${NC} Download failed."
+    echo -e "${RED}[ERROR]${NC} Download failed. Check your internet connection."
     exit 1
 fi
 
-# --- 6. Download Rust Indexer (Monke Engine) ---
+# --- 5. Download Optional Indexer (Legacy Monke Engine) ---
 ARCH=$(uname -m)
 ASSET_NAME=""
 
@@ -158,18 +122,16 @@ case "$ARCH" in
 esac
 
 if [[ -n "$ASSET_NAME" ]]; then
-    echo -e "\n${BLUE}[OPTIONAL]${NC} Install High-Performance Indexer?"
-    echo -e "Detected Architecture: ${GREEN}$ARCH${NC} ($ASSET_NAME)"
-    echo -e "The Rust-based indexer is ${GREEN}significantly faster${NC}."
-    read -rp "Install pre-compiled binary? [Y/n]: " RUST_CHOICE < /dev/tty
+    echo -e "\n${BLUE}[OPTIONAL]${NC} Install Accelerated Indexer (Legacy Binary)?"
+    echo -e "Detected Architecture: ${GREEN}$ARCH${NC}"
+    read -rp "Install pre-compiled indexer? [Y/n]: " RUST_CHOICE < /dev/tty
     RUST_CHOICE=${RUST_CHOICE:-Y}
 
     if [[ "$RUST_CHOICE" =~ ^[Yy]$ ]]; then
-        # Default config dir logic matches your script
         CONFIG_DIR="$HOME/.config/mpv-music"
 
         echo -e "\n${BLUE}[QUESTION]${NC} Where should the Indexer Binary be placed?"
-        echo -e "  [1] ${GREEN}$INSTALL_DIR${NC} (Recommended - Same as script)"
+        echo -e "  [1] ${GREEN}$INSTALL_DIR${NC} (Recommended)"
         echo -e "  [2] ${YELLOW}$CONFIG_DIR${NC} (Project Config Folder)"
         read -rp "Select [1/2] (Default: 1): " BIN_LOC_CHOICE < /dev/tty
         BIN_LOC_CHOICE=${BIN_LOC_CHOICE:-1}
@@ -183,31 +145,28 @@ if [[ -n "$ASSET_NAME" ]]; then
         mkdir -p "$TARGET_BIN_DIR"
 
         LOCAL_BINARY_NAME="mpv-music-indexer"
-        BINARY_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$LATEST_TAG/$ASSET_NAME"
+        # Using the hardcoded TARGET_VERSION for release assets
+        BINARY_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$TARGET_VERSION/$ASSET_NAME"
         DESTINATION_PATH="$TARGET_BIN_DIR/$LOCAL_BINARY_NAME"
 
-        echo "Downloading MPV Music Indexer ($ASSET_NAME)..."
+        echo "Downloading Indexer..."
 
         if curl -sL --fail "$BINARY_URL" -o "$DESTINATION_PATH"; then
             chmod +x "$DESTINATION_PATH"
             echo -e "${GREEN}[OK]${NC} Indexer installed to $DESTINATION_PATH"
         else
-            echo -e "${YELLOW}[WARN]${NC} Download failed (Asset '$ASSET_NAME' not found)."
-            echo "Falling back to Bash logic."
+            echo -e "${YELLOW}[WARN]${NC} Download failed (Asset not found for $TARGET_VERSION)."
+            echo "Falling back to pure Bash indexing."
         fi
     else
         echo -e "${YELLOW}[INFO]${NC} Skipping binary installation."
     fi
 else
-    # Unsupported Architecture
-    echo -e "\n${YELLOW}[INFO]${NC} Architecture detected: $ARCH"
-    echo "No pre-compiled binary found for your system."
-    echo -e "If you want speed, build from source:"
-    echo -e "${BLUE}  git clone https://github.com/$REPO_OWNER/$REPO_NAME${NC}"
-    echo -e "${BLUE}  cd $REPO_NAME/crates/mpv-music-indexer && cargo install --path .${NC}"
+    echo -e "\n${YELLOW}[INFO]${NC} Architecture '$ARCH' has no pre-compiled indexer."
+    echo "Using pure Bash mode."
 fi
 
-# --- 7. Initial Configuration (BATCH MODE) ---
+# --- 6. Initial Configuration ---
 echo -e "\n${BLUE}[INFO]${NC} Initial Setup"
 echo "Would you like to add music directories now?"
 read -rp "[y/N]: " SETUP_CHOICE < /dev/tty
@@ -215,7 +174,6 @@ read -rp "[y/N]: " SETUP_CHOICE < /dev/tty
 if [[ "$SETUP_CHOICE" =~ ^[Yy]$ ]]; then
     echo -e "${YELLOW}Tip:${NC} You can drag and drop folders into this terminal."
 
-    # Array to store collected paths
     COLLECTED_PATHS=()
 
     while true; do
@@ -237,10 +195,8 @@ if [[ "$SETUP_CHOICE" =~ ^[Yy]$ ]]; then
         fi
     done
 
-    # If we collected any paths, process them all at once
     if [[ ${#COLLECTED_PATHS[@]} -gt 0 ]]; then
         echo -e "\n${BLUE}[INFO]${NC} Configuring mpv-music..."
-        # Pass all collected paths as arguments to --add-dir
         if "$INSTALLED_SCRIPT" --add-dir "${COLLECTED_PATHS[@]}"; then
              echo -e "${GREEN}[OK]${NC} Configuration updated."
         else
@@ -249,7 +205,7 @@ if [[ "$SETUP_CHOICE" =~ ^[Yy]$ ]]; then
     fi
 fi
 
-# --- 8. PATH Check ---
+# --- 7. PATH Check ---
 echo -e "\n${BLUE}[INFO]${NC} Verifying PATH..."
 if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
     echo -e "${YELLOW}[WARN] $INSTALL_DIR is NOT in your PATH.${NC}"
@@ -260,5 +216,5 @@ else
     echo -e "${GREEN}[OK]${NC} Install directory is in your PATH."
 fi
 
-echo -e "\n${GREEN}Installation complete!${NC}"
+echo -e "\n${GREEN}Legacy Installation complete!${NC}"
 echo "Run 'mpv-music' to start."
