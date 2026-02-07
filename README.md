@@ -107,11 +107,11 @@ curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/mpv-music-sh-arch
 
 ### Option 2: Manual Install
 
-1. Download the latest `mpv-music` script from the [Releases page](https://github.com/FurqanHun/mpv-music/releases).
+1. Download the latest `mpv-music` script from the [Archived Bash Release](https://github.com/FurqanHun/mpv-music/releases/tag/v0.23.5).
 2. (Optional but Recommended) Download the binary for your architecture (`x86_64`, `aarch64`, or `armv7`) and rename it to `mpv-music-indexer`.
 
 > [!NOTE]
->  You can compile the [mpv-music-indexer](https://github.com/FurqanHun/mpv-music/tree/master/crates/mpv-music-indexer) yourself.
+>  You can compile the [mpv-music-indexer](https://github.com/FurqanHun/mpv-music/tree/mpv-music-sh-archive/crates/mpv-music-indexer) yourself.
 
 3. Make it executable:
 ```bash
