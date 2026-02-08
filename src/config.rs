@@ -37,12 +37,10 @@ impl Default for Config {
             if let Some(audio) = user_dirs.audio_dir() {
                 log::debug!("Detected XDG audio directory: {:?}", audio);
                 music_dirs.push(audio.to_path_buf());
-            } else {
-                if let Ok(home) = std::env::var("HOME") {
-                    let fallback = PathBuf::from(home).join("Music");
-                    log::debug!("No XDG dir found, using fallback: {:?}", fallback);
-                    music_dirs.push(fallback);
-                }
+            } else if let Ok(home) = std::env::var("HOME") {
+                let fallback = PathBuf::from(home).join("Music");
+                log::debug!("No XDG dir found, using fallback: {:?}", fallback);
+                music_dirs.push(fallback);
             }
         }
 

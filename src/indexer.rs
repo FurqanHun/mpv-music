@@ -113,11 +113,12 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
             let path_str = path.to_string_lossy().to_string();
 
             // smort check
-            if let Some(old_track) = old_cache.get(&path_str) {
-                if old_track.mtime == mtime && old_track.size == size {
-                    log::debug!("Cache hit (Unchanged): {}", path_str);
-                    return Some(old_track.clone());
-                }
+            if let Some(old_track) = old_cache
+                .get(&path_str)
+                .filter(|t| t.mtime == mtime && t.size == size)
+            {
+                log::debug!("Cache hit (Unchanged): {}", path_str);
+                return Some(old_track.clone());
             }
 
             log::debug!("Cache miss/Dirty: Probing {}", path_str);

@@ -450,14 +450,12 @@ fn main() -> Result<()> {
         } else {
             "mpv_music=info, warn"
         }
+    } else if args.debug {
+        "mpv_music=debug, warn"
+    } else if args.verbose > 0 {
+        "mpv_music=info, warn"
     } else {
-        if args.debug {
-            "mpv_music=debug, warn"
-        } else if args.verbose > 0 {
-            "mpv_music=info, warn"
-        } else {
-            "mpv_music=error, warn"
-        }
+        "mpv_music=error, warn"
     };
 
     std::fs::create_dir_all(&log_dir)?;
@@ -684,17 +682,17 @@ fn main() -> Result<()> {
             .artist
             .as_ref()
             .and_then(|o| o.as_ref())
-            .map_or(false, |s| s.contains(','))
+            .is_some_and(|s| s.contains(','))
             || args
                 .genre
                 .as_ref()
                 .and_then(|o| o.as_ref())
-                .map_or(false, |s| s.contains(','))
+                .is_some_and(|s| s.contains(','))
             || args
                 .album
                 .as_ref()
                 .and_then(|o| o.as_ref())
-                .map_or(false, |s| s.contains(','));
+                .is_some_and(|s| s.contains(','));
 
         // stage 1: exact match
         let mut filtered = if !is_multi_value_search {
@@ -1001,7 +999,7 @@ fn run_post_filter_action(tracks: &[indexer::Track], cfg: &config::Config) -> Re
     }
     let paths: Vec<String> = tracks.iter().map(|t| t.path.clone()).collect();
 
-    let opts = vec![
+    let opts = [
         format!("1) Play all {} tracks", tracks.len()),
         "2) Select individual tracks".to_string(),
     ];
@@ -1217,7 +1215,7 @@ fn apply_cli_filters(tracks: &[indexer::Track], args: &Cli, exact: bool) -> Vec<
                         // iterators to avoid allocating a new Vec for every track
                         search_vals.iter().any(|term| {
                             field_lower
-                                .split(|c| c == ';' || c == ',')
+                                .split([';', ','])
                                 .map(|s| s.trim())
                                 .any(|tag| tag == term)
                         })
@@ -1235,7 +1233,7 @@ fn apply_cli_filters(tracks: &[indexer::Track], args: &Cli, exact: bool) -> Vec<
                 && matches(&t.album, &album_terms)
                 && title_term
                     .as_ref()
-                    .map_or(true, |ti| t.title.to_lowercase().contains(ti))
+                    .is_none_or(|ti| t.title.to_lowercase().contains(ti))
         })
         .cloned()
         .collect()
@@ -1398,21 +1396,24 @@ fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<Stri
         .build()
         .unwrap();
 
-    let output = Skim::run_with(opts, Some(rx)).ok()?;
-    if output.is_abort {
-        return None;
-    }
+    if let Ok(output) = Skim::run_with(opts, Some(rx)) {
+        if output.is_abort {
+            return None;
+        }
 
-    let selections: Vec<String> = output
-        .selected_items
-        .iter()
-        .map(|i| i.text().to_string())
-        .collect();
+        let selections: Vec<String> = output
+            .selected_items
+            .iter()
+            .map(|i| i.text().to_string())
+            .collect();
 
-    if selections.is_empty() {
-        None
+        if selections.is_empty() {
+            None
+        } else {
+            Some(selections)
+        }
     } else {
-        Some(selections)
+        None
     }
 }
 
@@ -1491,7 +1492,7 @@ fn run_dir_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<()> {
         tx.send(vec![Arc::new(DirItem {
             dirname: name,
             path: path,
-            count: count,
+            count,
             samples: files,
         })])
         .unwrap();
@@ -1634,7 +1635,7 @@ fn run_search_mode(cfg: &config::Config, initial_query: Option<String>) -> Resul
         .build()
         .unwrap();
 
-    if let Some(output) = Skim::run_with(opts, Some(rx)).ok() {
+    if let Ok(output) = Skim::run_with(opts, Some(rx)) {
         if output.is_abort {
             return Ok(());
         }

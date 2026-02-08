@@ -34,7 +34,7 @@ pub fn search_youtube(query: &str, limit: usize) -> Result<Vec<SearchResult>> {
     log::debug!("Exec: yt-dlp {:?}", args);
 
     let output = Command::new("yt-dlp")
-        .args(&args)
+        .args(args)
         .output()
         .context("Failed to execute yt-dlp search")?;
 
