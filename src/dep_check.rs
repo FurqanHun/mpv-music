@@ -32,12 +32,30 @@ pub fn check(cfg: &mut Config) -> Result<()> {
     match Command::new("yt-dlp").arg("--version").output() {
         Ok(output) => {
             let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            log::info!("Dependency 'yt-dlp': Found (Version: {})", version);
             cfg.ytdlp_available = true;
+
+            // Stable is "YYYY.MM.DD" (3 parts). Nightly is "YYYY.MM.DD.HHMMSS" (4 parts)
+            let is_nightly = version.split('.').count() >= 4 || version.contains("nightly");
+
+            if is_nightly {
+                log::info!("Dependency 'yt-dlp': Found Nightly (Version: {})", version);
+                cfg.ytdlp_is_nightly = true;
+            } else {
+                log::info!("Dependency 'yt-dlp': Found Stable (Version: {})", version);
+                println!(
+                    "\x1b[33m[Suggestion]\x1b[0m yt-dlp nightly is recommended for best performance."
+                );
+                println!(
+                    "             Get it here: https://github.com/yt-dlp/yt-dlp-nightly-builds/releases"
+                );
+
+                cfg.ytdlp_is_nightly = false;
+            }
         }
         Err(_) => {
             log::warn!("Dependency 'yt-dlp' not found. Search and Streaming features disabled.");
             cfg.ytdlp_available = false;
+            cfg.ytdlp_is_nightly = false;
         }
     }
 

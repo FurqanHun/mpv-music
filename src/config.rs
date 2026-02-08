@@ -26,6 +26,8 @@ pub struct Config {
 
     #[serde(skip, default)]
     pub ytdlp_available: bool,
+    #[serde(skip, default)]
+    pub ytdlp_is_nightly: bool,
 }
 
 impl Default for Config {
@@ -86,6 +88,7 @@ impl Default for Config {
                 format!("--term-status-msg={}", status_msg),
             ],
             ytdlp_available: false,
+            ytdlp_is_nightly: false,
         }
     }
 }

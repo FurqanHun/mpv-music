@@ -111,7 +111,7 @@ fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
             log::debug!("Applying User-Agent from config");
             ytdl_opts.push_str(&format!("user-agent={},", config.ytdlp_useragent));
 
-            if config.ytdlp_ejs_remote_github {
+            if config.ytdlp_ejs_remote_github && !config.ytdlp_is_nightly {
                 log::debug!("Enabling remote EJS components");
                 ytdl_opts.push_str("remote-components=ejs:github,");
             }
