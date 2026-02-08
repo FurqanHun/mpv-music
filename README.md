@@ -401,12 +401,16 @@ For unsupported formats, the indexer falls back to filename parsing. I may imple
 ## Development
 
 - **Source Code:** Located in `src/`.
-  * **`main.rs`**: Entry point. Handles CLI argument parsing, **TUI orchestration** (skim), and the main application loop.
+  * **`main.rs`**: Entry point. Initializes configuration, logging, and dependencies before passing control to the TUI.
+  * **`cli.rs`**: Defines the command-line interface arguments and flags (using `clap`).
+  - **`tui/`**: The Terminal User Interface module.
+    * **`mod.rs`**: Core orchestration, menu loops, and user interaction logic.
+    * **`items.rs`**: Data structures for list items (Tracks, Directories, Playlists).
   * **`config.rs`**: Manages configuration loading, validation, and defaults (Toml).
   * **`indexer.rs`**: The core library scanner. Uses `walkdir`, `rayon` (parallelism), and `lofty` for metadata.
-  * **`player.rs`**: Wraps the `mpv` process, handling playback control and status flags.
+  * **`player.rs`**: Wraps the `mpv` process, handling playback control, queue generation, and temporary file cleanup.
   * **`search.rs`**: **YouTube Backend.** Wraps `yt-dlp` to fetch search results and stream URLs.
-  * **`dep_check.rs`**: Validates runtime dependencies (mpv, yt-dlp) and environment health.
+  * **`dep_check.rs`**: Validates runtime dependencies (mpv, yt-dlp versions) and environment health.
 
 ---
 

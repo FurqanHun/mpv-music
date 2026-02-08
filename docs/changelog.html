@@ -162,6 +162,41 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/0.24.0-dev.9" target="_blank" class="tag">0.24.0-dev.9</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 08, 2026</span>
+            </div>
+            <div class="body">
+                <h2>Features &amp; Enhancements</h2>
+<ul>
+<li><strong>Smart <code>yt-dlp</code> Nightly Detection:</strong><ul>
+<li>The app now detects if you are using a Nightly build of <code>yt-dlp</code>.</li>
+<li>Intelligently disables legacy "EJS" workarounds when Nightly is detected to prevent conflicts.</li>
+<li>Adds a helpful suggestion to upgrade if a Stable version is found.</li>
+</ul>
+</li>
+</ul>
+<h2>Fixes</h2>
+<ul>
+<li><strong>Robust File Cleanup:</strong><ul>
+<li>Implemented a <strong>RAII Guard</strong> (<code>TempCleaner</code>) to ensure the temporary playlist file (<code>queue.m3u8</code>) is always deleted, even if MPV crashes or exits with an error.</li>
+</ul>
+</li>
+<li><strong>CLI:</strong> Fixed value handling for the <code>--yt</code> flag.</li>
+</ul>
+<h2>Refactoring</h2>
+<ul>
+<li><strong>Modular Architecture:</strong><ul>
+<li>Split the monolithic <code>main.rs</code> into a dedicated <code>cli.rs</code> and <code>tui</code> module.</li>
+<li>Further separated the TUI into <code>tui/items.rs</code> (data structures) and <code>tui/mod.rs</code> (logic) for better maintainability.</li>
+</ul>
+</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/0.24.0-dev.8" target="_blank" class="tag">0.24.0-dev.8</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">February 08, 2026</span>

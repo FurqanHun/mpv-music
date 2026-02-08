@@ -2,6 +2,29 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [0.24.0-dev.9](https://github.com/FurqanHun/mpv-music/releases/tag/0.24.0-dev.9) - 2026-02-08 (Pre-release)
+
+## Features & Enhancements
+
+- **Smart `yt-dlp` Nightly Detection:**
+    * The app now detects if you are using a Nightly build of `yt-dlp`.
+    * Intelligently disables legacy "EJS" workarounds when Nightly is detected to prevent conflicts.
+    * Adds a helpful suggestion to upgrade if a Stable version is found.
+
+## Fixes
+
+- **Robust File Cleanup:**
+    * Implemented a **RAII Guard** (`TempCleaner`) to ensure the temporary playlist file (`queue.m3u8`) is always deleted, even if MPV crashes or exits with an error.
+- **CLI:** Fixed value handling for the `--yt` flag.
+
+## Refactoring
+
+- **Modular Architecture:**
+    * Split the monolithic `main.rs` into a dedicated `cli.rs` and `tui` module.
+    * Further separated the TUI into `tui/items.rs` (data structures) and `tui/mod.rs` (logic) for better maintainability.
+
+---
+
 ## [0.24.0-dev.8](https://github.com/FurqanHun/mpv-music/releases/tag/0.24.0-dev.8) - 2026-02-08 (Pre-release)
 
 ## Fixes & Improvements
