@@ -343,7 +343,7 @@ impl SkimItem for SearchItem {
         };
 
         let details = format!(
-            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mChannel:\x1b[0m  {}\n  \x1b[1;33mViews:\x1b[0m    {}\n  \x1b[1;33mDuration:\x1b[0m {}\n  \x1b[1;34mType:\x1b[0m     {}\n\n  \x1b[90mURL: {}\x1b[0m",
+            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mChannel:\x1b[0m  {}\n  \x1b[1;33mViews:\x1b[0m    {}\n  \x1b[1;33mDuration:\x1b[0m {}\n  \x1b[1;34mType:\x1b[0m      {}\n\n  \x1b[90mURL: {}\x1b[0m",
             icon,
             self.result.title,
             self.result.uploader,
@@ -739,24 +739,32 @@ fn main() -> Result<()> {
                 }
             }
 
-            // if we have ambiguity AND it wasn't a multi-search, ask the user
-            // if it WAS a multi-search, we assume they want all of them
-            if unique_options.len() > 1 && !active_key.is_empty() && !is_multi_value_search {
-                let mut options_vec: Vec<&str> =
-                    unique_options.iter().map(|s| s.as_str()).collect();
+            if !args.play_all
+                && unique_options.len() > 1
+                && !active_key.is_empty()
+                && !is_multi_value_search
+            {
+                let mut options_vec: Vec<String> = unique_options.into_iter().collect();
                 options_vec.sort();
 
-                if let Some(clarified) =
-                    run_skim_simple(options_vec, &format!("Which {} did you mean? ", active_key))
-                {
-                    let mut temp_args = args.clone();
-                    match active_key {
-                        "artist" => temp_args.artist = Some(Some(clarified)),
-                        "genre" => temp_args.genre = Some(Some(clarified)),
-                        "album" => temp_args.album = Some(Some(clarified)),
-                        _ => {}
-                    }
-                    filtered = apply_cli_filters(&tracks, &temp_args, true);
+                if let Some(selected_vals) = run_skim_multi_selection(
+                    options_vec,
+                    &format!("Which {}s? (TAB to select multiple) > ", active_key),
+                ) {
+                    let selected_set: HashSet<String> = selected_vals.into_iter().collect();
+
+                    filtered = partials
+                        .into_iter()
+                        .filter(|t| {
+                            let val = match active_key {
+                                "artist" => &t.artist,
+                                "genre" => &t.genre,
+                                "album" => &t.album,
+                                _ => "",
+                            };
+                            selected_set.contains(val)
+                        })
+                        .collect();
                 } else {
                     return Ok(());
                 }
@@ -1370,6 +1378,44 @@ fn run_skim_simple(items: Vec<&str>, prompt: &str) -> Option<String> {
     output.selected_items.first().map(|i| i.text().to_string())
 }
 
+fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<String>> {
+    let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
+    for i in items {
+        tx.send(vec![Arc::new(MenuItem {
+            text: i.clone(),
+            id: i,
+        })])
+        .unwrap();
+    }
+    drop(tx);
+
+    let opts = SkimOptionsBuilder::default()
+        .height("50%".to_string())
+        .reverse(true)
+        .prompt(prompt.to_string())
+        .inline_info(true)
+        .multi(true)
+        .build()
+        .unwrap();
+
+    let output = Skim::run_with(opts, Some(rx)).ok()?;
+    if output.is_abort {
+        return None;
+    }
+
+    let selections: Vec<String> = output
+        .selected_items
+        .iter()
+        .map(|i| i.text().to_string())
+        .collect();
+
+    if selections.is_empty() {
+        None
+    } else {
+        Some(selections)
+    }
+}
+
 fn run_track_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<()> {
     let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
     for track in tracks {
@@ -1390,7 +1436,7 @@ fn run_track_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<()>
         .multi(true)
         .preview(Some("".to_string()))
         .prompt("🎵 Tracks > ".to_string())
-        .header(Some("   Artist             Title".to_string()))
+        .header(Some("   Artist              Title".to_string()))
         .reverse(true)
         .inline_info(true)
         .build()
