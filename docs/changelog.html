@@ -162,6 +162,30 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/0.24.0-dev.8" target="_blank" class="tag">0.24.0-dev.8</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 08, 2026</span>
+            </div>
+            <div class="body">
+                <h2>Fixes &amp; Improvements</h2>
+<ul>
+<li><strong>CLI Disambiguation Logic:</strong><ul>
+<li>Fixed a bug where the ambiguity picker ("Which artist did you mean?") blocked the <code>-p</code> / <code>--play-all</code> flag. It now correctly bypasses the menu if the flag is present.</li>
+<li>Added <strong>Multi-Selection</strong> support to the disambiguation menu. You can now select multiple artists or genres using <code>TAB</code> before confirming.</li>
+<li>Fixed matching logic for tags containing separators (e.g., <code>Artist A; Artist B</code>).</li>
+</ul>
+</li>
+</ul>
+<h2>Maintenance</h2>
+<ul>
+<li><strong>Code Cleanup:</strong> applied comprehensive <code>cargo clippy</code> fixes and optimizations.</li>
+<li><strong>Refactor:</strong> introduced <code>run_skim_multi_selection</code> helper in <code>main.rs</code>.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/0.24.0-dev.7" target="_blank" class="tag">0.24.0-dev.7</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">February 06, 2026</span>
