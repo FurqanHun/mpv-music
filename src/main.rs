@@ -458,7 +458,6 @@ fn main() -> Result<()> {
         "mpv_music=error, warn"
     };
 
-    // FIX: Removed unnecessary borrow &log_dir -> log_dir
     std::fs::create_dir_all(log_dir)?;
     let mut logger = Logger::try_with_str(log_filter)?.format_for_stderr(|w, _now, record| {
         let level = record.level();
@@ -665,9 +664,13 @@ fn main() -> Result<()> {
         run_track_mode(&tracks, &cfg)?;
         return Ok(());
     }
-    if let Some(None) = args.search {
-        log::info!("Empty search flag. Opening YouTube Search.");
-        run_search_mode(&cfg, None)?;
+    if let Some(search_input) = args.search {
+        if let Some(query) = search_input {
+            run_search_mode(&cfg, Some(query))?;
+        } else {
+            log::info!("Empty search flag. Opening YouTube Search.");
+            run_search_mode(&cfg, None)?;
+        }
         return Ok(());
     }
     if let Some(None) = args.playlist {
