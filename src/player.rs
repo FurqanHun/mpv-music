@@ -4,6 +4,19 @@ use directories::ProjectDirs;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
+struct TempCleaner {
+    path: std::path::PathBuf,
+}
+
+impl Drop for TempCleaner {
+    fn drop(&mut self) {
+        if self.path.exists() {
+            let _ = std::fs::remove_file(&self.path);
+            log::debug!("Cleaned up temporary file: {:?}", self.path);
+        }
+    }
+}
+
 pub fn play(target: &str, config: &Config) -> Result<()> {
     log::info!("Preparing playback for target: {}", target);
 
@@ -59,9 +72,13 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
         }
     }
 
+    let _cleaner = TempCleaner {
+        path: queue_path.clone(),
+    };
+
     log::info!("Generated playlist at {:?}", queue_path);
 
-    // Pass the file to MPV
+    // pass the file to MPV
     cmd.arg(format!("--playlist={}", queue_path.to_string_lossy()));
 
     log::info!("Launching MPV for playlist playback...");
@@ -69,13 +86,6 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
 
     // blocks until mpv closes (finished/crashed)
     cmd.status().context("Failed to launch mpv for playlist")?;
-
-    log::debug!("Cleaning up temporary playlist: {:?}", queue_path);
-    if let Err(e) = std::fs::remove_file(&queue_path) {
-        log::debug!("Failed to remove temporary playlist: {}", e);
-    } else {
-        log::debug!("Temporary playlist removed successfully.");
-    }
 
     Ok(())
 }
