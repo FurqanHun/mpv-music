@@ -458,7 +458,8 @@ fn main() -> Result<()> {
         "mpv_music=error, warn"
     };
 
-    std::fs::create_dir_all(&log_dir)?;
+    // FIX: Removed unnecessary borrow &log_dir -> log_dir
+    std::fs::create_dir_all(log_dir)?;
     let mut logger = Logger::try_with_str(log_filter)?.format_for_stderr(|w, _now, record| {
         let level = record.level();
         write!(
@@ -477,7 +478,7 @@ fn main() -> Result<()> {
         logger = logger
             .log_to_file(
                 FileSpec::default()
-                    .directory(&log_dir)
+                    .directory(log_dir)
                     .basename("mpv-music")
                     .suffix("log")
                     .use_timestamp(false),
@@ -981,7 +982,7 @@ fn run_tag_picker(tracks: &[indexer::Track], cfg: &config::Config, key: &str) ->
             let clean_val = if val.trim().is_empty() {
                 "UNKNOWN"
             } else {
-                &val[..]
+                val
             };
             selected_names.contains(clean_val)
         })
@@ -1491,7 +1492,7 @@ fn run_dir_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<()> {
 
         tx.send(vec![Arc::new(DirItem {
             dirname: name,
-            path: path,
+            path,
             count,
             samples: files,
         })])
