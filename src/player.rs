@@ -238,9 +238,14 @@ fn check_ytdlp_status() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let combined = format!("{}\n{}", stdout, String::from_utf8_lossy(&output.stderr));
 
-    if combined.contains("Latest version:") {
-        log::warn!("yt-dlp update available. Local version is outdated.");
-    } else if combined.contains("up to date") {
+    if combined.contains("is up to date") {
         log::info!("yt-dlp is verified up to date.");
+    } else if combined.contains("Latest version:") || combined.contains("Available version:") {
+        log::warn!("yt-dlp update available. Local version is outdated.");
+    } else {
+        log::debug!(
+            "yt-dlp status check returned unexpected output:\n{}",
+            combined
+        );
     }
 }
