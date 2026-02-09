@@ -150,8 +150,8 @@ fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
                 ytdl_opts.push_str("remote-components=ejs:github,");
             }
 
-            if has_command("deno") {
-                log::debug!("JS runtime check: deno found (default)");
+            if check_deno_availability() {
+                log::debug!("JS runtime check: Deno found (skipping fallbacks)");
             } else if has_command("node") {
                 log::debug!("JS runtime check: node found");
                 ytdl_opts.push_str("js-runtimes=node,");
@@ -234,6 +234,22 @@ fn apply_common_args(cmd: &mut Command, config: &Config) {
             log::debug!("Unrecognized loop mode, skipping loop arguments");
         }
     }
+}
+
+fn check_deno_availability() -> bool {
+    if let Ok(output) = Command::new("which").arg("yt-dlp").output() {
+        if output.status.success() {
+            let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            let ytdlp_path = std::path::Path::new(&path_str);
+            if let Some(parent) = ytdlp_path.parent() {
+                let local_deno = parent.join("deno");
+                if local_deno.exists() {
+                    return true;
+                }
+            }
+        }
+    }
+    has_command("deno")
 }
 
 fn has_command(cmd: &str) -> bool {
