@@ -383,11 +383,7 @@ fn main() -> Result<()> {
                 }
             }
 
-            if !args.play_all
-                && unique_options.len() > 1
-                && !active_key.is_empty()
-                && !is_multi_value_search
-            {
+            if !args.play_all && unique_options.len() > 1 && !active_key.is_empty() {
                 let mut options_vec: Vec<String> = unique_options.into_iter().collect();
                 options_vec.sort();
 
