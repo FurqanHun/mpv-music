@@ -80,26 +80,24 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
     }
 
     let running = Arc::new(AtomicBool::new(true));
-
     let r_handler = running.clone();
     let p_handler = queue_path.clone();
 
-    // register
+    // Register signal handler
     ctrlc::set_handler(move || {
-        if r_handler.load(Ordering::SeqCst) {
+        if r_handler.swap(false, Ordering::SeqCst) {
             if p_handler.exists() {
                 let _ = std::fs::remove_file(&p_handler);
                 log::info!("\nReceived Ctrl+C. Cleaned up queue file.");
             }
-            std::process::exit(0);
         }
+        std::process::exit(0);
     })
     .ok();
 
-    // ipdate cleaner to hold the lock
     let _cleaner = TempCleaner {
         path: queue_path.clone(),
-        running,
+        running: running.clone(),
     };
 
     log::info!("Generated unique playlist at {:?}", queue_path);
