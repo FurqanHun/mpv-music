@@ -9,6 +9,7 @@ use crate::search;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use skim::prelude::*;
+use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -161,7 +162,8 @@ pub fn run_tag_picker(tracks: &[indexer::Track], cfg: &config::Config, key: &str
         selected_names.insert(name.to_string());
     }
 
-    let filtered: Vec<indexer::Track> = tracks
+    // Reference approach: just collect references, no cloning here.
+    let filtered: Vec<&indexer::Track> = tracks
         .iter()
         .filter(|t| {
             let val = match key {
@@ -177,7 +179,6 @@ pub fn run_tag_picker(tracks: &[indexer::Track], cfg: &config::Config, key: &str
             };
             selected_names.contains(clean_val)
         })
-        .cloned()
         .collect();
 
     run_post_filter_action(&filtered, cfg)?;
@@ -185,11 +186,14 @@ pub fn run_tag_picker(tracks: &[indexer::Track], cfg: &config::Config, key: &str
     Ok(true)
 }
 
-pub fn run_post_filter_action(tracks: &[indexer::Track], cfg: &config::Config) -> Result<()> {
+pub fn run_post_filter_action<T>(tracks: &[T], cfg: &config::Config) -> Result<()>
+where
+    T: Borrow<indexer::Track>,
+{
     if tracks.is_empty() {
         return Ok(());
     }
-    let paths: Vec<String> = tracks.iter().map(|t| t.path.clone()).collect();
+    let paths: Vec<String> = tracks.iter().map(|t| t.borrow().path.clone()).collect();
 
     let opts = [
         format!("1) Play all {} tracks", tracks.len()),
@@ -613,9 +617,13 @@ pub fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<
     }
 }
 
-pub fn run_track_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<()> {
+pub fn run_track_mode<T>(tracks: &[T], cfg: &config::Config) -> Result<()>
+where
+    T: Borrow<indexer::Track>,
+{
     let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
-    for track in tracks {
+    for item in tracks {
+        let track = item.borrow();
         if track.media_type == "playlist" {
             continue;
         }
