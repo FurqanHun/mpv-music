@@ -60,7 +60,8 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
     let data_dir = dirs.data_dir();
     std::fs::create_dir_all(data_dir)?;
 
-    let queue_path = data_dir.join("queue.m3u8");
+    let pid = std::process::id();
+    let queue_path = data_dir.join(format!("queue_{}.m3u8", pid));
 
     {
         let mut file = std::fs::File::create(&queue_path)
@@ -76,7 +77,7 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
         path: queue_path.clone(),
     };
 
-    log::info!("Generated playlist at {:?}", queue_path);
+    log::info!("Generated unique playlist at {:?}", queue_path);
 
     // pass the file to MPV
     cmd.arg(format!("--playlist={}", queue_path.to_string_lossy()));
@@ -84,7 +85,7 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
     log::info!("Launching MPV for playlist playback...");
     log::debug!("Exec: {:?}", cmd);
 
-    // blocks until mpv closes (finished/crashed)
+    // blocks until mpv closes
     cmd.status().context("Failed to launch mpv for playlist")?;
 
     Ok(())
