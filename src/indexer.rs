@@ -44,21 +44,31 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
     let video_exts = to_set(&config.video_exts);
     let playlist_exts = to_set(&config.playlist_exts);
 
-    let old_cache: HashMap<String, Track> = if !force {
-        log::debug!("Attempting to load existing cache for smart update");
+    // load existing index for caching and smart recovery
+    let (old_cache, recovery_map) = if !force {
         if let Ok((old_tracks, _)) = load_index() {
             log::info!("Cache loaded. Found {} existing entries", old_tracks.len());
-            old_tracks
-                .into_iter()
-                .map(|t| (t.path.clone(), t))
-                .collect()
+
+            let mut path_map = HashMap::new();
+            let mut attr_map = HashMap::new();
+
+            for t in old_tracks {
+                // primary cache: lookup by exact path
+                path_map.insert(t.path.clone(), t.clone());
+
+                // secondary cache: lookup by attributes (size + mtime + filename)
+                if let Some(fname) = std::path::Path::new(&t.path).file_name() {
+                    let key = (t.size, t.mtime, fname.to_string_lossy().to_string());
+                    attr_map.entry(key).or_insert(t);
+                }
+            }
+            (path_map, attr_map)
         } else {
-            log::debug!("No valid cache found. Proceeding with clean scan");
-            HashMap::new()
+            (HashMap::new(), HashMap::new())
         }
     } else {
         log::info!("Forced reindex requested. Ignoring existing cache");
-        HashMap::new()
+        (HashMap::new(), HashMap::new())
     };
 
     let pb = ProgressBar::new_spinner();
@@ -80,12 +90,11 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
         .par_bridge()
         .filter_map(|entry| {
             let path = entry.path();
-
             if !path.is_file() {
                 return None;
             }
 
-            log::trace!("Examining file: {:?}", path);
+            // log::trace!("Examining file: {:?}", path);
 
             let ext = path.extension()?.to_str()?.to_lowercase();
 
@@ -121,7 +130,16 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
                 return Some(old_track.clone());
             }
 
-            log::debug!("Cache miss/Dirty: Probing {}", path_str);
+            let filename = path.file_name()?.to_string_lossy().to_string();
+            let recovery_key = (size, mtime, filename);
+            if let Some(recovered) = recovery_map.get(&recovery_key) {
+                log::debug!("Smart Recovery (Moved/Renamed): {}", path_str);
+                let mut new_entry = recovered.clone();
+                new_entry.path = path_str;
+                return Some(new_entry);
+            }
+
+            log::debug!("Cache miss: Probing {}", path_str);
 
             let (mut title, mut artist, mut album, mut genre);
 
@@ -252,7 +270,7 @@ pub fn load_index() -> Result<(Vec<Track>, bool)> {
             Ok(t) => tracks.push(t),
             Err(e) => {
                 log::warn!(
-                    "Corruption detected on line {}: {}. Marking for surgical repair...",
+                    "Corruption detected on line {}: {}. Marking for repair...",
                     line_count,
                     e
                 );
@@ -262,7 +280,7 @@ pub fn load_index() -> Result<(Vec<Track>, bool)> {
     }
 
     if needs_repair {
-        log::info!("Performing surgical repair on index (purging corrupt entries)...");
+        log::info!("Performing surgical repair on index...");
         save(&tracks)?;
     }
 
