@@ -2,6 +2,20 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.24.0-dev.11](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.11) - 2026-02-09 (Pre-release)
+
+### Bug Fixes
+
+- **Ctrl+C Cleanup Now Works in Release Builds:** Fixed race condition where `std::process::exit(0)` terminated the process before `Drop` implementations could run. Signal handler now uses `swap()` instead of `load()` to guarantee single-execution cleanup, ensuring queue files are deleted on interrupt in both debug and release modes.
+
+### Technical Details
+
+- The bug only manifested in optimized builds due to faster execution paths
+- Handler now directly deletes temp files before calling `exit()` rather than relying on `Drop`
+- `AtomicBool::swap()` prevents double-deletion between handler and `Drop` cleanup
+
+---
+
 ## [v0.24.0-dev.10](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.10) - 2026-02-09 (Pre-release)
 
 ### Performance

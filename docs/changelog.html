@@ -162,6 +162,26 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.11" target="_blank" class="tag">v0.24.0-dev.11</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 09, 2026</span>
+            </div>
+            <div class="body">
+                <h3>Bug Fixes</h3>
+<ul>
+<li><strong>Ctrl+C Cleanup Now Works in Release Builds:</strong> Fixed race condition where <code>std::process::exit(0)</code> terminated the process before <code>Drop</code> implementations could run. Signal handler now uses <code>swap()</code> instead of <code>load()</code> to guarantee single-execution cleanup, ensuring queue files are deleted on interrupt in both debug and release modes.</li>
+</ul>
+<h3>Technical Details</h3>
+<ul>
+<li>The bug only manifested in optimized builds due to faster execution paths</li>
+<li>Handler now directly deletes temp files before calling <code>exit()</code> rather than relying on <code>Drop</code></li>
+<li><code>AtomicBool::swap()</code> prevents double-deletion between handler and <code>Drop</code> cleanup</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.10" target="_blank" class="tag">v0.24.0-dev.10</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">February 09, 2026</span>
