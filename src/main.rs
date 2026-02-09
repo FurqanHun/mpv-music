@@ -175,6 +175,7 @@ fn main() -> Result<()> {
     if args.video_ok {
         cfg.video_ok = true;
     }
+    #[cfg(feature = "update")]
     if args.update {
         println!("Update logic not implemented yet.");
         println!("GitHub releases: https://github.com/FurqanHun/mpv-music/releases");

@@ -7,6 +7,9 @@ authors = ["FurqanHun <furqanhun@proton.me>"]
 license = "MIT"
 description = "A TUI-based music player wrapper for MPV"
 
+[features]
+update = []
+
 [dependencies]
 walkdir = "2.5"
 lofty = "0.22"

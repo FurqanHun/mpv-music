@@ -24,6 +24,7 @@ pub struct Cli {
     pub reindex: bool,
 
     // actions
+    #[cfg(feature = "update")]
     #[arg(short = 'u', long, help = "Update the application")]
     pub update: bool,
 
