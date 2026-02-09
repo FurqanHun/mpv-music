@@ -162,6 +162,25 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.13" target="_blank" class="tag">v0.24.0-dev.13</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 09, 2026</span>
+            </div>
+            <div class="body">
+                <h3>Fixes</h3>
+<ul>
+<li><strong>Updater Logic:</strong> Fixed an edge case where development builds (e.g., <code>0.23.5-dev</code>) failed to identify the matching stable release (<code>0.23.5</code>) as a valid update.</li>
+</ul>
+<h3>Refactoring</h3>
+<ul>
+<li><strong>Version Comparison:</strong> Replaced manual semantic version comparison logic with native Rust tuple comparison for improved reliability and readability.</li>
+<li><strong>Code Quality:</strong> Refactored <code>player.rs</code> and <code>update.rs</code> to use guard clauses and flattened control flow, resolving multiple Clippy warnings.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.12" target="_blank" class="tag">v0.24.0-dev.12</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">February 09, 2026</span>

@@ -2,6 +2,17 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.24.0-dev.13](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.13) - 2026-02-09 (Pre-release)
+
+### Fixes
+- **Updater Logic:** Fixed an edge case where development builds (e.g., `0.23.5-dev`) failed to identify the matching stable release (`0.23.5`) as a valid update.
+
+### Refactoring
+- **Version Comparison:** Replaced manual semantic version comparison logic with native Rust tuple comparison for improved reliability and readability.
+- **Code Quality:** Refactored `player.rs` and `update.rs` to use guard clauses and flattened control flow, resolving multiple Clippy warnings.
+
+---
+
 ## [v0.24.0-dev.12](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.12) - 2026-02-09 (Pre-release)
 
 ### Added
