@@ -161,7 +161,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `[TARGET]` | Directly play a file, directory, or URL |
 | `-r`, `--refresh-index` | Update index (incremental scan). Detects new/changed files. |
 | `--reindex` | Force a full re-scan of the library. |
-| `-u`, `--update` | Update the application. |
+| `-u`, `--update` | Check for application updates. |
 | `--add-dir <PATH>...` | Add directory (e.g. `--add-dir /music /other`). |
 | `--remove-dir <PATH>...` | Remove directory (aliases: `--rm-dir`). |
 | `--manage-dirs` | Open the Interactive Directory Manager. |
@@ -411,6 +411,7 @@ For unsupported formats, the indexer falls back to filename parsing. I may imple
   * **`player.rs`**: Wraps the `mpv` process, handling playback control, queue generation, and temporary file cleanup.
   * **`search.rs`**: **YouTube Backend.** Wraps `yt-dlp` to fetch search results and stream URLs.
   * **`dep_check.rs`**: Validates runtime dependencies (mpv, yt-dlp versions) and environment health.
+  * **`update.rs`**: Handles version comparison (SemVer) and checks GitHub for releases.
 
 ---
 

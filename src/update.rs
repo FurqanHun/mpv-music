@@ -10,7 +10,7 @@ fn parse_version(v: &str) -> (u32, u32, u32) {
     let parts: Vec<u32> = base.split('.').map(|s| s.parse().unwrap_or(0)).collect();
 
     (
-        *parts.get(0).unwrap_or(&0),
+        *parts.first().unwrap_or(&0),
         *parts.get(1).unwrap_or(&0),
         *parts.get(2).unwrap_or(&0),
     )
@@ -35,18 +35,11 @@ pub fn update_self() -> Result<()> {
         .context("Release missing tag_name")?;
     let remote_ver_str = remote_tag.trim_start_matches('v');
 
-    let (cur_major, cur_minor, cur_patch) = parse_version(current_ver_str);
-    let (rem_major, rem_minor, rem_patch) = parse_version(remote_ver_str);
-
-    let update_available = if rem_major > cur_major {
-        true
-    } else if rem_major == cur_major && rem_minor > cur_minor {
-        true
-    } else if rem_major == cur_major && rem_minor == cur_minor && rem_patch > cur_patch {
-        true
-    } else {
-        false
-    };
+    let current_semver = parse_version(current_ver_str);
+    let remote_semver = parse_version(remote_ver_str);
+    let is_dev = current_ver_str.contains("dev");
+    let update_available =
+        remote_semver > current_semver || (remote_semver == current_semver && is_dev);
 
     println!("\n--- Version Info ---");
     println!("Current Version:  v{}", current_ver_str);
@@ -60,12 +53,10 @@ pub fn update_self() -> Result<()> {
         );
         println!("\nOr download manually:");
         println!("https://github.com/FurqanHun/mpv-music/releases/latest");
+    } else if current_ver_str.contains("dev") {
+        println!("Update Status:    \x1b[33mDevelopment Build\x1b[0m (Newer than stable)");
     } else {
-        if current_ver_str.contains("dev") {
-            println!("Update Status:    \x1b[33mDevelopment Build\x1b[0m (Newer than stable)");
-        } else {
-            println!("Update Status:    \x1b[32mUp to date\x1b[0m");
-        }
+        println!("Update Status:    \x1b[32mUp to date\x1b[0m");
     }
     println!("--------------------\n");
 

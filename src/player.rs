@@ -85,11 +85,9 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
 
     // Register signal handler
     ctrlc::set_handler(move || {
-        if r_handler.swap(false, Ordering::SeqCst) {
-            if p_handler.exists() {
-                let _ = std::fs::remove_file(&p_handler);
-                log::info!("\nReceived Ctrl+C. Cleaned up queue file.");
-            }
+        if r_handler.swap(false, Ordering::SeqCst) && p_handler.exists() {
+            let _ = std::fs::remove_file(&p_handler);
+            log::info!("\nReceived Ctrl+C. Cleaned up queue file.");
         }
         std::process::exit(0);
     })
@@ -237,18 +235,21 @@ fn apply_common_args(cmd: &mut Command, config: &Config) {
 }
 
 fn check_deno_availability() -> bool {
-    if let Ok(output) = Command::new("which").arg("yt-dlp").output() {
-        if output.status.success() {
-            let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            let ytdlp_path = std::path::Path::new(&path_str);
-            if let Some(parent) = ytdlp_path.parent() {
-                let local_deno = parent.join("deno");
-                if local_deno.exists() {
-                    return true;
-                }
-            }
-        }
+    let Ok(output) = Command::new("which").arg("yt-dlp").output() else {
+        return has_command("deno");
+    };
+
+    if !output.status.success() {
+        return has_command("deno");
     }
+
+    let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let ytdlp_path = std::path::Path::new(&path_str);
+
+    if ytdlp_path.parent().is_some_and(|p| p.join("deno").exists()) {
+        return true;
+    }
+
     has_command("deno")
 }
 
