@@ -266,7 +266,7 @@ fn has_command(cmd: &str) -> bool {
 }
 
 fn check_ytdlp_status() {
-    log::info!("Executing yt-dlp health check (yt-dlp -U)...");
+    log::info!("Attempting yt-dlp self-update (yt-dlp -U)...");
     let output = match Command::new("yt-dlp").arg("-U").output() {
         Ok(o) => o,
         Err(_) => {
