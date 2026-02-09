@@ -3,13 +3,19 @@ use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use std::io::Write;
 use std::process::{Command, Stdio};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 struct TempCleaner {
     path: std::path::PathBuf,
+    running: Arc<AtomicBool>,
 }
 
 impl Drop for TempCleaner {
     fn drop(&mut self) {
+        // mark "done" so the signal handler doesnt try to double delete if it triggers late
+        self.running.store(false, Ordering::SeqCst);
+
         if self.path.exists() {
             let _ = std::fs::remove_file(&self.path);
             log::debug!("Cleaned up temporary file: {:?}", self.path);
@@ -73,8 +79,27 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
         }
     }
 
+    let running = Arc::new(AtomicBool::new(true));
+
+    let r_handler = running.clone();
+    let p_handler = queue_path.clone();
+
+    // register
+    ctrlc::set_handler(move || {
+        if r_handler.load(Ordering::SeqCst) {
+            if p_handler.exists() {
+                let _ = std::fs::remove_file(&p_handler);
+                log::info!("\nReceived Ctrl+C. Cleaned up queue file.");
+            }
+            std::process::exit(0);
+        }
+    })
+    .ok();
+
+    // ipdate cleaner to hold the lock
     let _cleaner = TempCleaner {
         path: queue_path.clone(),
+        running,
     };
 
     log::info!("Generated unique playlist at {:?}", queue_path);
