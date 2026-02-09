@@ -5,6 +5,7 @@ mod indexer;
 mod player;
 mod search;
 mod tui;
+mod update;
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -177,8 +178,7 @@ fn main() -> Result<()> {
     }
     #[cfg(feature = "update")]
     if args.update {
-        println!("Update logic not implemented yet.");
-        println!("GitHub releases: https://github.com/FurqanHun/mpv-music/releases");
+        update::update_self()?;
         return Ok(());
     }
     if let Some(ref mode) = args.loop_arg {
