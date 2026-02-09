@@ -50,10 +50,12 @@ pub fn search_youtube(query: &str, limit: usize) -> Result<Vec<SearchResult>> {
     let mut stats_channels = 0;
     let mut stats_bad_url = 0;
     let mut stats_mixes = 0;
+    let mut stats_shorts = 0;
 
     for line in stdout.lines() {
         if let Ok(v) = serde_json::from_str::<Value>(line) {
             let title = v["title"].as_str().unwrap_or("Unknown").to_string();
+
             // no channels
             if v["_type"].as_str() == Some("channel") {
                 log::debug!("Ignored (Type=Channel): {}", title);
@@ -72,6 +74,12 @@ pub fn search_youtube(query: &str, limit: usize) -> Result<Vec<SearchResult>> {
 
             if url.is_empty() {
                 stats_bad_url += 1;
+                continue;
+            }
+
+            if url.contains("/shorts/") {
+                log::debug!("Ignored (Type=Shorts): {} [{}]", title, url);
+                stats_shorts += 1;
                 continue;
             }
 
@@ -130,10 +138,11 @@ pub fn search_youtube(query: &str, limit: usize) -> Result<Vec<SearchResult>> {
         }
     }
     log::info!(
-        "Search finished. Found: {}, Ignored Channels: {}, Mixes: {}, Bad URLs: {}",
+        "Search finished. Found: {}, Ignored [Channels: {}, Mixes: {}, Shorts: {}, Bad URLs: {}]",
         results.len(),
         stats_channels,
         stats_mixes,
+        stats_shorts,
         stats_bad_url
     );
 
