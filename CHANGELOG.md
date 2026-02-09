@@ -2,6 +2,22 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.24.0-dev.12](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.12) - 2026-02-09 (Pre-release)
+
+### Added
+- **Portable Deno Support:** The player now automatically searches for the `deno` binary in the same directory as the `yt-dlp` executable, improving compatibility for portable installations.
+
+### Changed
+- **Update Checker:** Fully implemented the `--update` CLI flag logic. (for now)
+    - Feature is now optional and gated behind the `update` cargo feature (enabled in release builds).
+    - Implements semantic version comparison (SemVer) to accurately detect updates.
+    - Displays upgrade instructions (curl command and manual download link) if a new version is found.
+    - Detects and handles development builds correctly to prevent false positives.
+- **Logging:** Clarified the `yt-dlp` check message. It now explicitly states "Attempting self-update" instead of "health check" to better reflect that dependencies are being maintained.
+- **CI/Build:** Enabled the `update` feature flag in release workflows, ensuring all distributed binaries ship with the self-update capability.
+
+---
+
 ## [v0.24.0-dev.11](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.11) - 2026-02-09 (Pre-release)
 
 ### Bug Fixes

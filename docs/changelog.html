@@ -162,6 +162,32 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.12" target="_blank" class="tag">v0.24.0-dev.12</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 09, 2026</span>
+            </div>
+            <div class="body">
+                <h3>Added</h3>
+<ul>
+<li><strong>Portable Deno Support:</strong> The player now automatically searches for the <code>deno</code> binary in the same directory as the <code>yt-dlp</code> executable, improving compatibility for portable installations.</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li><strong>Update Checker:</strong> Fully implemented the <code>--update</code> CLI flag logic. (for now)<ul>
+<li>Feature is now optional and gated behind the <code>update</code> cargo feature (enabled in release builds).</li>
+<li>Implements semantic version comparison (SemVer) to accurately detect updates.</li>
+<li>Displays upgrade instructions (curl command and manual download link) if a new version is found.</li>
+<li>Detects and handles development builds correctly to prevent false positives.</li>
+</ul>
+</li>
+<li><strong>Logging:</strong> Clarified the <code>yt-dlp</code> check message. It now explicitly states "Attempting self-update" instead of "health check" to better reflect that dependencies are being maintained.</li>
+<li><strong>CI/Build:</strong> Enabled the <code>update</code> feature flag in release workflows, ensuring all distributed binaries ship with the self-update capability.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.11" target="_blank" class="tag">v0.24.0-dev.11</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">February 09, 2026</span>
