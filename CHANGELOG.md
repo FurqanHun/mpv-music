@@ -11,6 +11,7 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 ### Reliability
 
 - **Multi-Instance Safety:** Temporary playlist files now use unique PID-based naming (`queue-{PID}.m3u8`), preventing conflicts when running multiple instances simultaneously.
+- **Graceful Shutdown:** Queue files now clean up properly on Ctrl+C/SIGINT. No more stale `.m3u8` files littering your temp directory! 🧹
 - **Smart File Recovery:** Enhanced the indexer with attribute-based tracking (size + mtime + filename). Moved or renamed files are now detected without re-probing metadata, making library reorganization instant.
 
 ### UX Improvements
@@ -21,7 +22,7 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 ### Technical Details
 
 - All changes maintain backward compatibility with existing indexes.
-- The `Borrow<T>` refactor is particularly notable for big ah libraries
+- The `Borrow<T>` refactor is particularly notable for big ah libraries.
 
 ---
 
