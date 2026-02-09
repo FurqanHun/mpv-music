@@ -162,6 +162,35 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.10" target="_blank" class="tag">v0.24.0-dev.10</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 09, 2026</span>
+            </div>
+            <div class="body">
+                <h3>Performance</h3>
+<ul>
+<li><strong>Zero-Cost Filtering:</strong> Refactored tag filtering to use <code>Borrow&lt;T&gt;</code> generics, eliminating unnecessary cloning during searches. Filters now work with references until absolutely necessary, drastically reducing allocations for large libraries.</li>
+</ul>
+<h3>Reliability</h3>
+<ul>
+<li><strong>Multi-Instance Safety:</strong> Temporary playlist files now use unique PID-based naming (<code>queue-{PID}.m3u8</code>), preventing conflicts when running multiple instances simultaneously.</li>
+<li><strong>Smart File Recovery:</strong> Enhanced the indexer with attribute-based tracking (size + mtime + filename). Moved or renamed files are now detected without re-probing metadata, making library reorganization instant.</li>
+</ul>
+<h3>UX Improvements</h3>
+<ul>
+<li><strong>YouTube Shorts Filter:</strong> Search results now automatically exclude YouTube Shorts to improve music discovery quality.</li>
+<li><strong>Interactive Multi-Value Filters:</strong> When passing comma-separated values to <code>-g</code>, <code>-a</code>, or <code>-b</code> flags, you now get an interactive picker to refine your selection before playing.</li>
+</ul>
+<h3>Technical Details</h3>
+<ul>
+<li>All changes maintain backward compatibility with existing indexes.</li>
+<li>The <code>Borrow&lt;T&gt;</code> refactor is particularly notable for big ah libraries</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/0.24.0-dev.9" target="_blank" class="tag">0.24.0-dev.9</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">February 08, 2026</span>

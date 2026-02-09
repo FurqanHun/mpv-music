@@ -2,6 +2,29 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.24.0-dev.10](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.10) - 2026-02-09 (Pre-release)
+
+### Performance
+
+- **Zero-Cost Filtering:** Refactored tag filtering to use `Borrow<T>` generics, eliminating unnecessary cloning during searches. Filters now work with references until absolutely necessary, drastically reducing allocations for large libraries.
+
+### Reliability
+
+- **Multi-Instance Safety:** Temporary playlist files now use unique PID-based naming (`queue-{PID}.m3u8`), preventing conflicts when running multiple instances simultaneously.
+- **Smart File Recovery:** Enhanced the indexer with attribute-based tracking (size + mtime + filename). Moved or renamed files are now detected without re-probing metadata, making library reorganization instant.
+
+### UX Improvements
+
+- **YouTube Shorts Filter:** Search results now automatically exclude YouTube Shorts to improve music discovery quality.
+- **Interactive Multi-Value Filters:** When passing comma-separated values to `-g`, `-a`, or `-b` flags, you now get an interactive picker to refine your selection before playing.
+
+### Technical Details
+
+- All changes maintain backward compatibility with existing indexes.
+- The `Borrow<T>` refactor is particularly notable for big ah libraries
+
+---
+
 ## [0.24.0-dev.9](https://github.com/FurqanHun/mpv-music/releases/tag/0.24.0-dev.9) - 2026-02-08 (Pre-release)
 
 ## Features & Enhancements
