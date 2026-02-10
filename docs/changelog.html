@@ -162,6 +162,31 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.14" target="_blank" class="tag">v0.24.0-dev.14</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 10, 2026</span>
+            </div>
+            <div class="body">
+                <h3>Features</h3>
+<ul>
+<li><strong>Visual Playback Mode:</strong> Introduced the <code>--watch</code> (<code>-w</code>) flag.</li>
+<li>explicitly enables the MPV video window for playback.</li>
+<li>forces MPV to run in "visual mode" with raw terminal output (so you can see buffering/connection logs) and an immediate window pop-up.</li>
+<li><strong>Video Logic Decoupling:</strong> Separated "Indexing" from "Playback".</li>
+<li><code>yt-dlp</code> integration now respects <code>--watch</code> to fetch video streams instead of forcing <code>bestaudio</code>.</li>
+<li>Added <code>--no-video</code> flag to forcefully override <code>video_ok=true</code> from your config (useful for temporarily hiding video files from search).</li>
+<li><em>Context:</em> This aligns behavior closer to the original Bash script, while offering new flexibility to toggle <code>--watch</code> or disable <code>--video-ok</code> per session.</li>
+</ul>
+<h3>Refactoring</h3>
+<ul>
+<li><strong>Audio-Only Polish:</strong> The default audio-only mode now strictly enforces <code>--audio-display=no</code>. This prevents MPV from accidentally opening a window for cover art when you only wanted music.</li>
+<li><strong>Crates.io Prep:</strong> Updated <code>Cargo.toml</code> with complete crate metadata (categories, keywords, repository links).</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.13" target="_blank" class="tag">v0.24.0-dev.13</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">February 09, 2026</span>

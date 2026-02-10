@@ -2,6 +2,23 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.24.0-dev.14](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.14) - 2026-02-10 (Pre-release)
+
+### Features
+- **Visual Playback Mode:** Introduced the `--watch` (`-w`) flag.
+  - explicitly enables the MPV video window for playback.
+  - forces MPV to run in "visual mode" with raw terminal output (so you can see buffering/connection logs) and an immediate window pop-up.
+- **Video Logic Decoupling:** Separated "Indexing" from "Playback".
+  - `yt-dlp` integration now respects `--watch` to fetch video streams instead of forcing `bestaudio`.
+  - Added `--no-video` flag to forcefully override `video_ok=true` from your config (useful for temporarily hiding video files from search).
+  - *Context:* This aligns behavior closer to the original Bash script, while offering new flexibility to toggle `--watch` or disable `--video-ok` per session.
+
+### Refactoring
+- **Audio-Only Polish:** The default audio-only mode now strictly enforces `--audio-display=no`. This prevents MPV from accidentally opening a window for cover art when you only wanted music.
+- **Crates.io Prep:** Updated `Cargo.toml` with complete crate metadata (categories, keywords, repository links).
+
+---
+
 ## [v0.24.0-dev.13](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.13) - 2026-02-09 (Pre-release)
 
 ### Fixes

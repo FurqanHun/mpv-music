@@ -61,6 +61,7 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 * **Configurable File Types:** Support for both audio and video extensions, easily tweakable.
 * **Custom MPV Flags:** Pass mpv flags directly or set defaults in the config.
 * **Video Toggle:** `--video-ok` lets you include videos in your library scans.
+* **Visual Playback:** `--watch (-w)` forces the MPV window to open, allowing you to watch videos or see cover art/visualizations during playback.
 * **YouTube Auto-Config:** Automatically detects JS runtimes (Deno, Node, QuickJS, Bun) for yt-dlp YouTube playback.
 * **Enhanced Logging:** Verbose/debug modes with log rotation and configurable log file size.
 
@@ -172,6 +173,8 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `-p`, `--play-all` | Play all tracks immediately. |
 | `-l`, `--playlist [<VAL>]` | Open Playlist Mode. Opens picker if no value given. |
 | `--video-ok` | Allow video files. |
+| `no-video` | Negates `--video-ok`, and overrides it in config. |
+| `--watch (-w)` | Play with video window enabled (forces visual mode). |
 | `--loop [<LOOP_ARG>]` | Enable looping (`inf`, `no`, `track`, or a NUMBER). |
 | `--no-loop` | Disable all looping. |
 | `--repeat` | Loop the current track (Repeat One). |
@@ -238,9 +241,11 @@ Searching the filesystem with find every time is slow, especially if you have a 
 * `--refresh-index` or `-r` - Smart update (only processes new/modified files)
 
 > [!TIP]
-> Run these flags alongside `--video-ok` to include video files in the index.
-> Example: `mpv-music --video-ok --reindex`
-> Or you can set `video_ok = true` in your config file.
+> **Indexing vs. Watching:**
+> * Use `--video-ok` (or set `video_ok = true`) to **scan** and include video files in your library.
+> * Use `--watch` (`-w`) when playing to actually **show** the video window.
+>
+> Example: `mpv-music --video-ok --reindex` to scan, then `mpv-music -w` to watch.
 
 ---
 
@@ -316,8 +321,8 @@ playlist_exts = [
 # --- MPV Arguments ---
 # These flags are passed directly to the mpv process.
 mpv_default_args = [
-    "--no-video",
-    "--audio-display=no",
+    "--no-video", # Automatically ignored if --watch is used
+    "--audio-display=no", # Automatically ignored if --watch is used
     "--msg-level=cplayer=warn",
     "--display-tags=",
     "--no-term-osd-bar",
