@@ -271,6 +271,7 @@ music_dirs = [
     "/mnt/storage/songs",
 ]
 video_ok = false    # Set to true to include video files in the index
+watch = false       # Set to true to actually show the video window when playing
 serial_mode = false # Set to true to force single-threaded scanning (better for HDDs)
 
 # --- YT-DLP / Networking ---
