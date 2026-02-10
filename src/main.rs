@@ -182,6 +182,9 @@ fn main() -> Result<()> {
     if args.watch {
         cfg.watch = true;
     }
+    if args.no_watch {
+        cfg.watch = false;
+    }
     #[cfg(feature = "update")]
     if args.update {
         update::update_self()?;

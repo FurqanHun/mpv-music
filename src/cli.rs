@@ -96,6 +96,9 @@ pub struct Cli {
     #[arg(short = 'w', long, help = "Play with video window enabled")]
     pub watch: bool,
 
+    #[arg(long, help = "Force audio-only (overrides config if watch=true)")]
+    pub no_watch: bool,
+
     #[arg(
             long = "loop",
             num_args = 0..=1,

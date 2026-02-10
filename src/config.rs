@@ -11,7 +11,7 @@ pub struct Config {
 
     pub music_dirs: Vec<PathBuf>,
     pub video_ok: bool,
-    #[serde(skip, default)]
+    #[serde(default)]
     pub watch: bool,
     pub serial_mode: bool,
 
