@@ -175,15 +175,25 @@ fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
 fn apply_common_args(cmd: &mut Command, config: &Config) {
     log::debug!("Applying common MPV arguments from config");
 
-    if config.video_ok {
-        log::debug!("Video enabled (video_ok=true)");
+    if config.watch {
+        log::debug!("Visual mode enabled (--watch)");
+        cmd.arg("--force-window=immediate");
+        cmd.arg("--video=auto");
     } else {
-        log::debug!("Video disabled (force-window=no, video=no)");
+        log::debug!("Audio-only mode (forcing video=no)");
         cmd.arg("--force-window=no");
         cmd.arg("--video=no");
+        cmd.arg("--audio-display=no");
     }
 
     for arg in &config.mpv_default_args {
+        if config.watch
+            && (arg == "--no-video" || arg == "--video=no" || arg == "--audio-display=no")
+        {
+            log::debug!("Skipping '{}' because visual mode is active", arg);
+            continue;
+        }
+
         if arg.contains("--term-playing-msg=") {
             let parts: Vec<&str> = arg.splitn(2, '=').collect();
             if parts.len() == 2 {

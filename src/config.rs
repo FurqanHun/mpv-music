@@ -11,6 +11,8 @@ pub struct Config {
 
     pub music_dirs: Vec<PathBuf>,
     pub video_ok: bool,
+    #[serde(skip, default)]
+    pub watch: bool,
     pub serial_mode: bool,
 
     pub ytdlp_ejs_remote_github: bool,
@@ -55,6 +57,7 @@ impl Default for Config {
             volume: 100,
             music_dirs,
             video_ok: false,
+            watch: false,
             serial_mode: false,
             ytdlp_ejs_remote_github: false,
             ytdlp_useragent:

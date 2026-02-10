@@ -88,6 +88,15 @@ pub struct Cli {
     pub video_ok: bool,
 
     #[arg(
+        long,
+        help = "Force disable video files (overrides config/negate --video-ok)"
+    )]
+    pub no_video: bool,
+
+    #[arg(short = 'w', long, help = "Play with video window enabled")]
+    pub watch: bool,
+
+    #[arg(
             long = "loop",
             num_args = 0..=1,
             default_missing_value = "inf",

@@ -176,6 +176,12 @@ fn main() -> Result<()> {
     if args.video_ok {
         cfg.video_ok = true;
     }
+    if args.no_video {
+        cfg.video_ok = false;
+    }
+    if args.watch {
+        cfg.watch = true;
+    }
     #[cfg(feature = "update")]
     if args.update {
         update::update_self()?;
