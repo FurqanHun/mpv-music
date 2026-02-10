@@ -7,7 +7,28 @@ authors = ["FurqanHun <furqanhun@proton.me>"]
 license = "MIT"
 description = "A TUI-based music player wrapper for MPV"
 
+repository = "https://github.com/FurqanHun/mpv-music"
+homepage = "https://furqanhun.github.io/mpv-music/"
+readme = "README.md"
+keywords = ["music", "mpv", "tui", "player", "terminal"]
+categories = [
+    "command-line-utilities",
+    "multimedia::audio",
+    "multimedia::video",
+    "multimedia",
+    "filesystem"
+]
+
+exclude = [
+    "docs/",
+    "googleee683236220c2726.html",
+    "mpv-music-updater",
+    "install.sh",
+    ".github/",
+]
+
 [features]
+default = []
 update = ["dep:ureq"]
 
 [dependencies]
@@ -39,3 +60,6 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 panic = "abort"
+
+[package.metadata.docs.rs]
+all-features = true
