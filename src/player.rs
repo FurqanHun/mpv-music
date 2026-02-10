@@ -124,11 +124,11 @@ fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
         cmd.arg("--msg-level=ytdl_hook=info");
 
         if is_youtube {
-            if !config.video_ok {
-                log::debug!("YouTube detected & Video Disabled: forcing bestaudio format");
+            if !config.video_ok && !config.watch {
+                log::debug!("YouTube detected & Audio Mode: forcing bestaudio format");
                 cmd.arg("--ytdl-format=bestaudio/best");
             } else {
-                log::debug!("YouTube detected & Video Enabled: allowing default formats");
+                log::debug!("YouTube detected & Video/Watch Mode: allowing default formats");
             }
         }
 
