@@ -162,6 +162,24 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.16" target="_blank" class="tag">v0.24.0-dev.16</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 10, 2026</span>
+            </div>
+            <div class="body">
+                <h3>Fixes</h3>
+<ul>
+<li><strong>Dev Build Detection:</strong> The update checker now correctly identifies and displays pre-release versions.</li>
+<li>Previously, dev users only saw "Latest Stable" info. Now, the updater explicitly fetches the latest <code>dev</code> tag as well (if the current build is a dev one)</li>
+<li><strong>Smart Version Comparison:</strong> Added logic to parse and compare pre-release suffixes.</li>
+<li>It now correctly understands that <code>dev.16</code> &gt; <code>dev.15</code>, preventing false "Update Available" notifications when your local build is ahead of the repo.</li>
+<li><strong>Config Editor:</strong> Fixed a bug where <code>mpv-music --config</code> would fail if the config file didn't exist yet. It now auto-generates defaults before opening the editor.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.15" target="_blank" class="tag">v0.24.0-dev.15</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">February 10, 2026</span>

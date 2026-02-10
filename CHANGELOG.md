@@ -2,6 +2,17 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.24.0-dev.16](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.16) - 2026-02-10 (Pre-release)
+
+### Fixes
+- **Dev Build Detection:** The update checker now correctly identifies and displays pre-release versions.
+  - Previously, dev users only saw "Latest Stable" info. Now, the updater explicitly fetches the latest `dev` tag as well (if the current build is a dev one)
+- **Smart Version Comparison:** Added logic to parse and compare pre-release suffixes.
+  - It now correctly understands that `dev.16` > `dev.15`, preventing false "Update Available" notifications when your local build is ahead of the repo.
+- **Config Editor:** Fixed a bug where `mpv-music --config` would fail if the config file didn't exist yet. It now auto-generates defaults before opening the editor.
+
+---
+
 ## [v0.24.0-dev.15](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.15) - 2026-02-10 (Pre-release)
 
 ### Features
