@@ -175,6 +175,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `--video-ok` | Allow video files. |
 | `no-video` | Negates `--video-ok`, and overrides it in config. |
 | `--watch (-w)` | Play with video window enabled (forces visual mode). |
+| `--no-watch` | Disable video window (forces audio mode, which is the default). |
 | `--loop [<LOOP_ARG>]` | Enable looping (`inf`, `no`, `track`, or a NUMBER). |
 | `--no-loop` | Disable all looping. |
 | `--repeat` | Loop the current track (Repeat One). |
@@ -243,7 +244,7 @@ Searching the filesystem with find every time is slow, especially if you have a 
 > [!TIP]
 > **Indexing vs. Watching:**
 > * Use `--video-ok` (or set `video_ok = true`) to **scan** and include video files in your library.
-> * Use `--watch` (`-w`) when playing to actually **show** the video window.
+> * Use `--watch` ((or set `watch = true`)) when playing to actually **show** the video window. 
 >
 > Example: `mpv-music --video-ok --reindex` to scan, then `mpv-music -w` to watch.
 

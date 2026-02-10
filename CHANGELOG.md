@@ -2,6 +2,15 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.24.0-dev.15](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.15) - 2026-02-10 (Pre-release)
+
+### Features
+- **Persistent Watch Mode:** The `watch` setting is now saved in `config.toml`.
+  - You can now set `watch = true` in your config to have the video window open by default for every session.
+- **New Flag:** Added `--no-watch` to temporarily force audio-only mode (overriding `watch = true` from your config).
+
+---
+
 ## [v0.24.0-dev.14](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.14) - 2026-02-10 (Pre-release)
 
 ### Features

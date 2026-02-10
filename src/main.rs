@@ -66,6 +66,14 @@ fn main() -> Result<()> {
 
     // handle editor
     if let Some(editor_opt) = args.config {
+        if !config_file.exists() {
+            log::info!(
+                "Config file not found. Generating default at {:?}...",
+                config_file
+            );
+            let _ = config::load(None)?;
+        }
+
         let editor = editor_opt
             .unwrap_or_else(|| std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string()));
 
