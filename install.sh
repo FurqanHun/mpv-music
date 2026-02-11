@@ -30,16 +30,23 @@ echo -e "${BLUE}🎧 mpv-music Rust Installer${NC}"
 OS_TYPE=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH_RAW=$(uname -m)
 
-case "$OS_TYPE" in
-    linux*)  PLATFORM="unknown-linux-musl" ;;
-    darwin*) PLATFORM="apple-darwin" ;;
-    *)       PLATFORM="unknown" ;;
+case "$ARCH_RAW" in
+    x86_64)        ARCH="x86_64" ;;
+    aarch64|arm64) ARCH="aarch64" ;;
+    armv7*)        ARCH="armv7" ;;
+    *)             ARCH="unknown" ;;
 esac
 
-case "$ARCH_RAW" in
-    x86_64)       ARCH="x86_64" ;;
-    aarch64|arm64) ARCH="aarch64" ;;
-    *)            ARCH="unknown" ;;
+case "$OS_TYPE" in
+    linux*)
+        if [[ "$ARCH" == "armv7" ]]; then
+            PLATFORM="unknown-linux-musleabihf"
+        else
+            PLATFORM="unknown-linux-musl"
+        fi
+        ;;
+    darwin*) PLATFORM="apple-darwin" ;;
+    *)       PLATFORM="unknown" ;;
 esac
 
 # --- 2. Interactive Path Selection ---
