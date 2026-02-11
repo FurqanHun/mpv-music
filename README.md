@@ -2,6 +2,7 @@
 
 [![version](https://img.shields.io/github/v/release/FurqanHun/mpv-music?include_prereleases&color=blue)](https://github.com/FurqanHun/mpv-music/releases)
 [![mpv-music build status](https://github.com/FurqanHun/mpv-music/actions/workflows/release.yml/badge.svg)](https://github.com/FurqanHun/mpv-music/actions/workflows/release.yml)
+[![crates.io](https://img.shields.io/crates/v/mpv-music.svg)](https://crates.io/crates/mpv-music)
 
 **mpv-music** is a blazing-fast, terminal-native music player and library browser. Originally a Bash hybrid, it has been completely rewritten in Rust for maximum performance, safety, and a seamless TUI experience.
 
@@ -98,6 +99,18 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 > [!Tip]
 > You can use WSL (Windows Subsystem for Linux) to run `mpv-music` on Windows.
 
+### From crates.io (Recommended)
+
+If you have Rust installed:
+
+```bash
+# Full installation with update checker
+cargo install mpv-music --features update
+
+# Minimal installation (smaller binary, no --update flag)
+cargo install mpv-music
+```
+
 ### Pre-built Binaries (Recommended)
 
 1. Download the latest binary for your architecture from the [Releases](https://github.com/FurqanHun/mpv-music/releases) page.
@@ -106,16 +119,16 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
     chmod +x mpv-music
     mv mpv-music ~/.local/bin/
     ```
-or Alternatively, you can use the followiing command and let the script handle the process
+or Alternatively, you can use the following command and let the script handle the process
 
 ```bash
-curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash -s -- --dev
+curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash
 ```
-    
+
 ### From Source
 Requires Rust **1.93.0+**.
 ```bash
-git clone [https://github.com/FurqanHun/mpv-music.git](https://github.com/FurqanHun/mpv-music.git)
+git clone https://github.com/FurqanHun/mpv-music.git
 cd mpv-music
 cargo build --release
 # Binary will be at target/release/mpv-music
@@ -225,7 +238,7 @@ mpv-music --manage-dirs                  # Manage directories
 
 Your music library is indexed to:
 
-- Where ever our sysetm has defined program data should go, for modern linux systems it should be at `~/.local/share/mpv-music/music_index.jsonl`
+- Where ever our system has defined program data should go, for modern linux systems it should be at `~/.local/share/mpv-music/music_index.jsonl`
 
 ### Why?
 
