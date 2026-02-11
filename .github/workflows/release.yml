@@ -23,6 +23,10 @@ jobs:
             os: ubuntu-latest
             use_cross: true
 
+          - target: armv7-unknown-linux-musleabihf
+            os: ubuntu-latest
+            use_cross: true
+
           - target: x86_64-apple-darwin
             os: macos-latest
             use_cross: false
