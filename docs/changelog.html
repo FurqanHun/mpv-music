@@ -162,6 +162,47 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0" target="_blank" class="tag">v0.24.0</a>
+                <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">February 11, 2026</span>
+            </div>
+            <div class="body">
+                <p><strong>The first stable release of the full Rust rewrite!</strong></p>
+<p>After starting as a pure Bash script and briefly becoming a Bash+Rust hybrid during development, mpv-music is now <strong>100% Rust</strong> — a unified, blazing-fast native binary with no shell dependencies.</p>
+<hr />
+<h2>What's New</h2>
+<h3><strong>Complete Rust Rewrite</strong></h3>
+<ul>
+<li><strong>Single Binary:</strong> Pure Rust from top to bottom. No more Bash wrapper.</li>
+<li><strong>Native TUI:</strong> Integrated <code>skim</code>-based interface (no external <code>fzf</code> dependency).</li>
+<li><strong>10x Faster:</strong> Parallel scanning with <code>rayon</code> processes thousands of files in milliseconds. It was there in hybrid butt now handled much better.</li>
+<li><strong>Static Linking:</strong> Linux binaries built with <code>musl</code> — run anywhere without GLIBC issues.</li>
+</ul>
+<h3><strong>What's Better Than v0.23.5</strong></h3>
+<ul>
+<li><strong>Smart Recovery:</strong> Moved/renamed files keep their metadata without re-scanning.</li>
+<li><strong>Faster Startup:</strong> No shell overhead (~15x faster than Bash version).</li>
+<li><strong>Better Error Messages:</strong> Clear, actionable error reporting.</li>
+<li><strong>Atomic Operations:</strong> Proper Ctrl+C handling and guaranteed cleanup.</li>
+<li><strong>Improved Caching:</strong> Dual-cache strategy (path + file attributes) for better hit rates.</li>
+<li>Aside from <code>--update</code> (which works differently now), it is at feature parity with bash version, and enhancements have been made all over the features.</li>
+</ul>
+<h3><strong>New Features</strong></h3>
+<ul>
+<li><strong><code>--update</code> flag:</strong> Check for new releases directly from the CLI (requires <code>--features update</code>).</li>
+<li><strong>Interactive Directory Manager:</strong> <code>--manage-dirs</code> provides a TUI for library management.</li>
+<li><strong>Settings Menu:</strong> Configure mpv-music directly from the main menu.</li>
+<li><strong>Watch/Video Mode:</strong> Now you can set the session to allow mpv to play video using <code>--watch</code> or set <code>watch = true</code> in config, so it always plays the video, and hen <code>--no-watch</code> can be utilized as a negation per session.</li>
+<li>Similarly <code>--no-video</code> has been introduced, which disallows the video extensions to be shown in search for the current session.</li>
+</ul>
+<h3>Installation</h3>
+<pre><code class="language-bash">curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash
+</code></pre>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.16" target="_blank" class="tag">v0.24.0-dev.16</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">February 10, 2026</span>

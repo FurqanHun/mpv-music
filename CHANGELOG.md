@@ -2,6 +2,46 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.24.0](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0) - 2026-02-11
+
+**The first stable release of the full Rust rewrite!**
+
+After starting as a pure Bash script and briefly becoming a Bash+Rust hybrid during development, mpv-music is now **100% Rust** — a unified, blazing-fast native binary with no shell dependencies.
+
+---
+
+## What's New
+
+### **Complete Rust Rewrite**
+- **Single Binary:** Pure Rust from top to bottom. No more Bash wrapper.
+- **Native TUI:** Integrated `skim`-based interface (no external `fzf` dependency).
+- **10x Faster:** Parallel scanning with `rayon` processes thousands of files in milliseconds. It was there in hybrid butt now handled much better.
+- **Static Linking:** Linux binaries built with `musl` — run anywhere without GLIBC issues.
+
+### **What's Better Than v0.23.5**
+- **Smart Recovery:** Moved/renamed files keep their metadata without re-scanning.
+- **Faster Startup:** No shell overhead (~15x faster than Bash version).
+- **Better Error Messages:** Clear, actionable error reporting.
+- **Atomic Operations:** Proper Ctrl+C handling and guaranteed cleanup.
+- **Improved Caching:** Dual-cache strategy (path + file attributes) for better hit rates.
+- Aside from `--update` (which works differently now), it is at feature parity with bash version, and enhancements have been made all over the features.
+
+### **New Features**
+- **`--update` flag:** Check for new releases directly from the CLI (requires `--features update`).
+- **Interactive Directory Manager:** `--manage-dirs` provides a TUI for library management.
+- **Settings Menu:** Configure mpv-music directly from the main menu.
+- **Watch/Video Mode:** Now you can set the session to allow mpv to play video using `--watch` or set `watch = true` in config, so it always plays the video, and hen `--no-watch` can be utilized as a negation per session.
+- Similarly `--no-video` has been introduced, which disallows the video extensions to be shown in search for the current session.
+
+### Installation
+
+```bash
+curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash
+```
+
+
+---
+
 ## [v0.24.0-dev.16](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0-dev.16) - 2026-02-10 (Pre-release)
 
 ### Fixes
