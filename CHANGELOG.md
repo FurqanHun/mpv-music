@@ -2,6 +2,17 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.24.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.1) - 2026-02-13
+
+### Fixed
+- **TUI:** Fixed an inconsistency where filtering down to a single track would still prompt the "Play all / Select tracks" menu. It now plays immediately, matching the CLI behavior.
+
+### Maintenance
+- Updated `toml` to **v1.0** (stable).
+- Updated `lofty` to **v0.23** (latest tag parsing fixes).
+
+---
+
 ## [v0.24.0](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.0) - 2026-02-11
 
 **The first stable release of the full Rust rewrite!**
