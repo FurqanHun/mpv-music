@@ -193,6 +193,13 @@ where
     if tracks.is_empty() {
         return Ok(());
     }
+
+    if tracks.len() == 1 {
+        let t = tracks[0].borrow();
+        player::play(&t.path, cfg)?;
+        return Ok(());
+    }
+
     let paths: Vec<String> = tracks.iter().map(|t| t.borrow().path.clone()).collect();
 
     let opts = [
