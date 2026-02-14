@@ -136,8 +136,8 @@ pub fn run_tag_picker(tracks: &[indexer::Track], cfg: &config::Config, key: &str
 
     let opts = SkimOptionsBuilder::default()
         .multi(true)
-        .prompt(prompt.to_string())
-        .preview(Some("".to_string()))
+        .prompt(prompt)
+        .preview("")
         .reverse(true)
         .inline_info(true)
         .build()
@@ -297,10 +297,8 @@ pub fn manage_remove_menu(cfg: &mut config::Config) -> Result<bool> {
 
     let opts = SkimOptionsBuilder::default()
         .multi(true)
-        .prompt("🗑️  Remove >   ".to_string())
-        .header(Some(
-            "   Select directories to remove (TAB to select)".to_string(),
-        ))
+        .prompt("🗑️  Remove >   ")
+        .header("   Select directories to remove (TAB to select)")
         .reverse(true)
         .inline_info(true)
         .build()
@@ -568,9 +566,9 @@ pub fn run_skim_simple(items: Vec<&str>, prompt: &str) -> Option<String> {
     drop(tx);
 
     let opts = SkimOptionsBuilder::default()
-        .height("50%".to_string())
+        .height("50%")
         .reverse(true)
-        .prompt(prompt.to_string())
+        .prompt(prompt)
         .inline_info(true)
         .build()
         .unwrap();
@@ -595,9 +593,9 @@ pub fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<
     drop(tx);
 
     let opts = SkimOptionsBuilder::default()
-        .height("50%".to_string())
+        .height("50%")
         .reverse(true)
-        .prompt(prompt.to_string())
+        .prompt(prompt)
         .inline_info(true)
         .multi(true)
         .build()
@@ -644,11 +642,11 @@ where
     drop(tx);
 
     let opts = SkimOptionsBuilder::default()
-        .height("100%".to_string())
+        .height("100%")
         .multi(true)
-        .preview(Some("".to_string()))
-        .prompt("🎵 Tracks > ".to_string())
-        .header(Some("   Artist              Title".to_string()))
+        .preview("")
+        .prompt("🎵 Tracks > ")
+        .header("   Artist              Title")
         .reverse(true)
         .inline_info(true)
         .build()
@@ -712,11 +710,11 @@ pub fn run_dir_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<(
 
     let opts = SkimOptionsBuilder::default()
         .multi(true)
-        .prompt("📁 Folders > ".to_string())
-        .header(Some("   Directory Name".to_string()))
+        .prompt("📁 Folders > ")
+        .header("   Directory Name")
         .reverse(true)
         .inline_info(true)
-        .preview(Some("".to_string()))
+        .preview("")
         .build()
         .unwrap();
 
@@ -774,10 +772,10 @@ pub fn run_playlist_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Res
 
     let opts = SkimOptionsBuilder::default()
         .multi(true)
-        .prompt("📜 Playlists > ".to_string())
+        .prompt("📜 Playlists > ")
         .reverse(true)
         .inline_info(true)
-        .preview(Some("".to_string()))
+        .preview("")
         .build()
         .unwrap();
 
@@ -837,12 +835,12 @@ pub fn run_search_mode(cfg: &config::Config, initial_query: Option<String>) -> R
     drop(tx);
 
     let opts = SkimOptionsBuilder::default()
-        .height("100%".to_string())
+        .height("100%")
         .multi(true)
-        .prompt("🎯 Search > ".to_string())
+        .prompt("🎯 Search > ")
         .reverse(true)
         .inline_info(true)
-        .preview(Some("".to_string()))
+        .preview("")
         .build()
         .unwrap();
 
