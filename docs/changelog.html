@@ -162,8 +162,28 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
-                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.1" target="_blank" class="tag">v0.24.1</a>
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.2" target="_blank" class="tag">v0.24.2</a>
                 <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">February 14, 2026</span>
+            </div>
+            <div class="body">
+                <p><strong>This patch upgrades the core TUI engine for better performance and reduced memory usage.</strong></p>
+<h3>Performance</h3>
+<ul>
+<li><strong>Upgraded <code>skim</code> to v3.2.0:</strong> This major dependency update brings a <strong>~25% reduction in memory usage</strong> (according to skim) for the fuzzy finder, making the TUI even lighter and snappier. </li>
+</ul>
+<h3>Internal</h3>
+<ul>
+<li><strong>TUI Refactor:</strong> Refactored <code>src/tui/mod.rs</code> to align with <code>skim</code>'s new API (migrated from <code>Option&lt;String&gt;</code> wrappers to zero-allocation <code>&amp;str</code> slices).</li>
+<li><strong>Stability:</strong> Validated all interactive menus (Playlists, Tags, Directories) to ensure zero regressions in the user experience despite the changes.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.1" target="_blank" class="tag">v0.24.1</a>
+                
                 <span style="margin-left: auto;">February 13, 2026</span>
             </div>
             <div class="body">

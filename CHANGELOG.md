@@ -2,6 +2,19 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.24.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.2) - 2026-02-14
+
+**This patch upgrades the core TUI engine for better performance and reduced memory usage.**
+
+### Performance
+- **Upgraded `skim` to v3.2.0:** This major dependency update brings a **~25% reduction in memory usage** (according to skim) for the fuzzy finder, making the TUI even lighter and snappier. 
+
+### Internal
+- **TUI Refactor:** Refactored `src/tui/mod.rs` to align with `skim`'s new API (migrated from `Option<String>` wrappers to zero-allocation `&str` slices).
+- **Stability:** Validated all interactive menus (Playlists, Tags, Directories) to ensure zero regressions in the user experience despite the changes.
+
+---
+
 ## [v0.24.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.1) - 2026-02-13
 
 ### Fixed
