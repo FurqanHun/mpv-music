@@ -13,10 +13,7 @@ struct TempCleaner {
 
 impl Drop for TempCleaner {
     fn drop(&mut self) {
-        // mark "done" so the signal handler doesnt try to double delete if it triggers late
-        self.running.store(false, Ordering::SeqCst);
-
-        if self.path.exists() {
+        if self.running.swap(false, Ordering::SeqCst) && self.path.exists() {
             let _ = std::fs::remove_file(&self.path);
             log::debug!("Cleaned up temporary file: {:?}", self.path);
         }
