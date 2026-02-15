@@ -162,8 +162,39 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
-                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.2" target="_blank" class="tag">v0.24.2</a>
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.3" target="_blank" class="tag">v0.24.3</a>
                 <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">February 15, 2026</span>
+            </div>
+            <div class="body">
+                <p>This patch focuses entirely on performance, eliminating startup lag and optimizing the TUI data pipeline for instant responsiveness.</p>
+<h3>Performance Improvements</h3>
+<ul>
+<li>
+<p><strong>Parallel Dependency Checks:</strong></p>
+<ul>
+<li>Startup latency is drastically reduced by running dependency checks for <code>mpv</code> (critical) and <code>yt-dlp</code> (optional) in <strong>concurrent threads</strong>.</li>
+<li>Previously, the application waited for the slower <code>yt-dlp --version</code> check to finish before launching. Now, it processes both checks simultaneously, effectively halving the wait time (which technically isn't much but feels instant)</li>
+<li><em>Ensures a valid state for CLI users while minimizing blocking time.</em></li>
+</ul>
+</li>
+<li>
+<p><strong>Batched TUI Data Loading:</strong></p>
+<ul>
+<li>Implemented <strong>batch processing</strong> for sending items (Tracks, Playlists, Directories) to the fuzzy finder (<code>skim</code>).</li>
+<li>Items are now ingested in batches of <strong>500</strong> instead of individually.</li>
+<li>This significantly reduces async channel locking overhead and context switching, fixing the "rendering lag" seen in large libraries.</li>
+<li><em>Optimizes item ingestion to work efficiently with the Skim v3 async runtime.</em></li>
+</ul>
+</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.2" target="_blank" class="tag">v0.24.2</a>
+                
                 <span style="margin-left: auto;">February 14, 2026</span>
             </div>
             <div class="body">

@@ -2,6 +2,25 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.24.3](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.3) - 2026-02-15
+
+This patch focuses entirely on performance, eliminating startup lag and optimizing the TUI data pipeline for instant responsiveness.
+
+###  Performance Improvements
+
+- **Parallel Dependency Checks:**
+    - Startup latency is drastically reduced by running dependency checks for `mpv` (critical) and `yt-dlp` (optional) in **concurrent threads**.
+    - Previously, the application waited for the slower `yt-dlp --version` check to finish before launching. Now, it processes both checks simultaneously, effectively halving the wait time (which technically isn't much but feels instant)
+    - *Ensures a valid state for CLI users while minimizing blocking time.*
+
+- **Batched TUI Data Loading:**
+    - Implemented **batch processing** for sending items (Tracks, Playlists, Directories) to the fuzzy finder (`skim`).
+    - Items are now ingested in batches of **500** instead of individually.
+    - This significantly reduces async channel locking overhead and context switching, fixing the "rendering lag" seen in large libraries.
+    * *Optimizes item ingestion to work efficiently with the Skim v3 async runtime.*
+
+---
+
 ## [v0.24.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.2) - 2026-02-14
 
 **This patch upgrades the core TUI engine for better performance and reduced memory usage.**
