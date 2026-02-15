@@ -14,6 +14,8 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+const BATCH_SIZE: usize = 500;
+
 // skim item wrappers
 
 pub fn run_main_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Config) -> Result<()> {
@@ -120,17 +122,26 @@ pub fn run_tag_picker(tracks: &[indexer::Track], cfg: &config::Config, key: &str
     let mut sorted_keys: Vec<_> = counts.keys().collect();
     sorted_keys.sort();
 
+    let mut batch: Vec<Arc<dyn SkimItem>> = Vec::with_capacity(BATCH_SIZE);
+
     for k in sorted_keys {
         let count = *counts.get(k).unwrap();
         let sample_list = samples.get(k).unwrap().clone();
 
-        tx.send(vec![Arc::new(TagItem {
+        batch.push(Arc::new(TagItem {
             name: k.clone(),
             count,
             samples: sample_list,
             icon: icon.to_string(),
-        })])
-        .unwrap();
+        }));
+
+        if batch.len() >= BATCH_SIZE {
+            tx.send(batch).unwrap();
+            batch = Vec::with_capacity(BATCH_SIZE);
+        }
+    }
+    if !batch.is_empty() {
+        tx.send(batch).unwrap();
     }
     drop(tx);
 
@@ -285,14 +296,20 @@ pub fn manage_remove_menu(cfg: &mut config::Config) -> Result<bool> {
     }
 
     let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
-    for dir in &cfg.music_dirs {
-        let dir_str = dir.to_string_lossy().to_string();
-        tx.send(vec![Arc::new(MenuItem {
-            text: dir_str.clone(),
-            id: dir_str,
-        })])
-        .unwrap();
-    }
+
+    let batch: Vec<Arc<dyn SkimItem>> = cfg
+        .music_dirs
+        .iter()
+        .map(|dir| {
+            let dir_str = dir.to_string_lossy().to_string();
+            Arc::new(MenuItem {
+                text: dir_str.clone(),
+                id: dir_str,
+            }) as Arc<dyn SkimItem>
+        })
+        .collect();
+
+    tx.send(batch).unwrap();
     drop(tx);
 
     let opts = SkimOptionsBuilder::default()
@@ -556,13 +573,18 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
 
 pub fn run_skim_simple(items: Vec<&str>, prompt: &str) -> Option<String> {
     let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
-    for i in items {
-        tx.send(vec![Arc::new(MenuItem {
-            text: i.to_string(),
-            id: "".to_string(),
-        })])
-        .unwrap();
-    }
+
+    let batch: Vec<Arc<dyn SkimItem>> = items
+        .into_iter()
+        .map(|i| {
+            Arc::new(MenuItem {
+                text: i.to_string(),
+                id: "".to_string(),
+            }) as Arc<dyn SkimItem>
+        })
+        .collect();
+
+    tx.send(batch).unwrap();
     drop(tx);
 
     let opts = SkimOptionsBuilder::default()
@@ -583,13 +605,18 @@ pub fn run_skim_simple(items: Vec<&str>, prompt: &str) -> Option<String> {
 
 pub fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<String>> {
     let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
-    for i in items {
-        tx.send(vec![Arc::new(MenuItem {
-            text: i.clone(),
-            id: i,
-        })])
-        .unwrap();
-    }
+
+    let batch: Vec<Arc<dyn SkimItem>> = items
+        .into_iter()
+        .map(|i| {
+            Arc::new(MenuItem {
+                text: i.clone(),
+                id: i,
+            }) as Arc<dyn SkimItem>
+        })
+        .collect();
+
+    tx.send(batch).unwrap();
     drop(tx);
 
     let opts = SkimOptionsBuilder::default()
@@ -627,17 +654,29 @@ where
     T: Borrow<indexer::Track>,
 {
     let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
+
+    let mut batch: Vec<Arc<dyn SkimItem>> = Vec::with_capacity(BATCH_SIZE);
+
     for item in tracks {
         let track = item.borrow();
         if track.media_type == "playlist" {
             continue;
         }
         let display = format!("{} - {}", track.artist, track.title);
-        tx.send(vec![Arc::new(TrackItem {
+
+        batch.push(Arc::new(TrackItem {
             track: track.clone(),
             display_text: display,
-        })])
-        .unwrap();
+        }));
+
+        if batch.len() >= BATCH_SIZE {
+            tx.send(batch).unwrap();
+            batch = Vec::with_capacity(BATCH_SIZE);
+        }
+    }
+
+    if !batch.is_empty() {
+        tx.send(batch).unwrap();
     }
     drop(tx);
 
@@ -671,7 +710,6 @@ where
 }
 
 pub fn run_dir_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<()> {
-    // Map: DirPath -> Vec<Filename>
     let mut dir_map: HashMap<String, Vec<String>> = HashMap::new();
 
     for t in tracks {
@@ -690,6 +728,8 @@ pub fn run_dir_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<(
     }
 
     let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
+    let mut batch: Vec<Arc<dyn SkimItem>> = Vec::with_capacity(BATCH_SIZE);
+
     for (path, files) in dir_map {
         let count = files.len();
         let name = std::path::Path::new(&path)
@@ -698,13 +738,20 @@ pub fn run_dir_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<(
             .to_string_lossy()
             .to_string();
 
-        tx.send(vec![Arc::new(DirItem {
+        batch.push(Arc::new(DirItem {
             dirname: name,
             path,
             count,
             samples: files,
-        })])
-        .unwrap();
+        }));
+
+        if batch.len() >= BATCH_SIZE {
+            tx.send(batch).unwrap();
+            batch = Vec::with_capacity(BATCH_SIZE);
+        }
+    }
+    if !batch.is_empty() {
+        tx.send(batch).unwrap();
     }
     drop(tx);
 
@@ -740,10 +787,10 @@ pub fn run_dir_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<(
 
 pub fn run_playlist_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<()> {
     let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
+    let mut batch: Vec<Arc<dyn SkimItem>> = Vec::with_capacity(BATCH_SIZE);
 
     for t in tracks {
         if t.media_type == "playlist" {
-            // handle errors gracefully (eg, if moved) by defaulting to 0
             let (count, lines) = if let Ok(content) = std::fs::read_to_string(&t.path) {
                 let all_valid_lines: Vec<String> = content
                     .lines()
@@ -759,14 +806,21 @@ pub fn run_playlist_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Res
                 (0, vec!["(Could not read file)".to_string()])
             };
 
-            tx.send(vec![Arc::new(PlaylistItem {
+            batch.push(Arc::new(PlaylistItem {
                 name: t.title.clone(),
                 path: t.path.clone(),
                 count,
                 preview_lines: lines,
-            })])
-            .unwrap();
+            }));
+
+            if batch.len() >= BATCH_SIZE {
+                tx.send(batch).unwrap();
+                batch = Vec::with_capacity(BATCH_SIZE);
+            }
         }
+    }
+    if !batch.is_empty() {
+        tx.send(batch).unwrap();
     }
     drop(tx);
 
@@ -798,7 +852,7 @@ pub fn run_search_mode(cfg: &config::Config, initial_query: Option<String>) -> R
     }
 
     let query = if let Some(q) = initial_query {
-        q // quey passed via cli
+        q
     } else {
         println!("Search YouTube or Paste URL:");
         print!("🔎 > ");
@@ -829,9 +883,12 @@ pub fn run_search_mode(cfg: &config::Config, initial_query: Option<String>) -> R
     }
 
     let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
-    for r in results {
-        tx.send(vec![Arc::new(SearchItem { result: r })]).unwrap();
-    }
+    let batch: Vec<Arc<dyn SkimItem>> = results
+        .into_iter()
+        .map(|r| Arc::new(SearchItem { result: r }) as Arc<dyn SkimItem>)
+        .collect();
+
+    tx.send(batch).unwrap();
     drop(tx);
 
     let opts = SkimOptionsBuilder::default()
