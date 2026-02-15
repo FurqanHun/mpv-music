@@ -128,9 +128,42 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     log::info!("Loading configuration from: {:?}", config_path);
     let content = std::fs::read_to_string(&config_path)?;
 
-    let cfg: Config = toml::from_str(&content).context("Failed to parse config.toml")?;
+    let mut cfg: Config = toml::from_str(&content).context("Failed to parse config.toml")?;
 
     log::debug!("Successfully parsed {} bytes of TOML", content.len());
+
+    let mut warnings = Vec::new();
+
+    if cfg.volume > 130 {
+        warnings.push(format!(
+            "Volume {} exceeds maximum (130). Reseting to 100.",
+            cfg.volume
+        ));
+        cfg.volume = 100;
+    }
+
+    let valid_loop_modes = ["inf", "playlist", "no", "off", "false", "track", "file"];
+    let is_numeric = cfg.loop_mode.chars().all(|c| c.is_numeric());
+
+    if !valid_loop_modes.contains(&cfg.loop_mode.as_str()) && !is_numeric {
+        warnings.push(format!(
+            "Invalid loop_mode '{}'. Defaulting to 'inf'.",
+            cfg.loop_mode
+        ));
+        cfg.loop_mode = "inf".to_string();
+    }
+
+    if cfg.music_dirs.is_empty() {
+        warnings.push(
+            "No music directories configured. Run 'mpv-music --manage-dirs' to add folders."
+                .to_string(),
+        );
+    }
+
+    for warning in warnings {
+        log::warn!("Config validation: {}", warning);
+        eprintln!("\x1b[33;1m[Config Warning]\x1b[0m {}", warning);
+    }
 
     log::trace!("Loaded Config State: {:#?}", cfg);
 
