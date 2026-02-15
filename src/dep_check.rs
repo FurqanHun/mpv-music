@@ -1,15 +1,32 @@
 use crate::config::Config;
 use anyhow::Result;
-use std::process::{Command, exit};
-use std::thread;
+use std::process::{Command, Stdio, exit};
 
 pub fn check(cfg: &mut Config) -> Result<()> {
     log::info!("Checking external dependencies...");
 
-    let mpv_handle = thread::spawn(|| Command::new("mpv").arg("--version").output());
-    let ytdlp_handle = thread::spawn(|| Command::new("yt-dlp").arg("--version").output());
+    // Spawn both processes WITHOUT waiting (true parallelism without thread overhead)
+    let mpv_child = Command::new("mpv")
+        .arg("--version")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn();
 
-    match mpv_handle.join().unwrap() {
+    let ytdlp_child = Command::new("yt-dlp")
+        .arg("--version")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn();
+
+    let mpv_output = match mpv_child {
+        Ok(child) => child.wait_with_output(),
+        Err(_) => Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "mpv not found",
+        )),
+    };
+
+    match mpv_output {
         Ok(output) => {
             let raw_output = String::from_utf8_lossy(&output.stdout);
             let mpv_line = raw_output.lines().next().unwrap_or("Unknown Version");
@@ -33,7 +50,17 @@ pub fn check(cfg: &mut Config) -> Result<()> {
         }
     }
 
-    match ytdlp_handle.join().unwrap() {
+    let ytdlp_output = match ytdlp_child {
+        Ok(child) => child.wait_with_output(),
+        Err(_) => {
+            log::warn!("Dependency 'yt-dlp' not found. Search and Streaming features disabled.");
+            cfg.ytdlp_available = false;
+            cfg.ytdlp_is_nightly = false;
+            return Ok(());
+        }
+    };
+
+    match ytdlp_output {
         Ok(output) => {
             if output.status.success() {
                 let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
