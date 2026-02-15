@@ -230,7 +230,7 @@ pub fn run_manage_dirs_mode(cfg: &mut config::Config) -> Result<bool> {
 
     loop {
         let count = cfg.music_dirs.len();
-        let prompt = format!("📂 Manage ({} dirs) >   ", count);
+        let prompt = format!("📂 Manage ({} dirs) >    ", count);
 
         let options = vec!["1) Add Directory", "2) Remove Directory", "q) Back"];
 
@@ -314,7 +314,7 @@ pub fn manage_remove_menu(cfg: &mut config::Config) -> Result<bool> {
 
     let opts = SkimOptionsBuilder::default()
         .multi(true)
-        .prompt("🗑️  Remove >   ")
+        .prompt("🗑️  Remove >    ")
         .header("   Select directories to remove (TAB to select)")
         .reverse(true)
         .inline_info(true)
@@ -685,7 +685,7 @@ where
         .multi(true)
         .preview("")
         .prompt("🎵 Tracks > ")
-        .header("   Artist              Title")
+        .header("   Artist               Title")
         .reverse(true)
         .inline_info(true)
         .build()
@@ -792,10 +792,49 @@ pub fn run_playlist_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Res
     for t in tracks {
         if t.media_type == "playlist" {
             let (count, lines) = if let Ok(content) = std::fs::read_to_string(&t.path) {
+                let playlist_dir = std::path::Path::new(&t.path)
+                    .parent()
+                    .unwrap_or_else(|| std::path::Path::new("."));
+
+                // validate and canonicalize paths
                 let all_valid_lines: Vec<String> = content
                     .lines()
                     .filter(|l| !l.starts_with('#') && !l.trim().is_empty())
-                    .map(|s| s.to_string())
+                    .filter_map(|line| {
+                        let line_trim = line.trim();
+
+                        if line_trim.starts_with("http://")
+                            || line_trim.starts_with("https://")
+                            || line_trim.starts_with("ftp://")
+                        {
+                            return Some(line_trim.to_string());
+                        }
+
+                        let path = std::path::PathBuf::from(line_trim);
+
+                        if path.is_absolute() {
+                            if path.exists() {
+                                Some(line_trim.to_string())
+                            } else {
+                                log::debug!(
+                                    "Skipping non-existent path in playlist: {}",
+                                    line_trim
+                                );
+                                None
+                            }
+                        } else {
+                            match playlist_dir.join(&path).canonicalize() {
+                                Ok(canonical) => Some(canonical.to_string_lossy().to_string()),
+                                Err(_) => {
+                                    log::debug!(
+                                        "Could not resolve relative path in playlist: {}",
+                                        line_trim
+                                    );
+                                    None
+                                }
+                            }
+                        }
+                    })
                     .collect();
 
                 let total = all_valid_lines.len();

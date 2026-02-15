@@ -54,8 +54,24 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
 
     apply_common_args(&mut cmd, config);
 
-    if let Some(first) = paths.first() {
-        apply_url_optimizations(&mut cmd, first, config);
+    // Priority: YouTube > Generic HTTP > Local File (default)
+    let mut best_target = paths.first();
+
+    for path in paths {
+        let is_yt = path.contains("youtube.com") || path.contains("youtu.be");
+        let is_http = path.starts_with("http");
+
+        if is_yt {
+            best_target = Some(path);
+            break;
+        } else if is_http {
+            best_target = Some(path);
+        }
+    }
+
+    if let Some(target) = best_target {
+        log::debug!("Configuring mpv based on representative track: {}", target);
+        apply_url_optimizations(&mut cmd, target, config);
     }
 
     let dirs = ProjectDirs::from("com", "furqanhun", "mpv-music")
