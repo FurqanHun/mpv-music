@@ -177,7 +177,16 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
             }
 
             if title.is_empty() {
-                title = path.file_stem()?.to_string_lossy().to_string();
+                let filename = path.file_stem()?.to_string_lossy().to_string();
+
+                if let Some((parsed_artist, parsed_title)) = filename.split_once(" - ") {
+                    title = parsed_title.trim().to_string();
+                    if artist.is_empty() {
+                        artist = parsed_artist.trim().to_string();
+                    }
+                } else {
+                    title = filename;
+                }
             }
             if artist.is_empty() {
                 artist = "UNKNOWN".to_string();
