@@ -1,11 +1,15 @@
 use crate::config::Config;
 use anyhow::Result;
 use std::process::{Command, exit};
+use std::thread;
 
 pub fn check(cfg: &mut Config) -> Result<()> {
     log::info!("Checking external dependencies...");
 
-    match Command::new("mpv").arg("--version").output() {
+    let mpv_handle = thread::spawn(|| Command::new("mpv").arg("--version").output());
+    let ytdlp_handle = thread::spawn(|| Command::new("yt-dlp").arg("--version").output());
+
+    match mpv_handle.join().unwrap() {
         Ok(output) => {
             let raw_output = String::from_utf8_lossy(&output.stdout);
             let mpv_line = raw_output.lines().next().unwrap_or("Unknown Version");
@@ -29,26 +33,30 @@ pub fn check(cfg: &mut Config) -> Result<()> {
         }
     }
 
-    match Command::new("yt-dlp").arg("--version").output() {
+    match ytdlp_handle.join().unwrap() {
         Ok(output) => {
-            let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            cfg.ytdlp_available = true;
+            if output.status.success() {
+                let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                cfg.ytdlp_available = true;
 
-            // Stable is "YYYY.MM.DD" (3 parts). Nightly is "YYYY.MM.DD.HHMMSS" (4 parts)
-            let is_nightly = version.split('.').count() >= 4 || version.contains("nightly");
+                let is_nightly = version.split('.').count() >= 4 || version.contains("nightly");
 
-            if is_nightly {
-                log::info!("Dependency 'yt-dlp': Found Nightly (Version: {})", version);
-                cfg.ytdlp_is_nightly = true;
+                if is_nightly {
+                    log::info!("Dependency 'yt-dlp': Found Nightly (Version: {})", version);
+                    cfg.ytdlp_is_nightly = true;
+                } else {
+                    log::info!("Dependency 'yt-dlp': Found Stable (Version: {})", version);
+                    println!(
+                        "\x1b[33m[Suggestion]\x1b[0m yt-dlp nightly is recommended for best performance."
+                    );
+                    println!(
+                        "             Get it here: https://github.com/yt-dlp/yt-dlp-nightly-builds/releases"
+                    );
+                    cfg.ytdlp_is_nightly = false;
+                }
             } else {
-                log::info!("Dependency 'yt-dlp': Found Stable (Version: {})", version);
-                println!(
-                    "\x1b[33m[Suggestion]\x1b[0m yt-dlp nightly is recommended for best performance."
-                );
-                println!(
-                    "             Get it here: https://github.com/yt-dlp/yt-dlp-nightly-builds/releases"
-                );
-
+                log::warn!("Dependency 'yt-dlp' found but returned error status.");
+                cfg.ytdlp_available = false;
                 cfg.ytdlp_is_nightly = false;
             }
         }
