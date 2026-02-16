@@ -26,7 +26,15 @@ pub fn play(target: &str, config: &Config) -> Result<()> {
     let mut cmd = Command::new("mpv");
 
     apply_common_args(&mut cmd, config);
-    apply_url_optimizations(&mut cmd, target, config);
+
+    let optimization_target = if let Some(inner_url) = inspect_playlist_content(target, config) {
+        log::debug!("Playlist content scan found network link. optimizing for: {}", inner_url);
+        inner_url
+    } else {
+        target.to_string()
+    };
+
+    apply_url_optimizations(&mut cmd, &optimization_target, config);
 
     cmd.arg(target);
 
@@ -35,7 +43,7 @@ pub fn play(target: &str, config: &Config) -> Result<()> {
 
     let status = cmd.status().context("Failed to launch mpv")?;
 
-    if !status.success() && target.starts_with("http") {
+    if !status.success() && classify_target_weight(&optimization_target) > 0 {
         log::error!("MPV process exited with error status. Checking yt-dlp health...");
         check_ytdlp_status();
     }
@@ -54,18 +62,21 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
 
     apply_common_args(&mut cmd, config);
 
-    // Priority: YouTube > Generic HTTP > Local File (default)
+    // O(N) Single-Pass Scan: Find the item with the highest requirement.
+    // 0 = Local (Default)
+    // 1 = HTTP/FTP (Basic network opts)
+    // 2 = YouTube (Needs JS runtimes & headers)
     let mut best_target = paths.first();
+    let mut max_weight = 0;
 
     for path in paths {
-        let is_yt = path.contains("youtube.com") || path.contains("youtu.be");
-        let is_http = path.starts_with("http");
-
-        if is_yt {
+        let weight = classify_target_weight(path);
+        if weight > max_weight {
+            max_weight = weight;
             best_target = Some(path);
-            break;
-        } else if is_http {
-            best_target = Some(path);
+            if max_weight == 2 {
+                break; // found yt, stop scanning
+            }
         }
     }
 
@@ -126,11 +137,53 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
 }
 
 // helpers
+
+// 0 = Local File
+// 1 = Generic Network URL
+// 2 = YouTube (Requires yt-dlp setup)
+fn classify_target_weight(s: &str) -> u8 {
+    if s.contains("youtube.com") || s.contains("youtu.be") {
+        2
+    } else if s.starts_with("http") || s.starts_with("ftp") {
+        1
+    } else {
+        0
+    }
+}
+
+// Scans a playlist file to find the "heaviest" URL inside
+fn inspect_playlist_content(path_str: &str, config: &Config) -> Option<String> {
+    let path = std::path::Path::new(path_str);
+
+    let ext = path.extension()?.to_str()?.to_lowercase();
+    if !config.playlist_exts.contains(&ext) {
+        return None;
+    }
+
+    let mut best_match: Option<String> = None;
+    let mut max_weight = 0;
+
+    if let Ok(content) = std::fs::read_to_string(path) {
+        for line in content.lines() {
+            let trim = line.trim();
+            let weight = classify_target_weight(trim);
+
+            if weight > max_weight {
+                max_weight = weight;
+                best_match = Some(trim.to_string());
+                if max_weight == 2 {
+                    break; // found yt, stop reading file
+                }
+            }
+        }
+    }
+    best_match
+}
+
 fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
-    let is_url = target.starts_with("http")
-        || target.starts_with("yt-dlp://")
-        || target.starts_with("ftp://");
-    let is_youtube = target.contains("youtube.com") || target.contains("youtu.be");
+    let weight = classify_target_weight(target);
+    let is_youtube = weight == 2;
+    let is_url = weight >= 1;
 
     if is_url {
         log::debug!("Applying network stream optimizations");
