@@ -7,10 +7,19 @@ on:
   workflow_dispatch:
 
 jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run Unit Tests
+        run: cargo test --all-features
+
   build-and-upload:
     name: Build ${{ matrix.target }}
+    needs: test
     runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -18,19 +27,15 @@ jobs:
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             use_cross: true
-
           - target: aarch64-unknown-linux-musl
             os: ubuntu-latest
             use_cross: true
-
           - target: armv7-unknown-linux-musleabihf
             os: ubuntu-latest
             use_cross: true
-
           - target: x86_64-apple-darwin
             os: macos-latest
             use_cross: false
-
           - target: aarch64-apple-darwin
             os: macos-latest
             use_cross: false
