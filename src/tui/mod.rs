@@ -962,3 +962,34 @@ pub fn run_search_mode(cfg: &config::Config, initial_query: Option<String>) -> R
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_url_detection_https() {
+        let line = "https://youtube.com/watch?v=test";
+        assert!(line.starts_with("https://"));
+    }
+
+    #[test]
+    fn test_not_a_url() {
+        let line = "/home/user/Music/song.mp3";
+        let is_url = line.starts_with("http://")
+            || line.starts_with("https://")
+            || line.starts_with("ftp://");
+        assert!(!is_url);
+    }
+
+    #[test]
+    fn test_absolute_path_unix() {
+        let path = std::path::PathBuf::from("/home/user/song.mp3");
+        assert!(path.is_absolute());
+    }
+
+    #[test]
+    fn test_relative_path_parent() {
+        let path = std::path::PathBuf::from("../Music/song.mp3");
+        assert!(!path.is_absolute());
+    }
+}

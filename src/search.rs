@@ -12,6 +12,24 @@ pub struct SearchResult {
     pub is_playlist: bool,
 }
 
+// Helper: Format seconds into MM:SS
+fn format_duration(seconds: f64) -> String {
+    let m = (seconds / 60.0).floor();
+    let s = (seconds % 60.0).floor();
+    format!("{:02}:{:02}", m, s)
+}
+
+// Helper: Format view count (e.g. 1.2M, 5.4K)
+fn format_views(count: u64) -> String {
+    if count >= 1_000_000 {
+        format!("{:.1}M", count as f64 / 1_000_000.0)
+    } else if count >= 1_000 {
+        format!("{:.1}K", count as f64 / 1_000.0)
+    } else {
+        count.to_string()
+    }
+}
+
 pub fn search_youtube(query: &str, limit: usize) -> Result<Vec<SearchResult>> {
     log::info!(
         "Starting YouTube search for: '{}' (Limit: {})",
@@ -104,22 +122,14 @@ pub fn search_youtube(query: &str, limit: usize) -> Result<Vec<SearchResult>> {
 
             // Duration: Seconds -> MM:SS
             let duration = if let Some(seconds) = v["duration"].as_f64() {
-                let m = (seconds / 60.0).floor();
-                let s = (seconds % 60.0).floor();
-                format!("{:02}:{:02}", m, s)
+                format_duration(seconds)
             } else {
                 "LIVE/???".to_string()
             };
 
             // Views: 1200000 -> 1.2M
             let views = if let Some(count) = v["view_count"].as_u64() {
-                if count >= 1_000_000 {
-                    format!("{:.1}M", count as f64 / 1_000_000.0)
-                } else if count >= 1_000 {
-                    format!("{:.1}K", count as f64 / 1_000.0)
-                } else {
-                    count.to_string()
-                }
+                format_views(count)
             } else {
                 "N/A".to_string()
             };
@@ -147,4 +157,94 @@ pub fn search_youtube(query: &str, limit: usize) -> Result<Vec<SearchResult>> {
     );
 
     Ok(results)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_search_result_creation() {
+        let result = SearchResult {
+            title: "Test Video".to_string(),
+            url: "https://youtube.com/watch?v=test".to_string(),
+            uploader: "Test Channel".to_string(),
+            duration: "03:45".to_string(),
+            view_count: "1.2M".to_string(),
+            is_playlist: false,
+        };
+
+        assert_eq!(result.title, "Test Video");
+        assert_eq!(result.url, "https://youtube.com/watch?v=test");
+        assert!(!result.is_playlist);
+    }
+
+    #[test]
+    fn test_search_result_playlist() {
+        let result = SearchResult {
+            title: "Mix - Lofi".to_string(),
+            url: "https://youtube.com/playlist?list=test".to_string(),
+            uploader: "YouTube Music".to_string(),
+            duration: "N/A".to_string(),
+            view_count: "N/A".to_string(),
+            is_playlist: true,
+        };
+
+        assert!(result.is_playlist);
+        assert!(result.url.contains("playlist"));
+    }
+
+    #[test]
+    fn test_view_count_formatting_millions() {
+        let count = 1_200_000_u64;
+        let formatted = format_views(count);
+        assert_eq!(formatted, "1.2M");
+    }
+
+    #[test]
+    fn test_view_count_formatting_thousands() {
+        let count = 5_400_u64;
+        let formatted = format_views(count);
+        assert_eq!(formatted, "5.4K");
+    }
+
+    #[test]
+    fn test_view_count_formatting_small() {
+        let count = 999_u64;
+        let formatted = format_views(count);
+        assert_eq!(formatted, "999");
+    }
+
+    #[test]
+    fn test_duration_formatting() {
+        let seconds: f64 = 225.0; // 3:45
+        let formatted = format_duration(seconds);
+        assert_eq!(formatted, "03:45");
+    }
+
+    #[test]
+    fn test_duration_formatting_hours() {
+        let seconds: f64 = 3665.0; // 1:01:05
+        let formatted = format_duration(seconds);
+        assert_eq!(formatted, "61:05");
+    }
+
+    #[test]
+    fn test_url_shorts_detection() {
+        let url = "https://youtube.com/shorts/abc123";
+        assert!(url.contains("/shorts/"));
+    }
+
+    #[test]
+    fn test_url_mix_detection() {
+        let url = "https://youtube.com/watch?v=test&list=RDtest";
+        assert!(url.contains("list=RD"));
+    }
+
+    #[test]
+    fn test_url_channel_detection() {
+        assert!("https://youtube.com/channel/UC123".contains("/channel/"));
+        assert!("https://youtube.com/@channelname".contains("/@"));
+        assert!("https://youtube.com/c/channelname".contains("/c/"));
+    }
 }

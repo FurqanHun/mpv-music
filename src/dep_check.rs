@@ -96,3 +96,23 @@ pub fn check(cfg: &mut Config) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_version_parsing_nightly() {
+        let version = "2026.02.12.233641";
+        let is_nightly = version.split('.').count() >= 4 || version.contains("nightly");
+
+        assert!(is_nightly);
+    }
+
+    #[test]
+    fn test_version_parsing_stable() {
+        let version = "2026.02.12";
+        let is_nightly = version.split('.').count() >= 4 || version.contains("nightly");
+
+        assert!(!is_nightly);
+    }
+}

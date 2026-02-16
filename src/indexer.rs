@@ -30,6 +30,17 @@ fn to_set(exts: &[String]) -> HashSet<String> {
     exts.iter().map(|s| s.trim().to_lowercase()).collect()
 }
 
+pub(crate) fn parse_filename_metadata(filename: &str) -> (String, String) {
+    if let Some((parsed_artist, parsed_title)) = filename.split_once(" - ") {
+        (
+            parsed_artist.trim().to_string(),
+            parsed_title.trim().to_string(),
+        )
+    } else {
+        (String::new(), filename.to_string())
+    }
+}
+
 pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
     if config.music_dirs.is_empty() {
         log::warn!("Scan aborted: No music directories configured.");
@@ -179,13 +190,11 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
             if title.is_empty() {
                 let filename = path.file_stem()?.to_string_lossy().to_string();
 
-                if let Some((parsed_artist, parsed_title)) = filename.split_once(" - ") {
-                    title = parsed_title.trim().to_string();
-                    if artist.is_empty() {
-                        artist = parsed_artist.trim().to_string();
-                    }
-                } else {
-                    title = filename;
+                let (parsed_artist, parsed_title) = parse_filename_metadata(&filename);
+
+                title = parsed_title;
+                if artist.is_empty() && !parsed_artist.is_empty() {
+                    artist = parsed_artist;
                 }
             }
             if artist.is_empty() {
@@ -295,4 +304,153 @@ pub fn load_index() -> Result<(Vec<Track>, bool)> {
 
     log::debug!("Index loaded successfully. Loaded {} tracks.", tracks.len());
     Ok((tracks, needs_repair))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_standard_format() {
+        let (artist, title) = parse_filename_metadata("Kendrick Lamar - HUMBLE.mp3");
+        assert_eq!(artist, "Kendrick Lamar");
+        assert_eq!(title, "HUMBLE.mp3");
+    }
+
+    #[test]
+    fn test_parse_with_whitespace() {
+        let (artist, title) = parse_filename_metadata("  Daft Punk  -  Get Lucky  ");
+        assert_eq!(artist, "Daft Punk");
+        assert_eq!(title, "Get Lucky");
+    }
+
+    #[test]
+    fn test_parse_no_artist() {
+        let (artist, title) = parse_filename_metadata("JustASong.flac");
+        assert_eq!(artist, "");
+        assert_eq!(title, "JustASong.flac");
+    }
+
+    #[test]
+    fn test_parse_multiple_dashes() {
+        // Should only split on FIRST " - "
+        let (artist, title) = parse_filename_metadata("Arctic Monkeys - Do I Wanna Know? - Live");
+        assert_eq!(artist, "Arctic Monkeys");
+        assert_eq!(title, "Do I Wanna Know? - Live");
+    }
+
+    #[test]
+    fn test_parse_unicode() {
+        let (artist, title) = parse_filename_metadata("Ado - うっせぇわ");
+        assert_eq!(artist, "Ado");
+        assert_eq!(title, "うっせぇわ");
+    }
+
+    #[test]
+    fn test_parse_special_characters() {
+        let (artist, title) = parse_filename_metadata("AC/DC - Back In Black");
+        assert_eq!(artist, "AC/DC");
+        assert_eq!(title, "Back In Black");
+    }
+
+    #[test]
+    fn test_parse_numbers() {
+        let (artist, title) = parse_filename_metadata("Twenty One Pilots - Stressed Out");
+        assert_eq!(artist, "Twenty One Pilots");
+        assert_eq!(title, "Stressed Out");
+    }
+
+    #[test]
+    fn test_parse_single_character_artist() {
+        let (artist, title) = parse_filename_metadata("K - Song Title");
+        assert_eq!(artist, "K");
+        assert_eq!(title, "Song Title");
+    }
+
+    #[test]
+    fn test_track_creation() {
+        let track = Track {
+            path: "/music/song.mp3".to_string(),
+            title: "Test Song".to_string(),
+            artist: "Test Artist".to_string(),
+            album: "Test Album".to_string(),
+            genre: "Test Genre".to_string(),
+            mtime: 1234567890,
+            size: 1024,
+            media_type: "audio".to_string(),
+        };
+
+        assert_eq!(track.artist, "Test Artist");
+        assert_eq!(track.title, "Test Song");
+        assert_eq!(track.media_type, "audio");
+        assert_eq!(track.size, 1024);
+    }
+
+    #[test]
+    fn test_track_serialization() {
+        let track = Track {
+            path: "/music/test.mp3".to_string(),
+            title: "Title".to_string(),
+            artist: "Artist".to_string(),
+            album: "Album".to_string(),
+            genre: "Genre".to_string(),
+            mtime: 12345,
+            size: 1000,
+            media_type: "audio".to_string(),
+        };
+
+        // Should be able to serialize to JSON
+        let json = serde_json::to_string(&track);
+        assert!(json.is_ok());
+    }
+
+    #[test]
+    fn test_track_deserialization() {
+        let json = r#"{
+            "path": "/test.mp3",
+            "title": "Test",
+            "artist": "Artist",
+            "album": "Album",
+            "genre": "Rock",
+            "mtime": 123,
+            "size": 500,
+            "media_type": "audio"
+        }"#;
+
+        let track: Result<Track, _> = serde_json::from_str(json);
+        assert!(track.is_ok());
+
+        let track = track.unwrap();
+        assert_eq!(track.artist, "Artist");
+        assert_eq!(track.genre, "Rock");
+    }
+
+    #[test]
+    fn test_to_set_function() {
+        let exts = vec!["mp3".to_string(), "flac".to_string(), "wav".to_string()];
+        let set = to_set(&exts);
+
+        assert!(set.contains("mp3"));
+        assert!(set.contains("flac"));
+        assert!(set.contains("wav"));
+        assert!(!set.contains("mp4"));
+    }
+
+    #[test]
+    fn test_to_set_case_insensitive() {
+        let exts = vec!["MP3".to_string(), "FLAC".to_string()];
+        let set = to_set(&exts);
+
+        // to_set converts to lowercase
+        assert!(set.contains("mp3"));
+        assert!(set.contains("flac"));
+    }
+
+    #[test]
+    fn test_to_set_empty() {
+        let exts: Vec<String> = vec![];
+        let set = to_set(&exts);
+
+        assert!(set.is_empty());
+    }
 }

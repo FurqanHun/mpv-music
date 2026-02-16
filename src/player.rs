@@ -28,7 +28,10 @@ pub fn play(target: &str, config: &Config) -> Result<()> {
     apply_common_args(&mut cmd, config);
 
     let optimization_target = if let Some(inner_url) = inspect_playlist_content(target, config) {
-        log::debug!("Playlist content scan found network link. optimizing for: {}", inner_url);
+        log::debug!(
+            "Playlist content scan found network link. optimizing for: {}",
+            inner_url
+        );
         inner_url
     } else {
         target.to_string()
@@ -365,4 +368,58 @@ fn check_ytdlp_status() {
             combined
         );
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_classify_youtube() {
+        assert_eq!(
+            classify_target_weight("https://youtube.com/watch?v=test"),
+            2
+        );
+        assert_eq!(classify_target_weight("https://youtu.be/test123"), 2);
+        assert_eq!(classify_target_weight("http://youtube.com/playlist"), 2);
+    }
+
+    #[test]
+    fn test_classify_generic_url() {
+        assert_eq!(classify_target_weight("https://example.com/song.mp3"), 1);
+        assert_eq!(classify_target_weight("http://radio.com/stream"), 1);
+        assert_eq!(classify_target_weight("ftp://server.com/file"), 1);
+    }
+
+    #[test]
+    fn test_classify_local_file() {
+        assert_eq!(classify_target_weight("/home/user/music.mp3"), 0);
+        assert_eq!(classify_target_weight("./local/file.flac"), 0);
+        assert_eq!(classify_target_weight("C:\\Music\\song.mp3"), 0);
+    }
+
+    #[test]
+    fn test_classify_empty() {
+        assert_eq!(classify_target_weight(""), 0);
+    }
+
+    #[test]
+    fn test_classify_priority_order() {
+        // YouTube (2) > HTTP (1) > Local (0)
+        let youtube = classify_target_weight("https://youtube.com/test");
+        let http = classify_target_weight("https://example.com/test");
+        let local = classify_target_weight("/path/to/file");
+
+        assert!(youtube > http);
+        assert!(http > local);
+    }
+
+    #[test]
+    fn test_has_command_invalid() {
+        // These commands should NOT exist
+        assert!(!has_command("this_command_definitely_does_not_exist_12345"));
+    }
+
+    // Note: We can't reliably test has_command for real commands
+    // because they might not be installed in CI environment
 }

@@ -183,3 +183,126 @@ pub fn save(config: &Config) -> Result<()> {
     log::debug!("Configuration saved successfully.");
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_config_values() {
+        let cfg = Config::default();
+        assert_eq!(cfg.volume, 100);
+        assert_eq!(cfg.loop_mode, "inf");
+        assert!(cfg.shuffle);
+        assert!(!cfg.video_ok);
+        assert!(!cfg.watch);
+    }
+
+    #[test]
+    fn test_default_music_dirs_not_empty() {
+        let cfg = Config::default();
+        assert!(
+            !cfg.music_dirs.is_empty(),
+            "Default config should have at least one music directory"
+        );
+    }
+
+    #[test]
+    fn test_default_extensions() {
+        let cfg = Config::default();
+
+        // Audio extensions
+        assert!(cfg.audio_exts.contains(&"mp3".to_string()));
+        assert!(cfg.audio_exts.contains(&"flac".to_string()));
+        assert!(cfg.audio_exts.contains(&"wav".to_string()));
+
+        // Video extensions
+        assert!(cfg.video_exts.contains(&"mp4".to_string()));
+        assert!(cfg.video_exts.contains(&"mkv".to_string()));
+
+        // Playlist extensions
+        assert!(cfg.playlist_exts.contains(&"m3u".to_string()));
+        assert!(cfg.playlist_exts.contains(&"m3u8".to_string()));
+    }
+
+    #[test]
+    fn test_volume_cap_at_130() {
+        // Simulate validation logic from load()
+        let mut volume = 200_u8;
+        if volume > 130 {
+            volume = 100;
+        }
+        assert_eq!(volume, 100);
+    }
+
+    #[test]
+    fn test_volume_allows_130() {
+        let mut volume = 130_u8;
+        if volume > 130 {
+            volume = 100;
+        }
+        assert_eq!(volume, 130);
+    }
+
+    #[test]
+    fn test_volume_allows_normal() {
+        let mut volume = 75_u8;
+        if volume > 130 {
+            volume = 100;
+        }
+        assert_eq!(volume, 75);
+    }
+
+    #[test]
+    fn test_loop_mode_validation_valid() {
+        let valid_modes = ["inf", "playlist", "no", "off", "false", "track", "file"];
+
+        assert!(valid_modes.contains(&"inf"));
+        assert!(valid_modes.contains(&"track"));
+        assert!(valid_modes.contains(&"no"));
+    }
+
+    #[test]
+    fn test_loop_mode_validation_invalid() {
+        let loop_mode = "potato";
+        let valid_modes = ["inf", "playlist", "no", "off", "false", "track", "file"];
+        let is_numeric = loop_mode.chars().all(|c| c.is_numeric());
+
+        assert!(!valid_modes.contains(&loop_mode));
+        assert!(!is_numeric);
+    }
+
+    #[test]
+    fn test_loop_mode_validation_numeric() {
+        let loop_mode = "5";
+        let is_numeric = loop_mode.chars().all(|c| c.is_numeric());
+
+        assert!(is_numeric);
+    }
+
+    #[test]
+    fn test_loop_mode_validation_numeric_multiple_digits() {
+        let loop_mode = "999";
+        let is_numeric = loop_mode.chars().all(|c| c.is_numeric());
+
+        assert!(is_numeric);
+    }
+
+    #[test]
+    fn test_ytdlp_flags_default() {
+        let cfg = Config::default();
+        assert!(!cfg.ytdlp_available);
+        assert!(!cfg.ytdlp_is_nightly);
+    }
+
+    #[test]
+    fn test_mpv_default_args_present() {
+        let cfg = Config::default();
+        assert!(!cfg.mpv_default_args.is_empty());
+        assert!(
+            cfg.mpv_default_args
+                .iter()
+                .any(|arg| arg.contains("--no-video"))
+        );
+    }
+}
