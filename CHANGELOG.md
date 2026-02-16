@@ -2,6 +2,37 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.25.0-dev.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.0-dev.1) - 2026-02-16 (Pre-release)
+
+> ⚠️ **Pre-release / Dev Build:** This release introduces major changes to the indexing engine and playlist resolution logic. Please test for regressions in file scanning and playlist playback.
+
+### Features
+
+- **Indexer (Smart Fallback):**
+    - Implemented a fallback parser for audio files missing ID3 tags.
+    - The indexer now attempts to extract metadata from filenames matching the `Artist - Title.ext` pattern, preventing untagged files from appearing as "UNKNOWN" in the library.
+- **Playlist Engine:**
+    - Added native support for `http://`, `https://`, and `ftp://` streams directly within `.m3u` playlist files.
+    - Fixed relative path resolution: playlist entries are now resolved relative to the playlist file's directory, not the application's current working directory.
+    - Added pre-validation to silently filter out non-existent local files during preview generation.
+- **Config Safety:**
+    - Implemented startup validation for `config.toml`.
+    - Volume is now automatically capped at 130 (resets to 100 if exceeded).
+    - Invalid `loop_mode` values default to `inf`.
+    - Added high-visibility (bold yellow) warnings on stderr when configurations are auto-corrected.
+
+### Performance
+
+- **Startup:** Replaced thread spawning with direct `Command::spawn` for `mpv` and `yt-dlp` dependency checks, reducing startup overhead and resource usage.
+- **Playlist Scanning:** Implemented an O(N) single-pass scanner for the play queue. The player now efficiently detects YouTube links to toggle `yt-dlp` optimizations without iterating through the list multiple times.
+
+### Fixes & Refactoring
+
+- **Player:** Fixed a logic gap where mixed playlists (Local files + YouTube links) would fail to load necessary `yt-dlp` configurations (JS runtimes/User-Agents) if the first track was a local file.
+- **Stability:** Refactored temporary playlist file cleanup to use `AtomicBool::swap()`, eliminating potential race conditions between the `Ctrl+C` signal handler and the `Drop` trait.
+
+---
+
 ## [v0.24.3](https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.3) - 2026-02-15
 
 This patch focuses entirely on performance, eliminating startup lag and optimizing the TUI data pipeline for instant responsiveness.

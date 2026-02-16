@@ -162,8 +162,52 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.0-dev.1" target="_blank" class="tag">v0.25.0-dev.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">February 16, 2026</span>
+            </div>
+            <div class="body">
+                <blockquote>
+<p>⚠️ <strong>Pre-release / Dev Build:</strong> This release introduces major changes to the indexing engine and playlist resolution logic. Please test for regressions in file scanning and playlist playback.</p>
+</blockquote>
+<h3>Features</h3>
+<ul>
+<li><strong>Indexer (Smart Fallback):</strong><ul>
+<li>Implemented a fallback parser for audio files missing ID3 tags.</li>
+<li>The indexer now attempts to extract metadata from filenames matching the <code>Artist - Title.ext</code> pattern, preventing untagged files from appearing as "UNKNOWN" in the library.</li>
+</ul>
+</li>
+<li><strong>Playlist Engine:</strong><ul>
+<li>Added native support for <code>http://</code>, <code>https://</code>, and <code>ftp://</code> streams directly within <code>.m3u</code> playlist files.</li>
+<li>Fixed relative path resolution: playlist entries are now resolved relative to the playlist file's directory, not the application's current working directory.</li>
+<li>Added pre-validation to silently filter out non-existent local files during preview generation.</li>
+</ul>
+</li>
+<li><strong>Config Safety:</strong><ul>
+<li>Implemented startup validation for <code>config.toml</code>.</li>
+<li>Volume is now automatically capped at 130 (resets to 100 if exceeded).</li>
+<li>Invalid <code>loop_mode</code> values default to <code>inf</code>.</li>
+<li>Added high-visibility (bold yellow) warnings on stderr when configurations are auto-corrected.</li>
+</ul>
+</li>
+</ul>
+<h3>Performance</h3>
+<ul>
+<li><strong>Startup:</strong> Replaced thread spawning with direct <code>Command::spawn</code> for <code>mpv</code> and <code>yt-dlp</code> dependency checks, reducing startup overhead and resource usage.</li>
+<li><strong>Playlist Scanning:</strong> Implemented an O(N) single-pass scanner for the play queue. The player now efficiently detects YouTube links to toggle <code>yt-dlp</code> optimizations without iterating through the list multiple times.</li>
+</ul>
+<h3>Fixes &amp; Refactoring</h3>
+<ul>
+<li><strong>Player:</strong> Fixed a logic gap where mixed playlists (Local files + YouTube links) would fail to load necessary <code>yt-dlp</code> configurations (JS runtimes/User-Agents) if the first track was a local file.</li>
+<li><strong>Stability:</strong> Refactored temporary playlist file cleanup to use <code>AtomicBool::swap()</code>, eliminating potential race conditions between the <code>Ctrl+C</code> signal handler and the <code>Drop</code> trait.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.24.3" target="_blank" class="tag">v0.24.3</a>
-                <span class="latest-badge">Latest</span>
+                
                 <span style="margin-left: auto;">February 15, 2026</span>
             </div>
             <div class="body">
