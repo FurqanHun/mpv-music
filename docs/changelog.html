@@ -162,8 +162,37 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
-                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.0" target="_blank" class="tag">v0.25.0</a>
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.1" target="_blank" class="tag">v0.25.1</a>
                 <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">March 01, 2026</span>
+            </div>
+            <div class="body">
+                <p>This patch fixes a regression in Manage Directories TUI.</p>
+<h3>Features</h3>
+<ul>
+<li><strong>Installer (Streamlined Experience):</strong><ul>
+<li><strong>Smarter Path Detection:</strong> The installer now automatically detects existing <code>mpv-music</code> installations in your <code>$PATH</code> and suggests the same directory for updates, skipping redundant prompts.</li>
+<li><strong>Dependency Guard:</strong> Added a mandatory pre-check for <code>jq</code>. The installer now validates its presence early to ensure GitHub API release data is parsed correctly.</li>
+<li><strong>PATH Verification:</strong> Added an end-of-install verification step. If the installation directory isn't in your shell's environment, the script provides copy-pasteable instructions for <code>.bashrc</code> or <code>.zshrc</code>.</li>
+<li><strong>Legacy Cleanup:</strong> Fully removed the legacy Bash version fallback logic.</li>
+</ul>
+</li>
+</ul>
+<h3>Fixes &amp; Refactoring</h3>
+<ul>
+<li><strong>Configuration (Interactive Sync):</strong><ul>
+<li>Fixed a critical regression where changes made via the interactive "Manage Directories" menu (Add/Remove) were only updating in memory.</li>
+<li>Added an explicit <code>config::save()</code> trigger to the TUI settings menu, ensuring directory modifications are persisted to <code>config.toml</code> before the indexer begins a library re-scan.</li>
+</ul>
+</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.0" target="_blank" class="tag">v0.25.0</a>
+                
                 <span style="margin-left: auto;">February 16, 2026</span>
             </div>
             <div class="body">

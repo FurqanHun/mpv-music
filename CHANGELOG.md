@@ -2,6 +2,26 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.25.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.1) - 2026-03-01
+
+This patch fixes a regression in Manage Directories TUI.
+
+### Features
+
+- **Installer (Streamlined Experience):**
+    - **Smarter Path Detection:** The installer now automatically detects existing `mpv-music` installations in your `$PATH` and suggests the same directory for updates, skipping redundant prompts.
+    - **Dependency Guard:** Added a mandatory pre-check for `jq`. The installer now validates its presence early to ensure GitHub API release data is parsed correctly.
+    - **PATH Verification:** Added an end-of-install verification step. If the installation directory isn't in your shell's environment, the script provides copy-pasteable instructions for `.bashrc` or `.zshrc`.
+    - **Legacy Cleanup:** Fully removed the legacy Bash version fallback logic.
+
+### Fixes & Refactoring
+
+- **Configuration (Interactive Sync):**
+    - Fixed a critical regression where changes made via the interactive "Manage Directories" menu (Add/Remove) were only updating in memory.
+    - Added an explicit `config::save()` trigger to the TUI settings menu, ensuring directory modifications are persisted to `config.toml` before the indexer begins a library re-scan.
+
+---
+
 ## [v0.25.0](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.0) - 2026-02-16
 
 ### Features
