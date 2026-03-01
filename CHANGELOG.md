@@ -2,6 +2,15 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.25.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.2) - 2026-03-01
+
+### Dependencies & Chores
+
+- **Fuzzy Finder Update:** Bumped `skim` from `v3.2.0` to `v3.5.0`.
+- **Rust Stable Compatibility:** Removed the `default-features = false` workaround for `skim`, as its upstream dependencies are now fully compatible with stable Rust.
+
+---
+
 ## [v0.25.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.1) - 2026-03-01
 
 This patch fixes a regression in Manage Directories TUI.
