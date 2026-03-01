@@ -479,7 +479,8 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
             // dirs
             Some(s) if s.contains("Manage Directories") => {
                 if run_manage_dirs_mode(cfg)? {
-                    println!("Syncing changes...");
+                    config::save(cfg)?;
+                    println!("Configuration saved. Syncing changes...");
                     *tracks = indexer::scan(cfg, false)?;
                     indexer::save(tracks)?;
                 }
