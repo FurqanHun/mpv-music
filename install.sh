@@ -26,6 +26,12 @@ done
 
 echo -e "${BLUE}🎧 mpv-music Rust Installer${NC}"
 
+if ! command -v jq &>/dev/null; then
+    echo -e "${RED}[ERROR]${NC} 'jq' is not installed. It is required for the installer to parse release data."
+    echo -e "Please install it via your package manager (e.g., 'sudo dnf install jq' or 'brew install jq')."
+    exit 1
+fi
+
 # --- 1. System Detection ---
 OS_TYPE=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH_RAW=$(uname -m)
@@ -49,10 +55,18 @@ case "$OS_TYPE" in
     *)       PLATFORM="unknown" ;;
 esac
 
-# --- 2. Interactive Path Selection ---
-echo -e "\nWhere would you like to install the binary?"
-read -rp "Default [$DEFAULT_INSTALL_DIR]: " USER_INPUT < /dev/tty
-INSTALL_DIR="${USER_INPUT:-$DEFAULT_INSTALL_DIR}"
+# --- 2. Path Selection ---
+EXISTING_PATH=$(command -v mpv-music || echo "")
+
+if [[ -n "$EXISTING_PATH" ]]; then
+    INSTALL_DIR=$(dirname "$EXISTING_PATH")
+    echo -e "${GREEN}[OK]${NC} Using existing installation directory: $INSTALL_DIR"
+else
+    echo -e "\nWhere would you like to install the binary?"
+    read -rp "Installation directory [$DEFAULT_INSTALL_DIR]: " USER_INPUT < /dev/tty
+    INSTALL_DIR="${USER_INPUT:-$DEFAULT_INSTALL_DIR}"
+fi
+
 INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
 mkdir -p "$INSTALL_DIR"
 
@@ -71,7 +85,7 @@ fi
 LATEST_TAG=$(echo "$LATEST_JSON" | jq -r ".tag_name // empty")
 ASSET_URL=$(echo "$LATEST_JSON" | jq -r ".assets[] | select(.name | contains(\"$ARCH\") and contains(\"$PLATFORM\")) | .browser_download_url" 2>/dev/null || echo "")
 
-# --- 4. Install Logic (Binary vs Legacy Fallback) ---
+# --- 4. Install Logic ---
 if [[ -n "$ASSET_URL" && "$ASSET_URL" != "null" ]]; then
     echo -e "${GREEN}[OK]${NC} Found pre-compiled binary for $ARCH-$PLATFORM ($LATEST_TAG)"
     TEMP_DIR=$(mktemp -d)
@@ -81,20 +95,6 @@ if [[ -n "$ASSET_URL" && "$ASSET_URL" != "null" ]]; then
     mv "$BINARY_SOURCE" "$INSTALLED_BINARY"
     rm -rf "$TEMP_DIR"
 else
-    # --- TRANSITION CHECK: Handle missing stable Rust release ---
-    if [[ "$DEV_MODE" == "false" ]]; then
-        echo -e "\n${YELLOW}[!] The Rust rewrite doesn't have a stable release yet.${NC}"
-        echo -e "Would you like to install the archived ${GREEN}Legacy Bash version${NC} instead?"
-        read -rp "[y/N]: " LEGACY_CHOICE < /dev/tty
-        if [[ "$LEGACY_CHOICE" =~ ^[Yy]$ ]]; then
-            echo -e "${BLUE}[INFO]${NC} Launching Legacy Installer..."
-            curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/refs/heads/mpv-music-sh-archive/install.sh | bash
-            exit 0
-        fi
-        echo -e "${RED}[ERROR]${NC} No stable binary found. Try running with --dev to install the Dev version."
-        exit 1
-    fi
-
     # Dev fallback: manual compilation
     echo -e "${YELLOW}[WARN]${NC} No pre-compiled binary found for your system ($ARCH_RAW-$OS_TYPE)."
     read -rp "Compile from source now? [y/N]: " BUILD_CHOICE < /dev/tty
@@ -112,7 +112,7 @@ fi
 chmod +x "$INSTALLED_BINARY"
 echo -e "${GREEN}[OK]${NC} mpv-music installed to $INSTALLED_BINARY"
 
-# --- 5. Initial Configuration (Directories) ---
+# --- 5. Initial Configuration ---
 echo -e "\n${BLUE}[INFO]${NC} Initial Setup"
 echo "Would you like to add music directories now?"
 read -rp "[y/N]: " SETUP_CHOICE < /dev/tty
@@ -136,4 +136,15 @@ if [[ "$SETUP_CHOICE" =~ ^[Yy]$ ]]; then
     fi
 fi
 
-echo -e "\n${GREEN}Installation complete!${NC} Run 'mpv-music' to start."
+# --- 6. PATH Verification ---
+case ":$PATH:" in
+    *":$INSTALL_DIR:"*)
+        echo -e "\n${GREEN}Installation complete!${NC} Run 'mpv-music' to start."
+        ;;
+    *)
+        echo -e "\n${YELLOW}[WARNING]${NC} $INSTALL_DIR is not in your PATH."
+        echo -e "Please add it to your shell configuration (e.g., .bashrc or .zshrc):"
+        echo -e "    export PATH=\"\$PATH:$INSTALL_DIR\""
+        echo -e "\nAfter adding it, run 'mpv-music' to start."
+        ;;
+esac
