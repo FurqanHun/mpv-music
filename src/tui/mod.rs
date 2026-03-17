@@ -12,9 +12,6 @@ use skim::prelude::*;
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::Arc;
-
-const BATCH_SIZE: usize = 500;
 
 // skim item wrappers
 
@@ -118,43 +115,35 @@ pub fn run_tag_picker(tracks: &[indexer::Track], cfg: &config::Config, key: &str
         }
     }
 
-    let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
     let mut sorted_keys: Vec<_> = counts.keys().collect();
     sorted_keys.sort();
 
-    let mut batch: Vec<Arc<dyn SkimItem>> = Vec::with_capacity(BATCH_SIZE);
+    let items: Vec<TagItem> = sorted_keys
+        .into_iter()
+        .map(|k| {
+            let count = *counts.get(k).unwrap();
+            let sample_list = samples.get(k).unwrap().clone();
 
-    for k in sorted_keys {
-        let count = *counts.get(k).unwrap();
-        let sample_list = samples.get(k).unwrap().clone();
-
-        batch.push(Arc::new(TagItem {
-            name: k.clone(),
-            count,
-            samples: sample_list,
-            icon: icon.to_string(),
-        }));
-
-        if batch.len() >= BATCH_SIZE {
-            tx.send(batch).unwrap();
-            batch = Vec::with_capacity(BATCH_SIZE);
-        }
-    }
-    if !batch.is_empty() {
-        tx.send(batch).unwrap();
-    }
-    drop(tx);
+            TagItem {
+                name: k.clone(),
+                count,
+                samples: sample_list,
+                icon: icon.to_string(),
+            }
+        })
+        .collect();
 
     let opts = SkimOptionsBuilder::default()
         .multi(true)
         .prompt(prompt)
         .preview("")
         .reverse(true)
+        //.typos(2)
         .inline_info(true)
         .build()
         .unwrap();
 
-    let output = Skim::run_with(opts, Some(rx)).ok().context("Skim failed")?;
+    let output = Skim::run_items(opts, items).ok().context("Skim failed")?;
 
     if output.is_abort {
         return Ok(false);
@@ -295,33 +284,29 @@ pub fn manage_remove_menu(cfg: &mut config::Config) -> Result<bool> {
         return Ok(false);
     }
 
-    let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
-
-    let batch: Vec<Arc<dyn SkimItem>> = cfg
+    let items: Vec<MenuItem> = cfg
         .music_dirs
         .iter()
         .map(|dir| {
             let dir_str = dir.to_string_lossy().to_string();
-            Arc::new(MenuItem {
+            MenuItem {
                 text: dir_str.clone(),
                 id: dir_str,
-            }) as Arc<dyn SkimItem>
+            }
         })
         .collect();
-
-    tx.send(batch).unwrap();
-    drop(tx);
 
     let opts = SkimOptionsBuilder::default()
         .multi(true)
         .prompt("🗑️  Remove >    ")
         .header("   Select directories to remove (TAB to select)")
         .reverse(true)
+        //.typos(2)
         .inline_info(true)
         .build()
         .unwrap();
 
-    let output = Skim::run_with(opts, Some(rx)).ok().context("Skim failed")?;
+    let output = Skim::run_items(opts, items).ok().context("Skim failed")?;
 
     if output.is_abort {
         return Ok(false);
@@ -573,30 +558,24 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
 // skim impl
 
 pub fn run_skim_simple(items: Vec<&str>, prompt: &str) -> Option<String> {
-    let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
-
-    let batch: Vec<Arc<dyn SkimItem>> = items
+    let skim_items: Vec<MenuItem> = items
         .into_iter()
-        .map(|i| {
-            Arc::new(MenuItem {
-                text: i.to_string(),
-                id: "".to_string(),
-            }) as Arc<dyn SkimItem>
+        .map(|i| MenuItem {
+            text: i.to_string(),
+            id: "".to_string(),
         })
         .collect();
-
-    tx.send(batch).unwrap();
-    drop(tx);
 
     let opts = SkimOptionsBuilder::default()
         .height("50%")
         .reverse(true)
         .prompt(prompt)
+        //.typos(2)
         .inline_info(true)
         .build()
         .unwrap();
 
-    let output = Skim::run_with(opts, Some(rx)).ok()?;
+    let output = Skim::run_items(opts, skim_items).ok()?;
     if output.is_abort {
         return None;
     }
@@ -605,31 +584,25 @@ pub fn run_skim_simple(items: Vec<&str>, prompt: &str) -> Option<String> {
 }
 
 pub fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<String>> {
-    let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
-
-    let batch: Vec<Arc<dyn SkimItem>> = items
+    let skim_items: Vec<MenuItem> = items
         .into_iter()
-        .map(|i| {
-            Arc::new(MenuItem {
-                text: i.clone(),
-                id: i,
-            }) as Arc<dyn SkimItem>
+        .map(|i| MenuItem {
+            text: i.clone(),
+            id: i,
         })
         .collect();
-
-    tx.send(batch).unwrap();
-    drop(tx);
 
     let opts = SkimOptionsBuilder::default()
         .height("50%")
         .reverse(true)
         .prompt(prompt)
+        //.typos(2)
         .inline_info(true)
         .multi(true)
         .build()
         .unwrap();
 
-    if let Ok(output) = Skim::run_with(opts, Some(rx)) {
+    if let Ok(output) = Skim::run_items(opts, skim_items) {
         if output.is_abort {
             return None;
         }
@@ -654,32 +627,21 @@ pub fn run_track_mode<T>(tracks: &[T], cfg: &config::Config) -> Result<()>
 where
     T: Borrow<indexer::Track>,
 {
-    let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
+    let skim_items: Vec<TrackItem> = tracks
+        .iter()
+        .filter_map(|item| {
+            let track = item.borrow();
+            if track.media_type == "playlist" {
+                return None;
+            }
+            let display = format!("{} - {}", track.artist, track.title);
 
-    let mut batch: Vec<Arc<dyn SkimItem>> = Vec::with_capacity(BATCH_SIZE);
-
-    for item in tracks {
-        let track = item.borrow();
-        if track.media_type == "playlist" {
-            continue;
-        }
-        let display = format!("{} - {}", track.artist, track.title);
-
-        batch.push(Arc::new(TrackItem {
-            track: track.clone(),
-            display_text: display,
-        }));
-
-        if batch.len() >= BATCH_SIZE {
-            tx.send(batch).unwrap();
-            batch = Vec::with_capacity(BATCH_SIZE);
-        }
-    }
-
-    if !batch.is_empty() {
-        tx.send(batch).unwrap();
-    }
-    drop(tx);
+            Some(TrackItem {
+                track: track.clone(),
+                display_text: display,
+            })
+        })
+        .collect();
 
     let opts = SkimOptionsBuilder::default()
         .height("100%")
@@ -688,11 +650,14 @@ where
         .prompt("🎵 Tracks > ")
         .header("   Artist               Title")
         .reverse(true)
+        //.typos(2)
         .inline_info(true)
         .build()
         .unwrap();
 
-    let output = Skim::run_with(opts, Some(rx)).ok().context("Skim failed")?;
+    let output = Skim::run_items(opts, skim_items)
+        .ok()
+        .context("Skim failed")?;
     if output.is_abort {
         return Ok(());
     }
@@ -728,45 +693,39 @@ pub fn run_dir_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<(
         dir_map.entry(parent).or_default().push(file_name);
     }
 
-    let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
-    let mut batch: Vec<Arc<dyn SkimItem>> = Vec::with_capacity(BATCH_SIZE);
+    let skim_items: Vec<DirItem> = dir_map
+        .into_iter()
+        .map(|(path, files)| {
+            let count = files.len();
+            let name = std::path::Path::new(&path)
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string();
 
-    for (path, files) in dir_map {
-        let count = files.len();
-        let name = std::path::Path::new(&path)
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .to_string();
-
-        batch.push(Arc::new(DirItem {
-            dirname: name,
-            path,
-            count,
-            samples: files,
-        }));
-
-        if batch.len() >= BATCH_SIZE {
-            tx.send(batch).unwrap();
-            batch = Vec::with_capacity(BATCH_SIZE);
-        }
-    }
-    if !batch.is_empty() {
-        tx.send(batch).unwrap();
-    }
-    drop(tx);
+            DirItem {
+                dirname: name,
+                path,
+                count,
+                samples: files,
+            }
+        })
+        .collect();
 
     let opts = SkimOptionsBuilder::default()
         .multi(true)
         .prompt("📁 Folders > ")
         .header("   Directory Name")
         .reverse(true)
+        //.typos(2)
         .inline_info(true)
         .preview("")
         .build()
         .unwrap();
 
-    let output = Skim::run_with(opts, Some(rx)).ok().context("Skim failed")?;
+    let output = Skim::run_items(opts, skim_items)
+        .ok()
+        .context("Skim failed")?;
     if output.is_abort {
         return Ok(());
     }
@@ -787,93 +746,89 @@ pub fn run_dir_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<(
 }
 
 pub fn run_playlist_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<()> {
-    let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
-    let mut batch: Vec<Arc<dyn SkimItem>> = Vec::with_capacity(BATCH_SIZE);
+    let skim_items: Vec<PlaylistItem> = tracks
+        .iter()
+        .filter_map(|t| {
+            if t.media_type == "playlist" {
+                let (count, lines) = if let Ok(content) = std::fs::read_to_string(&t.path) {
+                    let playlist_dir = std::path::Path::new(&t.path)
+                        .parent()
+                        .unwrap_or_else(|| std::path::Path::new("."));
 
-    for t in tracks {
-        if t.media_type == "playlist" {
-            let (count, lines) = if let Ok(content) = std::fs::read_to_string(&t.path) {
-                let playlist_dir = std::path::Path::new(&t.path)
-                    .parent()
-                    .unwrap_or_else(|| std::path::Path::new("."));
+                    // validate and canonicalize paths
+                    let all_valid_lines: Vec<String> = content
+                        .lines()
+                        .filter(|l| !l.starts_with('#') && !l.trim().is_empty())
+                        .filter_map(|line| {
+                            let line_trim = line.trim();
 
-                // validate and canonicalize paths
-                let all_valid_lines: Vec<String> = content
-                    .lines()
-                    .filter(|l| !l.starts_with('#') && !l.trim().is_empty())
-                    .filter_map(|line| {
-                        let line_trim = line.trim();
-
-                        if line_trim.starts_with("http://")
-                            || line_trim.starts_with("https://")
-                            || line_trim.starts_with("ftp://")
-                        {
-                            return Some(line_trim.to_string());
-                        }
-
-                        let path = std::path::PathBuf::from(line_trim);
-
-                        if path.is_absolute() {
-                            if path.exists() {
-                                Some(line_trim.to_string())
-                            } else {
-                                log::debug!(
-                                    "Skipping non-existent path in playlist: {}",
-                                    line_trim
-                                );
-                                None
+                            if line_trim.starts_with("http://")
+                                || line_trim.starts_with("https://")
+                                || line_trim.starts_with("ftp://")
+                            {
+                                return Some(line_trim.to_string());
                             }
-                        } else {
-                            match playlist_dir.join(&path).canonicalize() {
-                                Ok(canonical) => Some(canonical.to_string_lossy().to_string()),
-                                Err(_) => {
+
+                            let path = std::path::PathBuf::from(line_trim);
+
+                            if path.is_absolute() {
+                                if path.exists() {
+                                    Some(line_trim.to_string())
+                                } else {
                                     log::debug!(
-                                        "Could not resolve relative path in playlist: {}",
+                                        "Skipping non-existent path in playlist: {}",
                                         line_trim
                                     );
                                     None
                                 }
+                            } else {
+                                match playlist_dir.join(&path).canonicalize() {
+                                    Ok(canonical) => Some(canonical.to_string_lossy().to_string()),
+                                    Err(_) => {
+                                        log::debug!(
+                                            "Could not resolve relative path in playlist: {}",
+                                            line_trim
+                                        );
+                                        None
+                                    }
+                                }
                             }
-                        }
-                    })
-                    .collect();
+                        })
+                        .collect();
 
-                let total = all_valid_lines.len();
-                let sample = all_valid_lines.into_iter().take(15).collect();
+                    let total = all_valid_lines.len();
+                    let sample = all_valid_lines.into_iter().take(15).collect();
 
-                (total, sample)
+                    (total, sample)
+                } else {
+                    (0, vec!["(Could not read file)".to_string()])
+                };
+
+                Some(PlaylistItem {
+                    name: t.title.clone(),
+                    path: t.path.clone(),
+                    count,
+                    preview_lines: lines,
+                })
             } else {
-                (0, vec!["(Could not read file)".to_string()])
-            };
-
-            batch.push(Arc::new(PlaylistItem {
-                name: t.title.clone(),
-                path: t.path.clone(),
-                count,
-                preview_lines: lines,
-            }));
-
-            if batch.len() >= BATCH_SIZE {
-                tx.send(batch).unwrap();
-                batch = Vec::with_capacity(BATCH_SIZE);
+                None
             }
-        }
-    }
-    if !batch.is_empty() {
-        tx.send(batch).unwrap();
-    }
-    drop(tx);
+        })
+        .collect();
 
     let opts = SkimOptionsBuilder::default()
         .multi(true)
         .prompt("📜 Playlists > ")
         .reverse(true)
+        //.typos(2)
         .inline_info(true)
         .preview("")
         .build()
         .unwrap();
 
-    let output = Skim::run_with(opts, Some(rx)).ok().context("Skim failed")?;
+    let output = Skim::run_items(opts, skim_items)
+        .ok()
+        .context("Skim failed")?;
     if output.is_abort {
         return Ok(());
     }
@@ -922,26 +877,23 @@ pub fn run_search_mode(cfg: &config::Config, initial_query: Option<String>) -> R
         return Ok(());
     }
 
-    let (tx, rx): (SkimItemSender, SkimItemReceiver) = unbounded();
-    let batch: Vec<Arc<dyn SkimItem>> = results
+    let skim_items: Vec<SearchItem> = results
         .into_iter()
-        .map(|r| Arc::new(SearchItem { result: r }) as Arc<dyn SkimItem>)
+        .map(|r| SearchItem { result: r })
         .collect();
-
-    tx.send(batch).unwrap();
-    drop(tx);
 
     let opts = SkimOptionsBuilder::default()
         .height("100%")
         .multi(true)
         .prompt("🎯 Search > ")
         .reverse(true)
+        //.typos(2)
         .inline_info(true)
         .preview("")
         .build()
         .unwrap();
 
-    if let Ok(output) = Skim::run_with(opts, Some(rx)) {
+    if let Ok(output) = Skim::run_items(opts, skim_items) {
         if output.is_abort {
             return Ok(());
         }
