@@ -2,6 +2,20 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.25.3](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.3) - 2026-03-17
+
+### Features & Refactoring
+
+- **Fuzzy Finder Engine Upgrade:** Bumped `skim` from `v3.5.0` to `v4.0.0`, bringing the new `Arinae` search algorithm for significantly faster UI performance and reduced memory usage.
+- **Concurrency Refactor:** Replaced manual `crossbeam_channel` thread batching with `Skim::run_items` across all TUI modes. Removed `BATCH_SIZE` limits and `tx/rx` boilerplate, allowing the UI to natively manage its own background ingestion threads and event-driven re-rendering.
+- **Trait Simplification:** Dropped explicit `Arc<dyn SkimItem>` casting requirements in favor of the new, simplified v4 API.
+
+### CI & Build
+
+- **ARMv7 Target Suspended:** Temporarily disabled the `armv7-unknown-linux-musleabihf` build target due to broken 32-bit SIMD compilation tags in upstream dependencies.
+
+---
+
 ## [v0.25.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.2) - 2026-03-01
 
 ### Dependencies & Chores

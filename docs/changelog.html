@@ -162,8 +162,28 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
-                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.2" target="_blank" class="tag">v0.25.2</a>
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.3" target="_blank" class="tag">v0.25.3</a>
                 <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">March 17, 2026</span>
+            </div>
+            <div class="body">
+                <h3>Features &amp; Refactoring</h3>
+<ul>
+<li><strong>Fuzzy Finder Engine Upgrade:</strong> Bumped <code>skim</code> from <code>v3.5.0</code> to <code>v4.0.0</code>, bringing the new <code>Arinae</code> search algorithm for significantly faster UI performance and reduced memory usage.</li>
+<li><strong>Concurrency Refactor:</strong> Replaced manual <code>crossbeam_channel</code> thread batching with <code>Skim::run_items</code> across all TUI modes. Removed <code>BATCH_SIZE</code> limits and <code>tx/rx</code> boilerplate, allowing the UI to natively manage its own background ingestion threads and event-driven re-rendering.</li>
+<li><strong>Trait Simplification:</strong> Dropped explicit <code>Arc&lt;dyn SkimItem&gt;</code> casting requirements in favor of the new, simplified v4 API.</li>
+</ul>
+<h3>CI &amp; Build</h3>
+<ul>
+<li><strong>ARMv7 Target Suspended:</strong> Temporarily disabled the <code>armv7-unknown-linux-musleabihf</code> build target due to broken 32-bit SIMD compilation tags in upstream dependencies.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.2" target="_blank" class="tag">v0.25.2</a>
+                
                 <span style="margin-left: auto;">March 01, 2026</span>
             </div>
             <div class="body">
