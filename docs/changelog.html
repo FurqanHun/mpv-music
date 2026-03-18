@@ -162,8 +162,23 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
-                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.3" target="_blank" class="tag">v0.25.3</a>
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.4" target="_blank" class="tag">v0.25.4</a>
                 <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">March 18, 2026</span>
+            </div>
+            <div class="body">
+                <h3>Bug Fixes</h3>
+<ul>
+<li><strong>Title Flag Parsing:</strong> Fixed an inconsistency where the <code>-t</code>/<code>--title</code> flag failed to parse comma-separated values (e.g., <code>-t "song 1, song 2"</code>). It now properly splits terms and behaves identically to the artist and album filters.</li>
+<li><strong>Interactive Ambiguity Resolution:</strong> Added <code>title</code> to the main ambiguity resolution logic. When multiple tracks match a title search, the interactive "Which titles?" Skim picker will now correctly trigger instead of returning a "No match" error or silently failing.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.3" target="_blank" class="tag">v0.25.3</a>
+                
                 <span style="margin-left: auto;">March 17, 2026</span>
             </div>
             <div class="body">

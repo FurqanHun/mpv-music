@@ -2,6 +2,15 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.25.4](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.4) - 2026-03-18
+
+### Bug Fixes
+
+- **Title Flag Parsing:** Fixed an inconsistency where the `-t`/`--title` flag failed to parse comma-separated values (e.g., `-t "song 1, song 2"`). It now properly splits terms and behaves identically to the artist and album filters.
+- **Interactive Ambiguity Resolution:** Added `title` to the main ambiguity resolution logic. When multiple tracks match a title search, the interactive "Which titles?" Skim picker will now correctly trigger instead of returning a "No match" error or silently failing.
+
+---
+
 ## [v0.25.3](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.3) - 2026-03-17
 
 ### Features & Refactoring
