@@ -356,6 +356,11 @@ fn main() -> Result<()> {
                 .album
                 .as_ref()
                 .and_then(|o| o.as_ref())
+                .is_some_and(|s| s.contains(','))
+            || args
+                .title
+                .as_ref()
+                .and_then(|o| o.as_ref())
                 .is_some_and(|s| s.contains(','));
 
         // stage 1: exact match
@@ -384,6 +389,8 @@ fn main() -> Result<()> {
                 active_key = "genre";
             } else if args.album.is_some() {
                 active_key = "album";
+            } else if args.title.is_some() {
+                active_key = "title";
             }
 
             for t in &partials {
@@ -396,6 +403,9 @@ fn main() -> Result<()> {
                     }
                     "album" => {
                         unique_options.insert(t.album.clone());
+                    }
+                    "title" => {
+                        unique_options.insert(t.title.clone());
                     }
                     _ => {}
                 }
@@ -418,6 +428,7 @@ fn main() -> Result<()> {
                                 "artist" => &t.artist,
                                 "genre" => &t.genre,
                                 "album" => &t.album,
+                                "title" => &t.title,
                                 _ => "",
                             };
                             selected_set.contains(val)

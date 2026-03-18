@@ -404,11 +404,7 @@ pub fn apply_cli_filters(
     let genre_terms = prepare_terms(&args.genre);
     let artist_terms = prepare_terms(&args.artist);
     let album_terms = prepare_terms(&args.album);
-    let title_term = args
-        .title
-        .as_ref()
-        .and_then(|t| t.as_ref())
-        .map(|s| s.to_lowercase());
+    let title_terms = prepare_terms(&args.title);
 
     tracks
         .iter()
@@ -438,9 +434,7 @@ pub fn apply_cli_filters(
             matches(&t.genre, &genre_terms)
                 && matches(&t.artist, &artist_terms)
                 && matches(&t.album, &album_terms)
-                && title_term
-                    .as_ref()
-                    .is_none_or(|ti| t.title.to_lowercase().contains(ti))
+                && matches(&t.title, &title_terms)
         })
         .cloned()
         .collect()
