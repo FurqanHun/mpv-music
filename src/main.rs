@@ -454,7 +454,7 @@ fn main() -> Result<()> {
         }
 
         println!("Found {} matching tracks.", filtered.len());
-        if args.play_all {
+        if args.play_all || args.title.is_some() {
             let paths: Vec<String> = filtered.iter().map(|t| t.path.clone()).collect();
             player::play_files(&paths, &cfg)?;
         } else {
