@@ -2,6 +2,14 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.25.5](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.5) - 2026-03-19
+
+### UX Improvements
+
+- **Streamlined Title Search:** Fixed a redundant menu loop for the `-t`/`--title` filter. After selecting tracks from the ambiguous "Which titles?" menu, the app now instantly queues and plays your selections instead of asking "What's next?".
+
+---
+
 ## [v0.25.4](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.4) - 2026-03-18
 
 ### Bug Fixes
