@@ -162,8 +162,28 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.6-dev.1" target="_blank" class="tag">v0.25.6-dev.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">April 01, 2026</span>
+            </div>
+            <div class="body">
+                <blockquote>
+<p>⚠️ Pre-release / Dev Build: This release introduces major OS-level changes to path canonicalization, dependency detection, and terminal rendering. Please test for regressions in file scanning, track playback, and TUI behavior across all platforms.</p>
+</blockquote>
+<ul>
+<li><strong>Initial Windows Compatibility:</strong> <code>mpv-music</code> now natively compiles and runs on Windows! Handled OS-specific pathing, text editor/pager fallbacks (<code>notepad</code> &amp; <code>more</code>), and terminal dependencies.</li>
+<li><strong>Fuzzy Finder Engine Upgrade:</strong> Bumped <code>skim</code> to <code>v4.3.0</code> to bring official Windows support to the core TUI.</li>
+<li><strong>UNC Path Resolution:</strong> Replaced standard <code>canonicalize</code> with the <code>dunce</code> crate. This safely strips Verbatim UNC path prefixes (<code>\\?\</code>) on Windows, preventing <code>mpv</code> and <code>yt-dlp</code> from choking on file paths.</li>
+<li><strong>JS Runtime Detection:</strong> Swapped the hardcoded Unix <code>which</code> command for an OS-aware check (<code>where</code> on Windows). <code>yt-dlp</code> will now correctly detect Node, Deno, or Bun on Windows to bypass YouTube's 403 blocks.</li>
+<li><strong>CI/CD Automation:</strong> The release workflow now automatically builds <code>x86_64-pc-windows-msvc</code> targets and packages them as <code>.zip</code> files.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.5" target="_blank" class="tag">v0.25.5</a>
-                <span class="latest-badge">Latest</span>
+                
                 <span style="margin-left: auto;">March 19, 2026</span>
             </div>
             <div class="body">

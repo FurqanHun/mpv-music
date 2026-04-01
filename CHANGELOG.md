@@ -2,6 +2,18 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.25.6-dev.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.6-dev.1) - 2026-04-01 (Pre-release)
+
+> ⚠️ Pre-release / Dev Build: This release introduces major OS-level changes to path canonicalization, dependency detection, and terminal rendering. Please test for regressions in file scanning, track playback, and TUI behavior across all platforms.
+
+- **Initial Windows Compatibility:** `mpv-music` now natively compiles and runs on Windows! Handled OS-specific pathing, text editor/pager fallbacks (`notepad` & `more`), and terminal dependencies.
+- **Fuzzy Finder Engine Upgrade:** Bumped `skim` to `v4.3.0` to bring official Windows support to the core TUI.
+- **UNC Path Resolution:** Replaced standard `canonicalize` with the `dunce` crate. This safely strips Verbatim UNC path prefixes (`\\?\`) on Windows, preventing `mpv` and `yt-dlp` from choking on file paths.
+- **JS Runtime Detection:** Swapped the hardcoded Unix `which` command for an OS-aware check (`where` on Windows). `yt-dlp` will now correctly detect Node, Deno, or Bun on Windows to bypass YouTube's 403 blocks.
+- **CI/CD Automation:** The release workflow now automatically builds `x86_64-pc-windows-msvc` targets and packages them as `.zip` files.
+
+---
+
 ## [v0.25.5](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.5) - 2026-03-19
 
 ### UX Improvements
