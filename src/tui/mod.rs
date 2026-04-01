@@ -505,7 +505,13 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
                     .unwrap()
                     .data_dir()
                     .join("mpv-music.log");
-                let viewer = std::env::var("PAGER").unwrap_or_else(|_| "less".to_string());
+                let viewer = std::env::var("PAGER").unwrap_or_else(|_| {
+                    if cfg!(windows) {
+                        "more".to_string()
+                    } else {
+                        "less".to_string()
+                    }
+                });
                 if log_path.exists() {
                     std::process::Command::new(viewer).arg(log_path).status()?;
                 } else {

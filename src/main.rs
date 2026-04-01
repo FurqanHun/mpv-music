@@ -43,8 +43,15 @@ fn main() -> Result<()> {
         return Ok(());
     }
     if let Some(viewer_opt) = args.log {
-        let viewer = viewer_opt
-            .unwrap_or_else(|| std::env::var("PAGER").unwrap_or_else(|_| "less".to_string()));
+        let viewer = viewer_opt.unwrap_or_else(|| {
+            std::env::var("PAGER").unwrap_or_else(|_| {
+                if cfg!(windows) {
+                    "more".to_string()
+                } else {
+                    "less".to_string()
+                }
+            })
+        });
         if log_file_path.exists() {
             std::process::Command::new(viewer)
                 .arg(&log_file_path)
@@ -74,8 +81,15 @@ fn main() -> Result<()> {
             let _ = config::load(None)?;
         }
 
-        let editor = editor_opt
-            .unwrap_or_else(|| std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string()));
+        let editor = editor_opt.unwrap_or_else(|| {
+            std::env::var("EDITOR").unwrap_or_else(|_| {
+                if cfg!(windows) {
+                    "notepad".to_string()
+                } else {
+                    "nano".to_string()
+                }
+            })
+        });
 
         log::info!("Opening config with editor: {}", editor);
 
