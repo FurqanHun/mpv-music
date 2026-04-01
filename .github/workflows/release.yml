@@ -1,4 +1,4 @@
-name: Release Build (Linux & macOS)
+name: Release Build (Linux, macOS & Windows)
 
 permissions:
   contents: write
@@ -39,6 +39,9 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-latest
             use_cross: false
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            use_cross: false
 
     steps:
       - name: Checkout Code
@@ -72,14 +75,26 @@ jobs:
         run: |
           VERSION=${{ steps.get_version.outputs.version }}
           TARGET=${{ matrix.target }}
-          BINARY_NAME="mpv-music"
+
+          if [[ "$TARGET" == *"windows"* ]]; then
+            BINARY_NAME="mpv-music.exe"
+            ARCHIVE_NAME="mpv-music-v$VERSION-$TARGET.zip"
+          else
+            BINARY_NAME="mpv-music"
+            ARCHIVE_NAME="mpv-music-v$VERSION-$TARGET.tar.gz"
+          fi
 
           BIN_PATH="target/$TARGET/release/$BINARY_NAME"
-          ARCHIVE_NAME="$BINARY_NAME-v$VERSION-$TARGET.tar.gz"
 
           mkdir -p dist
-          cp $BIN_PATH dist/
-          cd dist && tar -czvf ../$ARCHIVE_NAME $BINARY_NAME && cd ..
+          cp "$BIN_PATH" dist/
+          cd dist
+          if [[ "$TARGET" == *"windows"* ]]; then
+            zip "../$ARCHIVE_NAME" "$BINARY_NAME"
+          else
+            tar -czvf "../$ARCHIVE_NAME" "$BINARY_NAME"
+          fi
+          cd ..
 
           echo "ASSET=$ARCHIVE_NAME" >> $GITHUB_ENV
 
