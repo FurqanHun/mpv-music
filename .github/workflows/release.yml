@@ -6,6 +6,9 @@ permissions:
 on:
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   test:
     name: Run Unit Tests
@@ -90,7 +93,7 @@ jobs:
           cp "$BIN_PATH" dist/
           cd dist
           if [[ "$TARGET" == *"windows"* ]]; then
-            zip "../$ARCHIVE_NAME" "$BINARY_NAME"
+            7z a "../$ARCHIVE_NAME" "$BINARY_NAME"
           else
             tar -czvf "../$ARCHIVE_NAME" "$BINARY_NAME"
           fi
