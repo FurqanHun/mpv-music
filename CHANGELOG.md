@@ -2,6 +2,19 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.25.6](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.6) - 2026-04-01
+
+- Bumped `skim` dependency to `v4.3.0`.
+
+---
+
+## [v0.25.6-dev.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.6-dev.2) - 2026-04-01 (Pre-release)
+
+- added static flag for target x86_64-pc-windows-msvc
+- updated actions/checkout to v6
+
+---
+
 ## [v0.25.6-dev.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.6-dev.1) - 2026-04-01 (Pre-release)
 
 > ⚠️ Pre-release / Dev Build: This release introduces major OS-level changes to path canonicalization, dependency detection, and terminal rendering. Please test for regressions in file scanning, track playback, and TUI behavior across all platforms.
