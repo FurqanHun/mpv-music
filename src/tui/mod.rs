@@ -467,7 +467,13 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
 
             // conf management
             Some(s) if s.contains("Edit Config") => {
-                let editor = std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
+                let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
+                    if cfg!(windows) {
+                        "notepad".to_string()
+                    } else {
+                        "nano".to_string()
+                    }
+                });
                 let config_path = ProjectDirs::from("com", "furqanhun", "mpv-music")
                     .unwrap()
                     .config_dir()
