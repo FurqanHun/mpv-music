@@ -314,7 +314,8 @@ fn apply_common_args(cmd: &mut Command, config: &Config) {
 }
 
 fn check_deno_availability() -> bool {
-    let Ok(output) = Command::new("which").arg("yt-dlp").output() else {
+    let check_cmd = if cfg!(windows) { "where" } else { "which" };
+    let Ok(output) = Command::new(check_cmd).arg("yt-dlp").output() else {
         return has_command("deno");
     };
 
@@ -333,7 +334,8 @@ fn check_deno_availability() -> bool {
 }
 
 fn has_command(cmd: &str) -> bool {
-    let exists = Command::new("which")
+    let check_cmd = if cfg!(windows) { "where" } else { "which" };
+    let exists = Command::new(check_cmd)
         .arg(cmd)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
