@@ -1493,7 +1493,7 @@ dependencies = [
 
 [[package]]
 name = "mpv-music"
-version = "0.25.6-dev.2"
+version = "0.25.6"
 dependencies = [
  "anyhow",
  "clap",
