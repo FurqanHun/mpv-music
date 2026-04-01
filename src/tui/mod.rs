@@ -352,7 +352,7 @@ pub fn add_directory(cfg: &mut config::Config, dir: String) -> Result<bool> {
         return Ok(false);
     }
 
-    let path = match std::fs::canonicalize(&path_buf) {
+    let path = match dunce::canonicalize(&path_buf) {
         Ok(p) => p,
         Err(e) => {
             println!("Failed to resolve absolute path: {}", e);
@@ -371,7 +371,7 @@ pub fn add_directory(cfg: &mut config::Config, dir: String) -> Result<bool> {
 }
 
 pub fn remove_directory(cfg: &mut config::Config, dir: String) -> Result<bool> {
-    let path = std::fs::canonicalize(&dir).unwrap_or_else(|_| PathBuf::from(&dir));
+    let path = dunce::canonicalize(&dir).unwrap_or_else(|_| PathBuf::from(&dir));
     let start_len = cfg.music_dirs.len();
 
     cfg.music_dirs.retain(|d| d != &path);
@@ -788,7 +788,7 @@ pub fn run_playlist_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Res
                                     None
                                 }
                             } else {
-                                match playlist_dir.join(&path).canonicalize() {
+                                match dunce::canonicalize(playlist_dir.join(&path)) {
                                     Ok(canonical) => Some(canonical.to_string_lossy().to_string()),
                                     Err(_) => {
                                         log::debug!(

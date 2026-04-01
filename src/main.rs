@@ -272,7 +272,7 @@ fn main() -> Result<()> {
 
         if path.is_dir() {
             log::info!("Session started for directory: {:?}", path);
-            let target_canonical = std::fs::canonicalize(&path).unwrap_or(path.clone());
+            let target_canonical = dunce::canonicalize(&path).unwrap_or(path.clone());
             let target_str = target_canonical.to_string_lossy();
 
             let mut temp_cfg = cfg.clone();

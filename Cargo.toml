@@ -54,6 +54,7 @@ skim = "4.0.0"
 log = "0.4"
 flexi_logger = "0.31"
 ctrlc = "3.5"
+dunce = "1.0"
 
 [profile.release]
 strip = true
