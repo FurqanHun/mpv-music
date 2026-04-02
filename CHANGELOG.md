@@ -4,7 +4,16 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 
 ## [v0.25.6](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.6) - 2026-04-01
 
+## Dependency
 - Bumped `skim` dependency to `v4.3.0`.
+
+## Platform Support
+- Added text editor/pager fallbacks (`notepad` & `more`), and terminal dependencies for Windows support.
+- Replaced standard `canonicalize` with the `dunce` crate. This safely strips Verbatim UNC path prefixes (`\\?\`) on Windows, preventing `mpv` and `yt-dlp` from choking on file paths.
+- Swapped the hardcoded Unix `which` command for an OS-aware check (`where` on Windows).
+
+> [!NOTE]
+> Windows is not a currently supported platform. Even though `skim` added initial Windows support (which was the major blocker for `mpv-music`), it still needs some fixing (like `mpv` spawning in the background as a separate process as noticed in `v0.25.6-dev.2`). I don't have a Windows system, and running a VM to test every change on a potato laptop isn't really the thing I wanna do. Also, my exams are coming up so idk when I'll get around to it.
 
 ---
 

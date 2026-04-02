@@ -167,9 +167,20 @@
                 <span style="margin-left: auto;">April 01, 2026</span>
             </div>
             <div class="body">
-                <ul>
+                <h2>Dependency</h2>
+<ul>
 <li>Bumped <code>skim</code> dependency to <code>v4.3.0</code>.</li>
 </ul>
+<h2>Platform Support</h2>
+<ul>
+<li>Added text editor/pager fallbacks (<code>notepad</code> &amp; <code>more</code>), and terminal dependencies for Windows support.</li>
+<li>Replaced standard <code>canonicalize</code> with the <code>dunce</code> crate. This safely strips Verbatim UNC path prefixes (<code>\\?\</code>) on Windows, preventing <code>mpv</code> and <code>yt-dlp</code> from choking on file paths.</li>
+<li>Swapped the hardcoded Unix <code>which</code> command for an OS-aware check (<code>where</code> on Windows).</li>
+</ul>
+<blockquote>
+<p>[!NOTE]
+Windows is not a currently supported platform. Even though <code>skim</code> added initial Windows support (which was the major blocker for <code>mpv-music</code>), it still needs some fixing (like <code>mpv</code> spawning in the background as a separate process as noticed in <code>v0.25.6-dev.2</code>). I don't have a Windows system, and running a VM to test every change on a potato laptop isn't really the thing I wanna do. Also, my exams are coming up so idk when I'll get around to it.</p>
+</blockquote>
             </div>
         </div>
         
