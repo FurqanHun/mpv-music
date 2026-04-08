@@ -2,6 +2,7 @@ mod cli;
 mod config;
 mod dep_check;
 mod indexer;
+mod moe;
 mod player;
 mod search;
 mod tui;
@@ -16,6 +17,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 
 fn main() -> Result<()> {
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let args = Cli::parse();
 
     // deterministic paths

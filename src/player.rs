@@ -40,9 +40,36 @@ pub fn play(target: &str, config: &Config) -> Result<()> {
     apply_url_optimizations(&mut cmd, &optimization_target, config);
 
     cmd.arg(target);
+    let is_moe = target.contains("listen.moe");
+    let ipc_socket = if cfg!(windows) {
+        r"\\.\pipe\mpv-music-ipc"
+    } else {
+        "/tmp/mpv-music-ipc.sock"
+    };
 
+    if is_moe {
+        cmd.arg(format!("--input-ipc-server={}", ipc_socket));
+    }
     log::info!("Launching MPV process...");
     log::debug!("Exec: {:?}", cmd);
+
+    let target_clone = target.to_string();
+    let socket_clone = ipc_socket.to_string();
+
+    if is_moe {
+        std::thread::spawn(move || {
+            // Give mpv 1 sec to create the socket file
+            std::thread::sleep(std::time::Duration::from_secs(1));
+
+            log::info!("Starting Tokio runtime for Radio Sync...");
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                if let Err(e) = crate::moe::start_radio_sync(&target_clone, socket_clone).await {
+                    log::error!("Radio Sync failed: {}", e);
+                }
+            });
+        });
+    }
 
     let status = cmd.status().context("Failed to launch mpv")?;
 
