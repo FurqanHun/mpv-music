@@ -2,6 +2,14 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.26.0-dev.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.0-dev.1) - 2026-04-08 (Pre-release)
+
+- **Radio Mode (LISTEN.moe):** Added a proper radio support for J-Pop and K-Pop streams. 
+- **WebSocket Metadata Sync:** Hooked into the gateway specifically to pull song/artist metadata that MPV's native stream handling misses, and send them to mpv using ipc.
+- **CLI & TUI:** Added the `--radio` flag and a dedicated Radio Mode menu at **Option 7**.
+
+---
+
 ## [v0.25.6](https://github.com/FurqanHun/mpv-music/releases/tag/v0.25.6) - 2026-04-01
 
 ## Dependency
