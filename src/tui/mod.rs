@@ -24,7 +24,8 @@ pub fn run_main_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Config)
             "4) Tag Filter Mode",
             "5) Play All Mode",
             "6) Search & Stream URL",
-            "7) Settings",
+            "7) Radio Mode",
+            "8) Settings",
             "q) Quit",
         ];
         let selected = run_skim_simple(options, "🎧 Pick mode > ");
@@ -40,7 +41,10 @@ pub fn run_main_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Config)
             Some(s) if s.starts_with("6)") => {
                 run_search_mode(cfg, None)?;
             }
-            Some(s) if s.starts_with("7)") => run_settings_menu(tracks, cfg)?,
+            Some(s) if s.starts_with("7)") => {
+                run_radio_mode(cfg)?;
+            }
+            Some(s) if s.starts_with("8)") => run_settings_menu(tracks, cfg)?,
             Some(s) if s.starts_with("q)") => break,
             None => break,
             _ => {}
@@ -919,6 +923,24 @@ pub fn run_search_mode(cfg: &config::Config, initial_query: Option<String>) -> R
             }
         }
     }
+    Ok(())
+}
+
+pub fn run_radio_mode(cfg: &config::Config) -> Result<()> {
+    let options = vec!["1) J-Pop (LISTEN.moe)", "2) K-Pop (LISTEN.moe)", "q) Back"];
+
+    let selected = run_skim_simple(options, "📻 Choose Station > ");
+
+    match selected.as_deref() {
+        Some(s) if s.contains("J-Pop") => {
+            player::play_radio("jpop", cfg)?;
+        }
+        Some(s) if s.contains("K-Pop") => {
+            player::play_radio("kpop", cfg)?;
+        }
+        _ => {}
+    }
+
     Ok(())
 }
 
