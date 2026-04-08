@@ -223,6 +223,9 @@ fn main() -> Result<()> {
     if args.repeat {
         cfg.loop_mode = "track".to_string();
     }
+    if let Some(choice) = args.radio {
+        return player::play_radio(&choice, &cfg);
+    }
 
     if let Some(ref extensions) = args.ext {
         cfg.audio_exts = extensions

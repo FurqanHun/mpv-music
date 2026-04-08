@@ -39,47 +39,7 @@ pub fn play(target: &str, config: &Config) -> Result<()> {
 
     apply_url_optimizations(&mut cmd, &optimization_target, config);
 
-    cmd.arg(target);
-    let is_moe = target.contains("listen.moe");
-    let ipc_socket = if cfg!(windows) {
-        r"\\.\pipe\mpv-music-ipc"
-    } else {
-        "/tmp/mpv-music-ipc.sock"
-    };
-
-    if is_moe {
-        cmd.arg(format!("--input-ipc-server={}", ipc_socket));
-        let radio_type = if target.contains("kpop") {
-            "KPOP"
-        } else {
-            "JPOP"
-        };
-
-        cmd.arg(format!(
-            "--term-status-msg=▶ ${{media-title}} • ${{time-pos}} • [ {} RADIO ]",
-            radio_type
-        ));
-    }
-    log::info!("Launching MPV process...");
-    log::debug!("Exec: {:?}", cmd);
-
-    let target_clone = target.to_string();
-    let socket_clone = ipc_socket.to_string();
-
-    if is_moe {
-        std::thread::spawn(move || {
-            // Give mpv 1 sec to create the socket file
-            std::thread::sleep(std::time::Duration::from_secs(1));
-
-            log::info!("Starting Tokio runtime for Radio Sync...");
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async {
-                if let Err(e) = crate::moe::start_radio_sync(&target_clone, socket_clone).await {
-                    log::error!("Radio Sync failed: {}", e);
-                }
-            });
-        });
-    }
+    handle_radio_sync(&mut cmd, target);
 
     let status = cmd.status().context("Failed to launch mpv")?;
 
@@ -123,6 +83,7 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
     if let Some(target) = best_target {
         log::debug!("Configuring mpv based on representative track: {}", target);
         apply_url_optimizations(&mut cmd, target, config);
+        handle_radio_sync(&mut cmd, target);
     }
 
     let dirs = ProjectDirs::from("com", "furqanhun", "mpv-music")
@@ -407,6 +368,65 @@ fn check_ytdlp_status() {
             combined
         );
     }
+}
+
+const JPOP_SQUAD: &[&str] = &[
+    "https://listen.moe/stream",
+    // "https://listen.moe/opus",
+    // "https://listen.moe/fallback",
+];
+
+const KPOP_SQUAD: &[&str] = &[
+    "https://listen.moe/kpop/stream",
+    // "https://listen.moe/kpop/opus",
+    // "https://listen.moe/kpop/fallback",
+];
+
+pub fn play_radio(choice: &str, config: &Config) -> Result<()> {
+    let squad = if choice.to_lowercase() == "kpop" {
+        KPOP_SQUAD
+    } else {
+        JPOP_SQUAD
+    };
+
+    let paths: Vec<String> = squad.iter().map(|s| s.to_string()).collect();
+
+    log::info!("Entering {} Radio Mode", choice.to_uppercase());
+
+    play_files(&paths, config)
+}
+
+fn handle_radio_sync(cmd: &mut Command, target: &str) {
+    if !target.contains("listen.moe") {
+        return;
+    }
+
+    let ipc_socket = if cfg!(windows) {
+        r"\\.\pipe\mpv-music-ipc"
+    } else {
+        "/tmp/mpv-music-ipc.sock"
+    };
+
+    cmd.arg(format!("--input-ipc-server={}", ipc_socket));
+    let radio_type = if target.contains("kpop") {
+        "KPOP"
+    } else {
+        "JPOP"
+    };
+    cmd.arg(format!(
+        "--term-status-msg=▶ ${{media-title}} • ${{time-pos}} • [ {} RADIO ]",
+        radio_type
+    ));
+
+    let target_clone = target.to_string();
+    let socket_clone = ipc_socket.to_string();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let _ = crate::moe::start_radio_sync(&target_clone, socket_clone).await;
+        });
+    });
 }
 
 #[cfg(test)]

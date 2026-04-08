@@ -174,4 +174,11 @@ pub struct Cli {
             help = "Search YouTube directly (e.g. --yt 'lofi') Requires yt-dlp."
         )]
     pub search: Option<Option<String>>,
+    #[arg(
+        long,
+        default_missing_value = "jpop",
+        num_args = 0..=1,
+        help = "Play listen.moe radio station (jpop or kpop)"
+    )]
+    pub radio: Option<String>,
 }
