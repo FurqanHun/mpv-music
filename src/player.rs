@@ -49,6 +49,16 @@ pub fn play(target: &str, config: &Config) -> Result<()> {
 
     if is_moe {
         cmd.arg(format!("--input-ipc-server={}", ipc_socket));
+        let radio_type = if target.contains("kpop") {
+            "KPOP"
+        } else {
+            "JPOP"
+        };
+
+        cmd.arg(format!(
+            "--term-status-msg=▶ ${{media-title}} • ${{time-pos}} • [ {} RADIO ]",
+            radio_type
+        ));
     }
     log::info!("Launching MPV process...");
     log::debug!("Exec: {:?}", cmd);
