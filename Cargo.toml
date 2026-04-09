@@ -53,7 +53,7 @@ anyhow = "1.0"
 
 directories = "6.0"
 
-skim = "4.3.0"
+skim = "4.5.1"
 
 log = "0.4"
 flexi_logger = "0.31"
