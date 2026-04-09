@@ -111,7 +111,7 @@ pub async fn start_radio_sync(target_url: &str, ipc_socket: String) -> Result<()
                                                 .join(", ");
                                             let title = format!("{} - {}", artists, song.title);
 
-                                            log::info!("Now Playing: {}", title);
+                                            log::debug!("Now Playing: {}", title);
                                             send_ipc_title(&ipc_socket, &title).await;
                                         }
                                     }

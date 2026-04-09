@@ -192,6 +192,14 @@ fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
 
     if is_url {
         log::debug!("Applying network stream optimizations");
+
+        if target.contains("listen.moe") {
+            log::debug!("LISTEN.moe detected: Forcing Live Mode (Cache=No, 1M Buffer)");
+            cmd.arg("--cache=no");
+            cmd.arg("--demuxer-max-bytes=1M");
+            cmd.arg("--demuxer-max-back-bytes=0");
+        }
+
         cmd.arg("--msg-level=ytdl_hook=info");
 
         if is_youtube {
