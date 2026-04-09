@@ -15,7 +15,11 @@ use std::path::PathBuf;
 
 // skim item wrappers
 
-pub fn run_main_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Config) -> Result<()> {
+pub fn run_main_menu(
+    tracks: &mut Vec<indexer::Track>,
+    cfg: &mut config::Config,
+    extra_args: &[String],
+) -> Result<()> {
     loop {
         let options = vec![
             "1) Directory Mode",
@@ -30,19 +34,19 @@ pub fn run_main_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Config)
         ];
         let selected = run_skim_simple(options, "🎧 Pick mode > ");
         match selected.as_deref() {
-            Some(s) if s.starts_with("1)") => run_dir_mode(tracks, cfg)?,
-            Some(s) if s.starts_with("2)") => run_track_mode(tracks, cfg)?,
-            Some(s) if s.starts_with("3)") => run_playlist_mode(tracks, cfg)?,
-            Some(s) if s.starts_with("4)") => run_tag_mode(tracks, cfg, None)?,
+            Some(s) if s.starts_with("1)") => run_dir_mode(tracks, cfg, extra_args)?,
+            Some(s) if s.starts_with("2)") => run_track_mode(tracks, cfg, extra_args)?,
+            Some(s) if s.starts_with("3)") => run_playlist_mode(tracks, cfg, extra_args)?,
+            Some(s) if s.starts_with("4)") => run_tag_mode(tracks, cfg, None, extra_args)?,
             Some(s) if s.starts_with("5)") => {
                 let paths: Vec<String> = tracks.iter().map(|t| t.path.clone()).collect();
-                player::play_files(&paths, cfg)?;
+                player::play_files(&paths, cfg, extra_args)?;
             }
             Some(s) if s.starts_with("6)") => {
-                run_search_mode(cfg, None)?;
+                run_search_mode(cfg, None, extra_args)?;
             }
             Some(s) if s.starts_with("7)") => {
-                run_radio_mode(cfg)?;
+                run_radio_mode(cfg, extra_args)?;
             }
             Some(s) if s.starts_with("8)") => run_settings_menu(tracks, cfg)?,
             Some(s) if s.starts_with("q)") => break,
@@ -57,10 +61,11 @@ pub fn run_tag_mode(
     tracks: &[indexer::Track],
     cfg: &config::Config,
     force_key: Option<&str>,
+    extra_args: &[String],
 ) -> Result<()> {
     // if a key is forced (like from cli -g), we don't loop/menu, just run once
     if let Some(k) = force_key {
-        let _ = run_tag_picker(tracks, cfg, k)?;
+        let _ = run_tag_picker(tracks, cfg, k, extra_args)?;
         return Ok(());
     }
 
@@ -79,14 +84,19 @@ pub fn run_tag_mode(
 
         // true = selection was made and processed -> Exit to Main Menu.
         // false = user pressed ESC inside the list -> Loop back.
-        if run_tag_picker(tracks, cfg, key)? {
+        if run_tag_picker(tracks, cfg, key, extra_args)? {
             return Ok(());
         }
     }
 }
 
 // helper to keep the logic clean, returns true if action taken, false if aborted (ESC).
-pub fn run_tag_picker(tracks: &[indexer::Track], cfg: &config::Config, key: &str) -> Result<bool> {
+pub fn run_tag_picker(
+    tracks: &[indexer::Track],
+    cfg: &config::Config,
+    key: &str,
+    extra_args: &[String],
+) -> Result<bool> {
     let (icon, prompt) = match key {
         "genre" => ("🏷️", "🏷️  Pick Genre > "),
         "artist" => ("🎤", "🎤 Pick Artist > "),
@@ -185,12 +195,16 @@ pub fn run_tag_picker(tracks: &[indexer::Track], cfg: &config::Config, key: &str
         })
         .collect();
 
-    run_post_filter_action(&filtered, cfg)?;
+    run_post_filter_action(&filtered, cfg, extra_args)?;
 
     Ok(true)
 }
 
-pub fn run_post_filter_action<T>(tracks: &[T], cfg: &config::Config) -> Result<()>
+pub fn run_post_filter_action<T>(
+    tracks: &[T],
+    cfg: &config::Config,
+    extra_args: &[String],
+) -> Result<()>
 where
     T: Borrow<indexer::Track>,
 {
@@ -200,7 +214,7 @@ where
 
     if tracks.len() == 1 {
         let t = tracks[0].borrow();
-        player::play(&t.path, cfg)?;
+        player::play(&t.path, cfg, extra_args)?;
         return Ok(());
     }
 
@@ -212,8 +226,8 @@ where
     ];
     let pick = run_skim_simple(opts.iter().map(|s| s.as_str()).collect(), "What's next? ");
     match pick.as_deref() {
-        Some(s) if s.starts_with("1)") => player::play_files(&paths, cfg),
-        Some(s) if s.starts_with("2)") => run_track_mode(tracks, cfg),
+        Some(s) if s.starts_with("1)") => player::play_files(&paths, cfg, extra_args),
+        Some(s) if s.starts_with("2)") => run_track_mode(tracks, cfg, extra_args),
         _ => Ok(()),
     }
 }
@@ -633,7 +647,7 @@ pub fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<
     }
 }
 
-pub fn run_track_mode<T>(tracks: &[T], cfg: &config::Config) -> Result<()>
+pub fn run_track_mode<T>(tracks: &[T], cfg: &config::Config, extra_args: &[String]) -> Result<()>
 where
     T: Borrow<indexer::Track>,
 {
@@ -658,7 +672,7 @@ where
         .multi(true)
         .preview("")
         .prompt("🎵 Tracks > ")
-        .header("   Artist               Title")
+        .header("   Artist                Title")
         .reverse(true)
         //.typos(2)
         .inline_info(true)
@@ -681,11 +695,15 @@ where
         return Ok(());
     }
 
-    player::play_files(&paths, cfg)?;
+    player::play_files(&paths, cfg, extra_args)?;
     Ok(())
 }
 
-pub fn run_dir_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<()> {
+pub fn run_dir_mode(
+    tracks: &[indexer::Track],
+    cfg: &config::Config,
+    extra_args: &[String],
+) -> Result<()> {
     let mut dir_map: HashMap<String, Vec<String>> = HashMap::new();
 
     for t in tracks {
@@ -752,10 +770,14 @@ pub fn run_dir_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<(
     if files.is_empty() {
         return Ok(());
     }
-    player::play_files(&files, cfg)
+    player::play_files(&files, cfg, extra_args)
 }
 
-pub fn run_playlist_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Result<()> {
+pub fn run_playlist_mode(
+    tracks: &[indexer::Track],
+    cfg: &config::Config,
+    extra_args: &[String],
+) -> Result<()> {
     let skim_items: Vec<PlaylistItem> = tracks
         .iter()
         .filter_map(|t| {
@@ -844,12 +866,16 @@ pub fn run_playlist_mode(tracks: &[indexer::Track], cfg: &config::Config) -> Res
     }
 
     if let Some(item) = output.selected_items.first() {
-        player::play(&item.output(), cfg)?;
+        player::play(&item.output(), cfg, extra_args)?;
     }
     Ok(())
 }
 
-pub fn run_search_mode(cfg: &config::Config, initial_query: Option<String>) -> Result<()> {
+pub fn run_search_mode(
+    cfg: &config::Config,
+    initial_query: Option<String>,
+    extra_args: &[String],
+) -> Result<()> {
     if !cfg.ytdlp_available {
         eprintln!("\n\x1b[33mFeature Unavailable:\x1b[0m yt-dlp is not installed.");
         eprintln!("Please install 'yt-dlp' to use Search and Streaming.");
@@ -875,7 +901,7 @@ pub fn run_search_mode(cfg: &config::Config, initial_query: Option<String>) -> R
 
     if query.starts_with("http") {
         log::info!("Direct URL detected, playing...");
-        player::play(&query, cfg)?;
+        player::play(&query, cfg, extra_args)?;
         return Ok(());
     }
 
@@ -916,27 +942,27 @@ pub fn run_search_mode(cfg: &config::Config, initial_query: Option<String>) -> R
 
         if !selected_urls.is_empty() {
             if selected_urls.len() == 1 {
-                player::play(&selected_urls[0], cfg)?;
+                player::play(&selected_urls[0], cfg, extra_args)?;
             } else {
                 log::info!("Playing queue of {} tracks", selected_urls.len());
-                player::play_files(&selected_urls, cfg)?;
+                player::play_files(&selected_urls, cfg, extra_args)?;
             }
         }
     }
     Ok(())
 }
 
-pub fn run_radio_mode(cfg: &config::Config) -> Result<()> {
+pub fn run_radio_mode(cfg: &config::Config, extra_args: &[String]) -> Result<()> {
     let options = vec!["1) J-Pop (LISTEN.moe)", "2) K-Pop (LISTEN.moe)", "q) Back"];
 
     let selected = run_skim_simple(options, "📻 Choose Station > ");
 
     match selected.as_deref() {
         Some(s) if s.contains("J-Pop") => {
-            player::play_radio("jpop", cfg)?;
+            player::play_radio("jpop", cfg, extra_args)?;
         }
         Some(s) if s.contains("K-Pop") => {
-            player::play_radio("kpop", cfg)?;
+            player::play_radio("kpop", cfg, extra_args)?;
         }
         _ => {}
     }

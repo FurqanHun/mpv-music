@@ -20,6 +20,8 @@ fn main() -> Result<()> {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let args = Cli::parse();
 
+    let extra_mpv_args = args.mpv_args.as_deref().unwrap_or(&[]);
+
     // deterministic paths
     let dirs = ProjectDirs::from("com", "furqanhun", "mpv-music")
         .context("Could not determine system paths")?;
@@ -224,7 +226,7 @@ fn main() -> Result<()> {
         cfg.loop_mode = "track".to_string();
     }
     if let Some(choice) = args.radio {
-        return player::play_radio(&choice, &cfg);
+        return player::play_radio(&choice, &cfg, extra_mpv_args);
     }
 
     if let Some(ref extensions) = args.ext {
@@ -290,7 +292,7 @@ fn main() -> Result<()> {
                 return Ok(());
             }
         } else {
-            player::play(&target, &cfg)?;
+            player::play(&target, &cfg, extra_mpv_args)?;
             return Ok(());
         }
     } else {
@@ -325,36 +327,36 @@ fn main() -> Result<()> {
     // enry point shortcuts
     if let Some(None) = args.genre {
         log::info!("Empty genre flag. Opening Genre Picker.");
-        tui::run_tag_mode(&tracks, &cfg, Some("genre"))?;
+        tui::run_tag_mode(&tracks, &cfg, Some("genre"), extra_mpv_args)?;
         return Ok(());
     }
     if let Some(None) = args.artist {
         log::info!("Empty artist flag. Opening Artist Picker.");
-        tui::run_tag_mode(&tracks, &cfg, Some("artist"))?;
+        tui::run_tag_mode(&tracks, &cfg, Some("artist"), extra_mpv_args)?;
         return Ok(());
     }
     if let Some(None) = args.album {
         log::info!("Empty album flag. Opening Album Picker.");
-        tui::run_tag_mode(&tracks, &cfg, Some("album"))?;
+        tui::run_tag_mode(&tracks, &cfg, Some("album"), extra_mpv_args)?;
         return Ok(());
     }
     if let Some(None) = args.title {
         log::info!("Empty title flag. Opening Track Mode.");
-        tui::run_track_mode(&tracks, &cfg)?;
+        tui::run_track_mode(&tracks, &cfg, extra_mpv_args)?;
         return Ok(());
     }
     if let Some(search_input) = args.search {
         if let Some(query) = search_input {
-            tui::run_search_mode(&cfg, Some(query))?;
+            tui::run_search_mode(&cfg, Some(query), extra_mpv_args)?;
         } else {
             log::info!("Empty search flag. Opening YouTube Search.");
-            tui::run_search_mode(&cfg, None)?;
+            tui::run_search_mode(&cfg, None, extra_mpv_args)?;
         }
         return Ok(());
     }
     if let Some(None) = args.playlist {
         log::info!("Empty playlist flag. Opening Playlist Picker.");
-        tui::run_playlist_mode(&tracks, &cfg)?;
+        tui::run_playlist_mode(&tracks, &cfg, extra_mpv_args)?;
         return Ok(());
     }
 
@@ -468,16 +470,16 @@ fn main() -> Result<()> {
 
         if filtered.len() == 1 {
             log::info!("Single match found. Playing directly.");
-            player::play(&filtered[0].path, &cfg)?;
+            player::play(&filtered[0].path, &cfg, extra_mpv_args)?;
             return Ok(());
         }
 
         println!("Found {} matching tracks.", filtered.len());
         if args.play_all || args.title.is_some() {
             let paths: Vec<String> = filtered.iter().map(|t| t.path.clone()).collect();
-            player::play_files(&paths, &cfg)?;
+            player::play_files(&paths, &cfg, extra_mpv_args)?;
         } else {
-            tui::run_post_filter_action(&filtered, &cfg)?;
+            tui::run_post_filter_action(&filtered, &cfg, extra_mpv_args)?;
         }
         return Ok(());
     }
@@ -485,7 +487,7 @@ fn main() -> Result<()> {
     // default modes
     if args.play_all {
         let paths: Vec<String> = tracks.iter().map(|t| t.path.clone()).collect();
-        player::play_files(&paths, &cfg)?;
+        player::play_files(&paths, &cfg, extra_mpv_args)?;
     } else if let Some(maybe_val) = args.playlist {
         if let Some(playlist_name) = maybe_val {
             let name_lower = playlist_name.to_lowercase();
@@ -501,13 +503,13 @@ fn main() -> Result<()> {
                     "Single playlist match found: {}. Playing directly.",
                     matches[0].title
                 );
-                player::play(&matches[0].path, &cfg)?;
+                player::play(&matches[0].path, &cfg, extra_mpv_args)?;
                 return Ok(());
             }
         }
-        tui::run_playlist_mode(&tracks, &cfg)?;
+        tui::run_playlist_mode(&tracks, &cfg, extra_mpv_args)?;
     } else {
-        tui::run_main_menu(&mut tracks, &mut cfg)?;
+        tui::run_main_menu(&mut tracks, &mut cfg, extra_mpv_args)?;
     }
 
     Ok(())

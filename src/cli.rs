@@ -181,4 +181,6 @@ pub struct Cli {
         help = "Play listen.moe radio station (jpop or kpop)"
     )]
     pub radio: Option<String>,
+    #[arg(long, allow_hyphen_values = true, num_args = 1.., help = "Pass arguments to mpv")]
+    pub mpv_args: Option<Vec<String>>,
 }

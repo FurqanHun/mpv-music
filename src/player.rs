@@ -20,12 +20,12 @@ impl Drop for TempCleaner {
     }
 }
 
-pub fn play(target: &str, config: &Config) -> Result<()> {
+pub fn play(target: &str, config: &Config, extra_args: &[String]) -> Result<()> {
     log::info!("Preparing playback for target: {}", target);
 
     let mut cmd = Command::new("mpv");
 
-    apply_common_args(&mut cmd, config);
+    apply_common_args(&mut cmd, config, extra_args);
 
     let optimization_target = if let Some(inner_url) = inspect_playlist_content(target, config) {
         log::debug!(
@@ -41,6 +41,10 @@ pub fn play(target: &str, config: &Config) -> Result<()> {
 
     handle_radio_sync(&mut cmd, target);
 
+    cmd.arg(target);
+
+    log::debug!("Exec: {:?}", cmd);
+
     let status = cmd.status().context("Failed to launch mpv")?;
 
     if !status.success() && classify_target_weight(&optimization_target) > 0 {
@@ -51,7 +55,7 @@ pub fn play(target: &str, config: &Config) -> Result<()> {
     Ok(())
 }
 
-pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
+pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> Result<()> {
     if paths.is_empty() {
         log::debug!("play_files called with empty path list, skipping");
         return Ok(());
@@ -60,7 +64,7 @@ pub fn play_files(paths: &[String], config: &Config) -> Result<()> {
     log::info!("Preparing playback for {} files", paths.len());
     let mut cmd = Command::new("mpv");
 
-    apply_common_args(&mut cmd, config);
+    apply_common_args(&mut cmd, config, extra_args);
 
     // O(N) Single-Pass Scan: Find the item with the highest requirement.
     // 0 = Local (Default)
@@ -239,7 +243,7 @@ fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
     }
 }
 
-fn apply_common_args(cmd: &mut Command, config: &Config) {
+fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[String]) {
     log::debug!("Applying common MPV arguments from config");
 
     if config.watch {
@@ -307,6 +311,13 @@ fn apply_common_args(cmd: &mut Command, config: &Config) {
         }
         _ => {
             log::debug!("Unrecognized loop mode, skipping loop arguments");
+        }
+    }
+
+    if !extra_args.is_empty() {
+        log::debug!("Injecting manual CLI overrides: {:?}", extra_args);
+        for arg in extra_args {
+            cmd.arg(arg);
         }
     }
 }
@@ -382,7 +393,7 @@ const KPOP_SQUAD: &[&str] = &[
     // "https://listen.moe/kpop/fallback",
 ];
 
-pub fn play_radio(choice: &str, config: &Config) -> Result<()> {
+pub fn play_radio(choice: &str, config: &Config, extra_args: &[String]) -> Result<()> {
     let squad = if choice.to_lowercase() == "kpop" {
         KPOP_SQUAD
     } else {
@@ -393,7 +404,12 @@ pub fn play_radio(choice: &str, config: &Config) -> Result<()> {
 
     log::info!("Entering {} Radio Mode", choice.to_uppercase());
 
-    play_files(&paths, config)
+    if paths.len() == 1 {
+        log::debug!("Single radio stream detected, skipping playlist file generation.");
+        return play(&paths[0], config, extra_args);
+    }
+
+    play_files(&paths, config, extra_args)
 }
 
 fn handle_radio_sync(cmd: &mut Command, target: &str) {
