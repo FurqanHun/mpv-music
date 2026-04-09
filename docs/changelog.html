@@ -162,6 +162,22 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.0-dev.2" target="_blank" class="tag">v0.26.0-dev.2</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">April 09, 2026</span>
+            </div>
+            <div class="body">
+                <ul>
+<li><strong>Introduced <code>--mpv-args</code> flag:</strong> You can now pipe raw arguments straight to the mpv engine from the CLI.</li>
+<li><strong>Overhauled <code>moe.rs</code>:</strong> Rewrote the WebSocket sync to be fully async with <code>tokio::select!</code> and <code>tokio::spawn</code>. Added exponential backoff so it survives disconnects.</li>
+<li><strong>No Time-Travel:</strong> Hardcoded <code>--cache=no</code>, <code>--demuxer-max-bytes=1M</code>, and <code>--demuxer-max-back-bytes=0</code> for <code>listen.moe</code> streams. Audio is now true-live and memory stays flat.</li>
+<li><strong>Purged queue gen for listen.moe:</strong> Stopped generating useless <code>.m3u8</code> queue files on the disk just to play a single radio URL. This shit was dumb of me, i mean not really as at first i wanted to use the vorbis as default and then opus and then fallbck stream but meh i later on switched to just using recommended stream only so there's no need for it to keep making a queue incase one fails.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.0-dev.1" target="_blank" class="tag">v0.26.0-dev.1</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">April 08, 2026</span>
