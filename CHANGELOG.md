@@ -8,6 +8,7 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 - **Overhauled `moe.rs`:** Rewrote the WebSocket sync to be fully async with `tokio::select!` and `tokio::spawn`. Added exponential backoff so it survives disconnects.
 - **No Time-Travel:** Hardcoded `--cache=no`, `--demuxer-max-bytes=1M`, and `--demuxer-max-back-bytes=0` for `listen.moe` streams. Audio is now true-live and memory stays flat.
 - **Purged queue gen for listen.moe:** Stopped generating useless `.m3u8` queue files on the disk just to play a single radio URL. This shit was dumb of me, i mean not really as at first i wanted to use the vorbis as default and then opus and then fallbck stream but meh i later on switched to just using recommended stream only so there's no need for it to keep making a queue incase one fails.
+- Bumped `skim` to v4.5.1
 
 ---
 
