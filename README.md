@@ -374,7 +374,12 @@ Because you don't need it. Your music library is likely under 100,000 tracks. A 
 <details>
 <summary><strong>Q. Why doesn't it work on Windows?</strong></summary>
 
-Blame the TUI library. We use `skim` (a Rust port of fzf) for the interface. As of v2.0.2, it does not support Windows natively. Once `skim` adds support, Windows support will happen. Until then, use WSL. They are working on it, or at least Windows support will be prioritized after the rewrite with `ratatui` ([Issue #293](https://github.com/lotabout/skim/issues/293)). That being said, I did see some development for Windows support in their PRs, and the testing was recently made cross-platform.
+~~Blame the TUI library. We use `skim`...~~ 
+Wait, `skim` actually added Windows support in v4.1.0, and we bumped to it in v0.25.6. So I can't blame them anymore. **The problem is me.**
+
+Here is the brutal truth: **It technically compiles and runs on Windows natively now.** I've patched the UNC pathing issues (shoutout to the `dunce` crate) and few other things to make it platform agnostic in theory. However, it still has weird bugs—like `mpv` deciding to spawn as a completely detached background process instead of behaving, but that's just Windows being Windows.
+
+I don't daily drive Windows, and booting up a Windows VM to test code on my potato laptop is pure agony. My exams are finally over, so I will eventually start chipping away at these Windows-specific bugs, but it's going to be a slow and painful process. In the meanwhile you can either build for Windows to test (I haven't put any blockers, Genius!) or look at the builds for v0.25.6-dev.2.
 
 </details>
 
