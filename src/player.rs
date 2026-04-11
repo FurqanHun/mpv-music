@@ -425,10 +425,11 @@ fn handle_radio_sync(cmd: &mut Command, target: &str) {
         return;
     }
 
+    let pid = std::process::id();
     let ipc_socket = if cfg!(windows) {
-        r"\\.\pipe\mpv-music-ipc"
+        format!(r"\\.\pipe\mpv-music-ipc-{}", pid)
     } else {
-        "/tmp/mpv-music-ipc.sock"
+        format!("/tmp/mpv-music-ipc-{}.sock", pid)
     };
 
     cmd.arg(format!("--input-ipc-server={}", ipc_socket));
