@@ -494,7 +494,14 @@ fn handle_radio_sync(cmd: &mut Command, target: &str) -> Option<String> {
     let target_clone = target.to_string();
     let socket_clone = ipc_socket.to_string();
     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_secs(1));
+        let p = std::path::Path::new(&socket_clone);
+        let mut attempts = 0;
+
+        // Wait up to 5 seconds (50 * 100ms) for mpv to create the socket
+        while !p.exists() && attempts < 50 {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            attempts += 1;
+        }
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let _ = crate::moe::start_radio_sync(&target_clone, socket_clone).await;
