@@ -20,6 +20,22 @@ impl Drop for TempCleaner {
     }
 }
 
+struct IpcCleaner {
+    path: Option<String>,
+}
+
+impl Drop for IpcCleaner {
+    fn drop(&mut self) {
+        if let Some(ref path) = self.path {
+            let p = std::path::Path::new(path);
+            if p.exists() {
+                let _ = std::fs::remove_file(p);
+                log::debug!("Cleaned up IPC socket: {}", path);
+            }
+        }
+    }
+}
+
 pub fn play(target: &str, config: &Config, extra_args: &[String]) -> Result<()> {
     log::info!("Preparing playback for target: {}", target);
 
@@ -39,7 +55,24 @@ pub fn play(target: &str, config: &Config, extra_args: &[String]) -> Result<()> 
 
     apply_url_optimizations(&mut cmd, &optimization_target, config);
 
-    handle_radio_sync(&mut cmd, target);
+    let socket_to_clean = handle_radio_sync(&mut cmd, target);
+
+    let _ipc_guard = IpcCleaner {
+        path: socket_to_clean.clone(),
+    };
+    let ipc_handler = socket_to_clean.clone();
+    ctrlc::set_handler(move || {
+        log::info!("\nReceived Ctrl+C.");
+        if let Some(ref path) = ipc_handler {
+            let p = std::path::Path::new(path);
+            if p.exists() {
+                let _ = std::fs::remove_file(p);
+                log::debug!("Cleaned up IPC socket: {}", path);
+            }
+        }
+        std::process::exit(0);
+    })
+    .ok();
 
     cmd.arg(target);
 
@@ -84,11 +117,17 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
         }
     }
 
-    if let Some(target) = best_target {
+    let socket_to_clean = if let Some(target) = best_target {
         log::debug!("Configuring mpv based on representative track: {}", target);
         apply_url_optimizations(&mut cmd, target, config);
-        handle_radio_sync(&mut cmd, target);
-    }
+        handle_radio_sync(&mut cmd, target) // No semicolon here!
+    } else {
+        None
+    };
+
+    let _ipc_guard = IpcCleaner {
+        path: socket_to_clean.clone(),
+    };
 
     let dirs = ProjectDirs::from("com", "furqanhun", "mpv-music")
         .context("Could not determine data directory")?;
@@ -111,12 +150,21 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
     let running = Arc::new(AtomicBool::new(true));
     let r_handler = running.clone();
     let p_handler = queue_path.clone();
+    let ipc_handler = socket_to_clean.clone();
 
     // Register signal handler
     ctrlc::set_handler(move || {
         if r_handler.swap(false, Ordering::SeqCst) && p_handler.exists() {
             let _ = std::fs::remove_file(&p_handler);
             log::info!("\nReceived Ctrl+C. Cleaned up queue file.");
+        }
+
+        if let Some(ref path) = ipc_handler {
+            let p = std::path::Path::new(path);
+            if p.exists() {
+                let _ = std::fs::remove_file(p);
+                log::info!("Cleaned up IPC socket on Ctrl+C.");
+            }
         }
         std::process::exit(0);
     })
@@ -420,9 +468,9 @@ pub fn play_radio(choice: &str, config: &Config, extra_args: &[String]) -> Resul
     play_files(&paths, config, extra_args)
 }
 
-fn handle_radio_sync(cmd: &mut Command, target: &str) {
+fn handle_radio_sync(cmd: &mut Command, target: &str) -> Option<String> {
     if !target.contains("listen.moe") {
-        return;
+        return None;
     }
 
     let pid = std::process::id();
@@ -452,6 +500,8 @@ fn handle_radio_sync(cmd: &mut Command, target: &str) {
             let _ = crate::moe::start_radio_sync(&target_clone, socket_clone).await;
         });
     });
+
+    Some(ipc_socket)
 }
 
 #[cfg(test)]
