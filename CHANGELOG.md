@@ -2,6 +2,30 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.26.0](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.0) - 2026-04-11
+
+### What's New
+- **Radio Mode (LISTEN.moe):** J-Pop & K-Pop support via TUI (**Option 7**) or `--radio` CLI flag.
+- **WebSocket Metadata Sync:** Fully async gateway sync with exponential backoff. Force-feeds live metadata (song/artist) directly into mpv.
+- **`--mpv-args` Flag:** Pipe raw arguments straight to the mpv engine from your terminal.
+- **True-Live Buffering:** Zero-cache, 1MB max-demuxer settings for radio...no more time travelling.
+
+### Stability and Performance
+- **PID-Based Sockets:** Multi-instance safety for Radio Mode.
+- **Atomic Cleanup:** New **RAII Guard** (`IpcCleaner`) and **Signal Handlers** ensure your `/tmp` stays clean, even after a crash or `Ctrl+C`.
+- **Active Polling:** Replaced blind sleeps with a smart 5s polling loop for IPC initialization.
+
+Tbh, this is more to do with making it consistent with how queue generation and clearance works.
+
+### Chores
+- Bumped `skim` to **v4.5.1**.
+- Updated Windows FAQ in README.
+
+---
+Closes #4 
+
+---
+
 ## [v0.26.0-dev.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.0-dev.2) - 2026-04-09 (Pre-release)
 
 - **Introduced `--mpv-args` flag:** You can now pipe raw arguments straight to the mpv engine from the CLI.

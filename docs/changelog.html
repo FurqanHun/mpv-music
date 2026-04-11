@@ -162,6 +162,37 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.0" target="_blank" class="tag">v0.26.0</a>
+                <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">April 11, 2026</span>
+            </div>
+            <div class="body">
+                <h3>What's New</h3>
+<ul>
+<li><strong>Radio Mode (LISTEN.moe):</strong> J-Pop &amp; K-Pop support via TUI (<strong>Option 7</strong>) or <code>--radio</code> CLI flag.</li>
+<li><strong>WebSocket Metadata Sync:</strong> Fully async gateway sync with exponential backoff. Force-feeds live metadata (song/artist) directly into mpv.</li>
+<li><strong><code>--mpv-args</code> Flag:</strong> Pipe raw arguments straight to the mpv engine from your terminal.</li>
+<li><strong>True-Live Buffering:</strong> Zero-cache, 1MB max-demuxer settings for radio...no more time travelling.</li>
+</ul>
+<h3>Stability and Performance</h3>
+<ul>
+<li><strong>PID-Based Sockets:</strong> Multi-instance safety for Radio Mode.</li>
+<li><strong>Atomic Cleanup:</strong> New <strong>RAII Guard</strong> (<code>IpcCleaner</code>) and <strong>Signal Handlers</strong> ensure your <code>/tmp</code> stays clean, even after a crash or <code>Ctrl+C</code>.</li>
+<li><strong>Active Polling:</strong> Replaced blind sleeps with a smart 5s polling loop for IPC initialization.</li>
+</ul>
+<p>Tbh, this is more to do with making it consistent with how queue generation and clearance works.</p>
+<h3>Chores</h3>
+<ul>
+<li>Bumped <code>skim</code> to <strong>v4.5.1</strong>.</li>
+<li>Updated Windows FAQ in README.</li>
+</ul>
+<hr />
+<p>Closes #4 </p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.0-dev.2" target="_blank" class="tag">v0.26.0-dev.2</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">April 09, 2026</span>
