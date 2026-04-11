@@ -54,6 +54,7 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
   * **Tag Filter Mode:** Drill down by genre, artist, album, or title interactively.
   * **Play All:** Instantly play your entire indexed library.
   * **Search & Stream URL:** Search YouTube or stream URLs directly from the menu.
+  * **Radio Mode (LISTEN.moe)**: Built-in support for J-Pop and K-Pop streams with live metadata synchronization.
   * **Settings:** Manage mpv-music settings directly from the menu.
 * **Direct File/URL Playback:** Instantly play local audio/video files or URLs (YouTube, streams) without going through the menu.
 * **Custom Directory Support:** Pass a folder path to browse and filter only that directory instead of your full library.
@@ -206,6 +207,8 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `--search [<SEARCH>]` | Search YouTube directly (aliases: `--yt`). |
 | `-h`, `--help` | Print help. |
 | `-V`, `--version` | Print version. |
+| `--radio <jpop/kpop>` |	Open Radio Mode directly. |
+| `--mpv-args <ARGS>`	| Pass raw, unparsed arguments straight to the mpv engine. |
 
 Any mpv flag also works: `--no-video`, `--volume=50`, `--shuffle`, etc.
 
@@ -437,6 +440,7 @@ For unsupported formats, the indexer falls back to filename parsing. I may imple
   * **`search.rs`**: **YouTube Backend.** Wraps `yt-dlp` to fetch search results and stream URLs.
   * **`dep_check.rs`**: Validates runtime dependencies (mpv, yt-dlp versions) and environment health.
   * **`update.rs`**: Handles version comparison (SemVer) and checks GitHub for releases.
+  * **`moe.rs`**: Radio Backend. Manages WebSocket connections to LISTEN.moe and synchronizes live metadata via IPC.
 
 ---
 
