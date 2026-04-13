@@ -95,7 +95,7 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 * **Linux:** Native. The script is built and tested primarily for Linux (GNU tools).
 * **WSL (Windows Subsystem for Linux):** Fully Supported. This is the recommended way to run it on Windows.
 * **macOS / BSD:** It should work fine on macOS and BSD systems (haven't tested it, please do... any feedback is appreciated).
-* **Windows (Native/Git Bash):** Not Supported. Check [FAQ](#windows-support).
+* **Windows (Native/Git Bash):** Currently in beta/dev. Check [FAQ](#windows-support).
 
 > [!Tip]
 > You can use WSL (Windows Subsystem for Linux) to run `mpv-music` on Windows.
@@ -377,12 +377,13 @@ Because you don't need it. Your music library is likely under 100,000 tracks. A 
 <details>
 <summary><strong>Q. Why doesn't it work on Windows?</strong></summary>
 
-~~Blame the TUI library. We use `skim`...~~ 
-Wait, `skim` actually added Windows support in v4.1.0, and we bumped to it in v0.25.6. So I can't blame them anymore. **The problem is me.**
+~~Blame the TUI library. We use `skim`...Wait, `skim` actually added Windows support in v4.1.0, and we bumped to it in v0.25.6. So I can't blame them anymore. **The problem is me.**~~
 
-Here is the brutal truth: **It technically compiles and runs on Windows natively now.** I've patched the UNC pathing issues (shoutout to the `dunce` crate) and few other things to make it platform agnostic in theory. However, it still has weird bugs—like `mpv` deciding to spawn as a completely detached background process instead of behaving, but that's just Windows being Windows.
+**It's in beta, let's say that.**
 
-I don't daily drive Windows, and booting up a Windows VM to test code on my potato laptop is pure agony. My exams are finally over, so I will eventually start chipping away at these Windows-specific bugs, but it's going to be a slow and painful process. In the meanwhile you can either build for Windows to test (I haven't put any blockers, Genius!) or look at the builds for v0.25.6-dev.2.
+I don't daily drive Windows, and booting up a Windows VM to test code on my potato laptop is pure agony. I have started chipping away at these Windows-specific bugs, and it's going to be a slow and painful process. In the meanwhile you can either build for Windows to test (I haven't put any blockers, Genius!) or look at the builds for v0.25.1-dev.
+
+> I really need someone to test it on windows tho, fr.
 
 </details>
 
