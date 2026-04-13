@@ -2,24 +2,37 @@ use crate::config::Config;
 use anyhow::Result;
 use std::process::{Command, Stdio, exit};
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
 pub fn check(cfg: &mut Config) -> Result<()> {
     log::info!("Checking external dependencies...");
 
     // Spawn both processes WITHOUT waiting (true parallelism without thread overhead)
     let mpv_cmd = if cfg!(windows) { "mpv.com" } else { "mpv" };
-    let mpv_child = Command::new(mpv_cmd)
+    let mut mpv_command = Command::new(mpv_cmd);
+    mpv_command
         .arg("--version")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
+        .stderr(Stdio::piped());
 
-    let ytdlp_child = Command::new("yt-dlp")
+    #[cfg(windows)]
+    mpv_command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
+    let mpv_child = mpv_command.spawn();
+
+    let mut ytdlp_command = Command::new("yt-dlp");
+    ytdlp_command
         .arg("--version")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
+        .stderr(Stdio::piped());
+
+    #[cfg(windows)]
+    ytdlp_command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
+    let ytdlp_child = ytdlp_command.spawn();
 
     let mpv_output = match mpv_child {
         Ok(child) => child.wait_with_output(),
