@@ -320,7 +320,11 @@ fn main() -> Result<()> {
     }
 
     if tracks.is_empty() {
-        eprintln!("No music found.");
+        eprintln!("No music found. Run from terminal with --manage-dirs or add dirs to config.");
+        if cfg!(windows) {
+            eprintln!("\nPress Enter to exit...");
+            let _ = std::io::stdin().read_line(&mut String::new());
+        }
         return Ok(());
     }
 

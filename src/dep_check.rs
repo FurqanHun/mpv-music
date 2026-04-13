@@ -49,6 +49,11 @@ pub fn check(cfg: &mut Config) -> Result<()> {
             eprintln!("Please install it via your package manager (e.g. sudo dnf install mpv).");
 
             log::error!("Critical dependency missing: mpv. Exiting.");
+
+            if cfg!(windows) {
+                eprintln!("\nPress Enter to exit...");
+                let _ = std::io::stdin().read_line(&mut String::new());
+            }
             exit(1);
         }
     }
