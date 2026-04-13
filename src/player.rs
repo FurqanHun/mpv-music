@@ -39,7 +39,8 @@ impl Drop for IpcCleaner {
 pub fn play(target: &str, config: &Config, extra_args: &[String]) -> Result<()> {
     log::info!("Preparing playback for target: {}", target);
 
-    let mut cmd = Command::new("mpv");
+    let cmd_name = if cfg!(windows) { "mpv.com" } else { "mpv" };
+    let mut cmd = Command::new(cmd_name);
 
     apply_common_args(&mut cmd, config, extra_args);
 
