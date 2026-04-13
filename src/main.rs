@@ -225,7 +225,13 @@ fn main() -> Result<()> {
     if args.repeat {
         cfg.loop_mode = "track".to_string();
     }
-    if let Some(choice) = args.radio {
+    if let Some(None) = args.radio {
+        log::info!("Empty radio flag. Opening Radio Picker.");
+        tui::run_radio_mode(&cfg, extra_mpv_args)?;
+        return Ok(());
+    }
+
+    if let Some(Some(choice)) = args.radio {
         return player::play_radio(&choice, &cfg, extra_mpv_args);
     }
 

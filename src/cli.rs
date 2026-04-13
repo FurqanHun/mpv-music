@@ -176,11 +176,10 @@ pub struct Cli {
     pub search: Option<Option<String>>,
     #[arg(
         long,
-        default_missing_value = "jpop",
         num_args = 0..=1,
         help = "Play listen.moe radio station (jpop or kpop)"
     )]
-    pub radio: Option<String>,
+    pub radio: Option<Option<String>>,
     #[arg(long, allow_hyphen_values = true, num_args = 1.., help = "Pass arguments to mpv")]
     pub mpv_args: Option<Vec<String>>,
 }
