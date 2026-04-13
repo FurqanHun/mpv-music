@@ -9,12 +9,14 @@ pub fn check(cfg: &mut Config) -> Result<()> {
     let mpv_cmd = if cfg!(windows) { "mpv.com" } else { "mpv" };
     let mpv_child = Command::new(mpv_cmd)
         .arg("--version")
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn();
 
     let ytdlp_child = Command::new("yt-dlp")
         .arg("--version")
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn();
