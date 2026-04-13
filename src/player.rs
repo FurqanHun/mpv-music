@@ -96,7 +96,8 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
     }
 
     log::info!("Preparing playback for {} files", paths.len());
-    let mut cmd = Command::new("mpv");
+    let cmd_name = if cfg!(windows) { "mpv.com" } else { "mpv" };
+    let mut cmd = Command::new(cmd_name);
 
     apply_common_args(&mut cmd, config, extra_args);
 

@@ -6,7 +6,8 @@ pub fn check(cfg: &mut Config) -> Result<()> {
     log::info!("Checking external dependencies...");
 
     // Spawn both processes WITHOUT waiting (true parallelism without thread overhead)
-    let mpv_child = Command::new("mpv")
+    let mpv_cmd = if cfg!(windows) { "mpv.com" } else { "mpv" };
+    let mpv_child = Command::new(mpv_cmd)
         .arg("--version")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
