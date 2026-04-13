@@ -2,6 +2,30 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.26.1-dev.3](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.1-dev.3) - 2026-04-13 (Pre-release)
+
+- Added create no window for windows in `dep_check`
+- `--radio` should now open the selection tui
+
+---
+
+## [v0.26.1-dev.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.1-dev.2) - 2026-04-13 (Pre-release)
+
+This dev release is also for testing windows shenanigans
+- wait for user input before exiting on windows
+- add `.stdin(Stdio::null())` in `dep_check` to fix double click launch on windows
+- update `mpv` calls every where to `mpv.com` for windows
+
+---
+
+## [v0.26.1-dev.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.1-dev.1) - 2026-04-13 (Pre-release)
+
+This dev build is primarily to test some windows shenanigans
+- instead of calling `mpv` in windows, triggered `mpv.com`
+- switched `more` to `notepad.exe` and `notepad` to `notepad.exe``
+
+---
+
 ## [v0.26.0](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.0) - 2026-04-11
 
 ### What's New
