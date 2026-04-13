@@ -50,7 +50,7 @@ fn main() -> Result<()> {
         let viewer = viewer_opt.unwrap_or_else(|| {
             std::env::var("PAGER").unwrap_or_else(|_| {
                 if cfg!(windows) {
-                    "more".to_string()
+                    "notepad.exe".to_string()
                 } else {
                     "less".to_string()
                 }
@@ -88,7 +88,7 @@ fn main() -> Result<()> {
         let editor = editor_opt.unwrap_or_else(|| {
             std::env::var("EDITOR").unwrap_or_else(|_| {
                 if cfg!(windows) {
-                    "notepad".to_string()
+                    "notepad.exe".to_string()
                 } else {
                     "nano".to_string()
                 }
