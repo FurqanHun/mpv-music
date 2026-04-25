@@ -2,6 +2,12 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.26.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.2) - 2026-04-25
+
+- Bump `lofty` to **v0.24.x** cause v23 got yanked _(I somehow didn't checked it until i tried publishing on cargo)_
+
+---
+
 ## [v0.26.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.1) - 2026-04-25
 
 This release introduces native Windows support by resolving critical bugs and upgrading the core TUI engine.
