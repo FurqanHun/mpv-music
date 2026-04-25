@@ -93,9 +93,9 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 ### Supported Systems
 
 * **Linux:** Native. The script is built and tested primarily for Linux (GNU tools).
-* **WSL (Windows Subsystem for Linux):** Fully Supported. This is the recommended way to run it on Windows.
+* **WSL (Windows Subsystem for Linux):** Fully Supported.
 * **macOS / BSD:** It should work fine on macOS and BSD systems (haven't tested it, please do... any feedback is appreciated).
-* **Windows (Native/Git Bash):** Currently in beta/dev. Check [FAQ](#windows-support).
+* **Windows (Native/Git Bash):** Fully Supported. Check [FAQ](#windows-support).
 
 > [!Tip]
 > You can use WSL (Windows Subsystem for Linux) to run `mpv-music` on Windows.
@@ -375,13 +375,9 @@ Because you don't need it. Your music library is likely under 100,000 tracks. A 
 
 <a name="windows-support"></a>
 <details>
-<summary><strong>Q. Why doesn't it work on Windows?</strong></summary>
+<summary><strong>Q. Why a Windows FAQ?</strong></summary>
 
-~~Blame the TUI library. We use `skim`...Wait, `skim` actually added Windows support in v4.1.0, and we bumped to it in v0.25.6. So I can't blame them anymore. **The problem is me.**~~
-
-**It's in beta, let's say that.**
-
-I don't daily drive Windows, and booting up a Windows VM to test code on my potato laptop is pure agony. I have started chipping away at these Windows-specific bugs, and it's going to be a slow and painful process. In the meanwhile you can either build for Windows to test (I haven't put any blockers, Genius!) or look at the builds for v0.25.1-dev.
+Well, despite me testing it a bit on a vm on ma potato laptop, I cannot gurantee no bugs on it, as I didn't really test more than it just launching mpv correctly and reading just one song and spawning the mpv, and radio mode. So edge cases may appear. It’s in beta, let's say that. Windows is still Windows.
 
 > I really need someone to test it on windows tho, fr.
 
