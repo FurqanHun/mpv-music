@@ -2,6 +2,26 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.26.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.1) - 2026-04-25
+
+This release introduces native Windows support by resolving critical bugs and upgrading the core TUI engine.
+
+### Windows Support
+* **GUI Subsystem Fix**: Switched all execution calls to `mpv.com`. This prevents `mpv` from spawning as a detached background process, ensuring it respects the terminal environment.
+* **Process Stealth**: Implemented `CREATE_NO_WINDOW` flags and `.stdin(Stdio::null())` in dependency checks. This nukes accidental console pop-ups and fixes issues when launching via double-click (kinda).
+* **Native Fallbacks**: Standardized on `notepad.exe` for configuration editing on Windows when no `$EDITOR` is defined.
+* **Exit Guard**: Added a mandatory wait for user input before exiting on Windows to prevent the terminal from closing instantly on errors.
+
+### Features & UI
+* **Interactive Radio**: The `--radio` flag now triggers the TUI selection menu instead of defaulting to a single station.
+
+### Chores
+* Updated Windows FAQ and documentation to reflect native compatibility.
+* Refactored internal dependency checks to prevent input blocking on windows.
+* Bumped `skim` to **v4.6.0** for improved performance.
+
+---
+
 ## [v0.26.1-dev.3](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.1-dev.3) - 2026-04-13 (Pre-release)
 
 - Added create no window for windows in `dep_check`

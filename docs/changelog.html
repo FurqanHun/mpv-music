@@ -162,6 +162,34 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.1" target="_blank" class="tag">v0.26.1</a>
+                <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">April 25, 2026</span>
+            </div>
+            <div class="body">
+                <p>This release introduces native Windows support by resolving critical bugs and upgrading the core TUI engine.</p>
+<h3>Windows Support</h3>
+<ul>
+<li><strong>GUI Subsystem Fix</strong>: Switched all execution calls to <code>mpv.com</code>. This prevents <code>mpv</code> from spawning as a detached background process, ensuring it respects the terminal environment.</li>
+<li><strong>Process Stealth</strong>: Implemented <code>CREATE_NO_WINDOW</code> flags and <code>.stdin(Stdio::null())</code> in dependency checks. This nukes accidental console pop-ups and fixes issues when launching via double-click (kinda).</li>
+<li><strong>Native Fallbacks</strong>: Standardized on <code>notepad.exe</code> for configuration editing on Windows when no <code>$EDITOR</code> is defined.</li>
+<li><strong>Exit Guard</strong>: Added a mandatory wait for user input before exiting on Windows to prevent the terminal from closing instantly on errors.</li>
+</ul>
+<h3>Features &amp; UI</h3>
+<ul>
+<li><strong>Interactive Radio</strong>: The <code>--radio</code> flag now triggers the TUI selection menu instead of defaulting to a single station.</li>
+</ul>
+<h3>Chores</h3>
+<ul>
+<li>Updated Windows FAQ and documentation to reflect native compatibility.</li>
+<li>Refactored internal dependency checks to prevent input blocking on windows.</li>
+<li>Bumped <code>skim</code> to <strong>v4.6.0</strong> for improved performance.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.1-dev.3" target="_blank" class="tag">v0.26.1-dev.3</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">April 13, 2026</span>
