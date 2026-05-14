@@ -46,12 +46,25 @@ pub fn update_self() -> Result<()> {
 
         if remote_semver > current_semver {
             println!("Update Available: \x1b[32mYES\x1b[0m");
-            println!("\nTo update, run this command:");
-            println!(
-                "\x1b[1mcurl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash\x1b[0m"
-            );
-            println!("\nOr download manually:");
-            println!("https://github.com/FurqanHun/mpv-music/releases/latest");
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
+            {
+                println!("\nTo update, run this command:");
+                println!(
+                    "\x1b[1mcurl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash\x1b[0m"
+                );
+                println!("\nOr download manually:");
+                println!("https://github.com/FurqanHun/mpv-music/releases/latest");
+            }
+            #[cfg(target_os = "windows")]
+            {
+                println!("\nDownload the latest release:");
+                println!("https://github.com/FurqanHun/mpv-music/releases/latest");
+            }
+            #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
+            {
+                println!("\nRepository:");
+                println!("https://github.com/FurqanHun/mpv-music");
+            }
         } else {
             println!("Update Status:    \x1b[32mUp to date\x1b[0m");
         }
@@ -95,16 +108,33 @@ pub fn update_self() -> Result<()> {
 
             if update_available {
                 println!("Update Status:    \x1b[32mYES\x1b[0m (Development Build)");
-                println!("\nTo update, run this command:");
-                println!(
-                    "\x1b[1mcurl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash -s -- --dev \x1b[0m"
-                );
-                println!("\nLinks:");
-                println!("Stable: https://github.com/FurqanHun/mpv-music/releases/latest");
-                println!(
-                    "Latest: https://github.com/FurqanHun/mpv-music/releases/tag/{}",
-                    latest_tag
-                );
+                #[cfg(any(target_os = "linux", target_os = "macos"))]
+                {
+                    println!("\nTo update, run this command:");
+                    println!(
+                        "\x1b[1mcurl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash -s -- --dev \x1b[0m"
+                    );
+                    println!("\nLinks:");
+                    println!("Stable: https://github.com/FurqanHun/mpv-music/releases/latest");
+                    println!(
+                        "Latest: https://github.com/FurqanHun/mpv-music/releases/tag/{}",
+                        latest_tag
+                    );
+                }
+                #[cfg(target_os = "windows")]
+                {
+                    println!("\nLinks:");
+                    println!("Stable: https://github.com/FurqanHun/mpv-music/releases/latest");
+                    println!(
+                        "Latest: https://github.com/FurqanHun/mpv-music/releases/tag/{}",
+                        latest_tag
+                    );
+                }
+                #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
+                {
+                    println!("\nRepository:");
+                    println!("https://github.com/FurqanHun/mpv-music");
+                }
             } else {
                 println!("Update Status:    \x1b[33mUp to date\x1b[0m (Development Build)");
             }
