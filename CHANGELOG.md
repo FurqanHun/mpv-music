@@ -2,9 +2,28 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.26.3](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.3) - 2026-05-14
+
+This patch release introduces OS-specific update instructions and bumps several core dependencies.
+
+### Fixes & Improvements
+- **OS-Specific Update Messages:** Fixed the update notification to provide platform-aware instructions. On Linux and macOS, it displays the standard `curl` installation command, while on Windows, it provides direct links to the Latest and Stable releases.
+- **Updater Logic (Stable vs Dev):** Fixed a bug where users on a development build were incorrectly told to use the `--dev` flag when a new *stable* release was available. The updater now correctly identifies stable updates, labels them as `(Stable Build)`, and provides the standard `install.sh` command without the `--dev` flag.
+
+### Dependencies & Chores
+- Bumped `rayon` to **v1.12**
+- Bumped `clap` to **v4.6**
+- Bumped `ureq` to **v3.3**
+- Bumped `tokio` to **v1.52**
+- Bumped `toml` to **v1.1**
+- Bumped `skim` to **v4.6.2**
+
+
+---
+
 ## [v0.26.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.2) - 2026-04-25
 
-- Bump `lofty` to **v0.24.x** cause v23 got yanked _(I somehow didn't checked it until i tried publishing on cargo)_
+- Bump `lofty` to **v0.24.x** cause v0.23.x got yanked _(I somehow didn't checked it until i tried publishing on crates)_
 
 ---
 

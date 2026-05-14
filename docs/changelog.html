@@ -162,13 +162,38 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
-                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.2" target="_blank" class="tag">v0.26.2</a>
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.3" target="_blank" class="tag">v0.26.3</a>
                 <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">May 14, 2026</span>
+            </div>
+            <div class="body">
+                <p>This patch release introduces OS-specific update instructions and bumps several core dependencies.</p>
+<h3>Fixes &amp; Improvements</h3>
+<ul>
+<li><strong>OS-Specific Update Messages:</strong> Fixed the update notification to provide platform-aware instructions. On Linux and macOS, it displays the standard <code>curl</code> installation command, while on Windows, it provides direct links to the Latest and Stable releases.</li>
+<li><strong>Updater Logic (Stable vs Dev):</strong> Fixed a bug where users on a development build were incorrectly told to use the <code>--dev</code> flag when a new <em>stable</em> release was available. The updater now correctly identifies stable updates, labels them as <code>(Stable Build)</code>, and provides the standard <code>install.sh</code> command without the <code>--dev</code> flag.</li>
+</ul>
+<h3>Dependencies &amp; Chores</h3>
+<ul>
+<li>Bumped <code>rayon</code> to <strong>v1.12</strong></li>
+<li>Bumped <code>clap</code> to <strong>v4.6</strong></li>
+<li>Bumped <code>ureq</code> to <strong>v3.3</strong></li>
+<li>Bumped <code>tokio</code> to <strong>v1.52</strong></li>
+<li>Bumped <code>toml</code> to <strong>v1.1</strong></li>
+<li>Bumped <code>skim</code> to <strong>v4.6.2</strong></li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.2" target="_blank" class="tag">v0.26.2</a>
+                
                 <span style="margin-left: auto;">April 25, 2026</span>
             </div>
             <div class="body">
                 <ul>
-<li>Bump <code>lofty</code> to <strong>v0.24.x</strong> cause v23 got yanked <em>(I somehow didn't checked it until i tried publishing on cargo)</em></li>
+<li>Bump <code>lofty</code> to <strong>v0.24.x</strong> cause v0.23.x got yanked <em>(I somehow didn't checked it until i tried publishing on crates)</em></li>
 </ul>
             </div>
         </div>
