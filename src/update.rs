@@ -87,12 +87,14 @@ pub fn update_self() -> Result<()> {
             let current_semver = parse_version(current_ver_str);
             let latest_semver = parse_version(latest_ver);
 
+            let is_latest_stable = !latest_ver.contains('-');
+
             // if update is strictly NEWER
             let update_available = if latest_semver > current_semver {
                 true
             } else if latest_semver == current_semver {
                 // base versions match, we must check suffixes
-                if latest_ver.contains("dev") && current_ver_str.contains("dev") {
+                if !is_latest_stable && current_ver_str.contains("dev") {
                     // extract number after last dot (e.g. "dev.16" -> 16)
                     let get_num = |s: &str| -> u32 {
                         s.rsplit('.').next().unwrap_or("0").parse().unwrap_or(0)
@@ -100,20 +102,27 @@ pub fn update_self() -> Result<()> {
                     get_num(latest_ver) > get_num(current_ver_str)
                 } else {
                     // with same base, stable is "newer"
-                    !latest_ver.contains("dev") && current_ver_str.contains("dev")
+                    is_latest_stable && current_ver_str.contains("dev")
                 }
             } else {
                 false
             };
 
             if update_available {
-                println!("Update Status:    \x1b[32mYES\x1b[0m (Development Build)");
+                let build_type = if is_latest_stable { "Stable Build" } else { "Development Build" };
+                println!("Update Status:    \x1b[32mYES\x1b[0m ({})", build_type);
                 #[cfg(any(target_os = "linux", target_os = "macos"))]
                 {
                     println!("\nTo update, run this command:");
-                    println!(
-                        "\x1b[1mcurl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash -s -- --dev \x1b[0m"
-                    );
+                    if is_latest_stable {
+                        println!(
+                            "\x1b[1mcurl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash\x1b[0m"
+                        );
+                    } else {
+                        println!(
+                            "\x1b[1mcurl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash -s -- --dev \x1b[0m"
+                        );
+                    }
                     println!("\nLinks:");
                     println!("Stable: https://github.com/FurqanHun/mpv-music/releases/latest");
                     println!(
