@@ -90,13 +90,27 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
     );
     pb.enable_steady_tick(Duration::from_millis(100));
 
+    let scan_hidden = config.scan_hidden_dirs;
     // scan loop
     let tracks: Vec<Track> = config
         .music_dirs
         .iter()
         .flat_map(|dir| {
             log::info!("Walking directory: {:?}", dir);
-            WalkDir::new(dir).into_iter().filter_map(|e| e.ok())
+            WalkDir::new(dir)
+                .into_iter()
+                .filter_entry(move |e| {
+                    if scan_hidden {
+                        return true;
+                    }
+                    let is_hidden = e
+                        .file_name()
+                        .to_str()
+                        .map(|s| s.starts_with('.') && s != "." && s != "..")
+                        .unwrap_or(false);
+                    !is_hidden
+                })
+                .filter_map(|e| e.ok())
         })
         .par_bridge()
         .filter_map(|entry| {

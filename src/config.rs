@@ -13,6 +13,8 @@ pub struct Config {
     pub video_ok: bool,
     #[serde(default)]
     pub watch: bool,
+    #[serde(default)]
+    pub scan_hidden_dirs: bool,
     pub serial_mode: bool,
 
     pub ytdlp_ejs_remote_github: bool,
@@ -58,6 +60,7 @@ impl Default for Config {
             music_dirs,
             video_ok: false,
             watch: false,
+            scan_hidden_dirs: false,
             serial_mode: false,
             ytdlp_ejs_remote_github: false,
             ytdlp_useragent:
