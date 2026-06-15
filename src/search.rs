@@ -1,8 +1,13 @@
 use anyhow::{Context, Result};
+use directories::ProjectDirs;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
+use std::fs;
 use std::process::Command;
+use std::time::SystemTime;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SearchResult {
     pub title: String,
     pub url: String,
@@ -30,12 +35,87 @@ fn format_views(count: u64) -> String {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct CacheEntry {
+    timestamp: u64,
+    results: Vec<SearchResult>,
+}
+
+fn get_cache_path() -> Option<std::path::PathBuf> {
+    ProjectDirs::from("com", "furqanhun", "mpv-music")
+        .map(|dirs| dirs.data_dir().join("yt_cache.json"))
+}
+
+fn load_cache() -> (HashMap<String, CacheEntry>, bool) {
+    let path = match get_cache_path() {
+        Some(p) => p,
+        None => return (HashMap::new(), false),
+    };
+
+    if path.exists() {
+        if let Ok(content) = fs::read_to_string(&path) {
+            if let Ok(map) = serde_json::from_str::<HashMap<String, CacheEntry>>(&content) {
+                let now = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+                let initial_len = map.len();
+                let pruned_map: HashMap<String, CacheEntry> = map
+                    .into_iter()
+                    .filter(|(_, v)| now.saturating_sub(v.timestamp) < 86400)
+                    .collect();
+                let was_pruned = initial_len != pruned_map.len();
+                return (pruned_map, was_pruned);
+            }
+        }
+    }
+    (HashMap::new(), false)
+}
+
+fn save_cache(cache: &HashMap<String, CacheEntry>) {
+    if let Some(path) = get_cache_path() {
+        if let Some(parent) = path.parent() {
+            if let Err(e) = fs::create_dir_all(parent) {
+                log::error!("Failed to create cache dir: {}", e);
+            }
+        }
+        match serde_json::to_string(cache) {
+            Ok(content) => {
+                let temp_path = path.with_extension("tmp");
+                if let Err(e) = fs::write(&temp_path, content) {
+                    log::error!("Failed to write cache file {:?}: {}", temp_path, e);
+                } else {
+                    if let Err(e) = fs::rename(&temp_path, &path) {
+                        log::error!("Failed to swap cache file {:?}: {}", path, e);
+                    } else {
+                        log::info!("Cache successfully saved to {:?}", path);
+                    }
+                }
+            }
+            Err(e) => {
+                log::error!("Failed to serialize cache: {}", e);
+            }
+        }
+    }
+}
+
 pub fn search_youtube(query: &str, limit: usize) -> Result<Vec<SearchResult>> {
     log::info!(
         "Starting YouTube search for: '{}' (Limit: {})",
         query,
         limit
     );
+
+    let cache_key = format!("{}|{}", query, limit);
+    let (mut cache, was_pruned) = load_cache();
+
+    if let Some(entry) = cache.get(&cache_key) {
+        log::info!("Cache hit for YouTube search: '{}'", query);
+        if was_pruned {
+            save_cache(&cache);
+        }
+        return Ok(entry.results.clone());
+    }
 
     let search_url = format!(
         "https://www.youtube.com/results?search_query={}",
@@ -155,6 +235,20 @@ pub fn search_youtube(query: &str, limit: usize) -> Result<Vec<SearchResult>> {
         stats_shorts,
         stats_bad_url
     );
+
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    cache.insert(
+        cache_key,
+        CacheEntry {
+            timestamp: now,
+            results: results.clone(),
+        },
+    );
+    save_cache(&cache);
 
     Ok(results)
 }
