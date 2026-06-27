@@ -46,7 +46,7 @@ pub fn run_main_menu(
                 run_search_mode(cfg, None, extra_args)?;
             }
             Some(s) if s.starts_with("7)") => {
-                run_radio_mode(cfg, extra_args)?;
+                run_radio_mode(cfg, extra_args, None)?;
             }
             Some(s) if s.starts_with("8)") => run_settings_menu(tracks, cfg)?,
             Some(s) if s.starts_with("q)") => break,
@@ -952,19 +952,50 @@ pub fn run_search_mode(
     Ok(())
 }
 
-pub fn run_radio_mode(cfg: &config::Config, extra_args: &[String]) -> Result<()> {
-    let options = vec!["1) J-Pop (LISTEN.moe)", "2) K-Pop (LISTEN.moe)", "q) Back"];
+pub fn run_radio_mode(
+    cfg: &config::Config,
+    extra_args: &[String],
+    filter: Option<&str>,
+) -> Result<()> {
+    use crate::radio::RADIO_STATIONS;
 
-    let selected = run_skim_simple(options, "📻 Choose Station > ");
+    let options: Vec<&str> = if let Some(f) = filter {
+        let f_lower = f.to_lowercase().replace("-", "").replace(" ", "");
+        RADIO_STATIONS
+            .iter()
+            .filter(|(n, url, _)| {
+                !url.is_empty()
+                    && n.to_lowercase()
+                        .replace("-", "")
+                        .replace(" ", "")
+                        .contains(&f_lower)
+            })
+            .map(|(name, _, _)| *name)
+            .collect()
+    } else {
+        RADIO_STATIONS.iter().map(|(name, _, _)| *name).collect()
+    };
 
-    match selected.as_deref() {
-        Some(s) if s.contains("J-Pop") => {
-            player::play_radio("jpop", cfg, extra_args)?;
+    if options.is_empty() {
+        log::error!("No radio stations found matching filter: {:?}", filter);
+        eprintln!("Radio station not found. Please use the interactive menu.");
+        return Ok(());
+    }
+
+    if options.len() == 1 && filter.is_some() {
+        let s = options[0];
+        if let Some((name, url, _)) = RADIO_STATIONS.iter().find(|(n, _, _)| *n == s) {
+            return player::play_radio(name, url, cfg, extra_args);
         }
-        Some(s) if s.contains("K-Pop") => {
-            player::play_radio("kpop", cfg, extra_args)?;
-        }
-        _ => {}
+    }
+
+    let selected = run_skim_simple(options, "📻 Choose Station (Please consider donating!) > ");
+
+    if let Some(s) = selected.as_deref()
+        && let Some((name, url, _is_listen_moe)) = RADIO_STATIONS.iter().find(|(n, _, _)| *n == s)
+        && !url.is_empty()
+    {
+        player::play_radio(name, url, cfg, extra_args)?;
     }
 
     Ok(())

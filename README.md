@@ -54,7 +54,15 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
   * **Tag Filter Mode:** Drill down by genre, artist, album, or title interactively.
   * **Play All:** Instantly play your entire indexed library.
   * **Search & Stream URL:** Search YouTube or stream URLs directly from the menu.
-  * **Radio Mode (LISTEN.moe)**: Built-in support for J-Pop and K-Pop streams with live metadata synchronization.
+  * **Radio Mode**: Built-in support for diverse internet radio stations. Stations are sourced from respected, ad-free streams (discovered via the open [Radio-Browser.info](https://www.radio-browser.info/) database, aside from the official LISTEN.moe), including:
+    * **LISTEN.moe** (J-Pop / K-Pop) - Includes live WebSocket metadata synchronization ([listen.moe](https://listen.moe)).
+    * **SomaFM** (Ambient / Metal) - Listener-supported, commercial-free radio from San Francisco ([somafm.com](https://somafm.com)).
+    * **Lofi 24/7** (Lofi Hip Hop) - Provided via fastcast4u.
+    * **Vocaloid Radio** (Vocaloid) - Independent SHOUTcast community stream ([vocaloidradio.com](https://vocaloidradio.com)).
+
+    > [!NOTE]
+    > Please consider donating directly to these independent stations through their websites to help keep their servers running!
+
   * **Settings:** Manage mpv-music settings directly from the menu.
 * **Direct File/URL Playback:** Instantly play local audio/video files or URLs (YouTube, streams) without going through the menu.
 * **Custom Directory Support:** Pass a folder path to browse and filter only that directory instead of your full library.
@@ -207,7 +215,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `--search [<SEARCH>]` | Search YouTube directly (aliases: `--yt`). |
 | `-h`, `--help` | Print help. |
 | `-V`, `--version` | Print version. |
-| `--radio <jpop/kpop>` |	Open Radio Mode directly. |
+| `--radio [<STATION>]` | Open Radio Mode directly, or play a station (e.g., `jpop`, `lofi`, `vocaloid`). |
 | `--mpv-args <ARGS>`	| Pass raw, unparsed arguments straight to the mpv engine. |
 
 Any mpv flag also works: `--no-video`, `--volume=50`, `--shuffle`, etc.
@@ -437,7 +445,9 @@ For unsupported formats, the indexer falls back to filename parsing. I may imple
   * **`search.rs`**: **YouTube Backend.** Wraps `yt-dlp` to fetch search results and stream URLs.
   * **`dep_check.rs`**: Validates runtime dependencies (mpv, yt-dlp versions) and environment health.
   * **`update.rs`**: Handles version comparison (SemVer) and checks GitHub for releases.
-  * **`moe.rs`**: Radio Backend. Manages WebSocket connections to LISTEN.moe and synchronizes live metadata via IPC.
+  * **`radio/`**: Radio Backend.
+    * **`mod.rs`**: Defines the list of available internet radio stations and their stream URLs.
+    * **`listen_moe.rs`**: Manages WebSocket connections to LISTEN.moe and synchronizes live metadata via IPC.
 
 ---
 

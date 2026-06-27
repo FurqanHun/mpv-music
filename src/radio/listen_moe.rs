@@ -43,7 +43,7 @@ async fn send_ipc_title(socket_path: &str, title: &str) {
     let payload = serde_json::json!({
         "command": ["set_property", "force-media-title", title]
     });
-    let msg = format!("{}\n", payload.to_string());
+    let msg = format!("{}\n", payload);
 
     #[cfg(unix)]
     {

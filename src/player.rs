@@ -439,39 +439,17 @@ fn check_ytdlp_status() {
     }
 }
 
-const JPOP_SQUAD: &[&str] = &[
-    "https://listen.moe/stream",
-    // "https://listen.moe/opus",
-    // "https://listen.moe/fallback",
-];
-
-const KPOP_SQUAD: &[&str] = &[
-    "https://listen.moe/kpop/stream",
-    // "https://listen.moe/kpop/opus",
-    // "https://listen.moe/kpop/fallback",
-];
-
-pub fn play_radio(choice: &str, config: &Config, extra_args: &[String]) -> Result<()> {
-    let squad = if choice.to_lowercase() == "kpop" {
-        KPOP_SQUAD
-    } else {
-        JPOP_SQUAD
-    };
-
-    let paths: Vec<String> = squad.iter().map(|s| s.to_string()).collect();
-
-    log::info!("Entering {} Radio Mode", choice.to_uppercase());
-
-    if paths.len() == 1 {
-        log::debug!("Single radio stream detected, skipping playlist file generation.");
-        return play(&paths[0], config, extra_args);
-    }
-
-    play_files(&paths, config, extra_args)
+pub fn play_radio(name: &str, url: &str, config: &Config, extra_args: &[String]) -> Result<()> {
+    log::info!("Entering Radio Mode: {}", name);
+    play(url, config, extra_args)
 }
 
 fn handle_radio_sync(cmd: &mut Command, target: &str) -> Option<String> {
-    if !target.contains("listen.moe") {
+    let is_radio = crate::radio::RADIO_STATIONS
+        .iter()
+        .any(|(_, url, _)| *url == target);
+
+    if !is_radio {
         return None;
     }
 
@@ -483,32 +461,40 @@ fn handle_radio_sync(cmd: &mut Command, target: &str) -> Option<String> {
     };
 
     cmd.arg(format!("--input-ipc-server={}", ipc_socket));
-    let radio_type = if target.contains("kpop") {
-        "KPOP"
-    } else {
-        "JPOP"
-    };
+
+    let (station_name, is_listen_moe) = crate::radio::RADIO_STATIONS
+        .iter()
+        .find(|(_, url, _)| *url == target)
+        .map(|(name, _, is_moe)| {
+            let clean_name = name.split(") ").nth(1).unwrap_or(name).to_uppercase();
+            (clean_name, *is_moe)
+        })
+        .unwrap_or_else(|| ("RADIO".to_string(), false));
+
     cmd.arg(format!(
-        "--term-status-msg=▶ ${{media-title}} • ${{time-pos}} • [ {} RADIO ]",
-        radio_type
+        "--term-status-msg=▶ ${{media-title}} • ${{time-pos}} • [ {} ]",
+        station_name
     ));
 
-    let target_clone = target.to_string();
-    let socket_clone = ipc_socket.to_string();
-    std::thread::spawn(move || {
-        let p = std::path::Path::new(&socket_clone);
-        let mut attempts = 0;
+    if is_listen_moe {
+        let target_clone = target.to_string();
+        let socket_clone = ipc_socket.to_string();
+        std::thread::spawn(move || {
+            let p = std::path::Path::new(&socket_clone);
+            let mut attempts = 0;
 
-        // Wait up to 5 seconds (50 * 100ms) for mpv to create the socket
-        while !p.exists() && attempts < 50 {
-            std::thread::sleep(std::time::Duration::from_millis(100));
-            attempts += 1;
-        }
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            let _ = crate::moe::start_radio_sync(&target_clone, socket_clone).await;
+            // Wait up to 5 seconds (50 * 100ms) for mpv to create the socket
+            while !p.exists() && attempts < 50 {
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                attempts += 1;
+            }
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                let _ =
+                    crate::radio::listen_moe::start_radio_sync(&target_clone, socket_clone).await;
+            });
         });
-    });
+    }
 
     Some(ipc_socket)
 }

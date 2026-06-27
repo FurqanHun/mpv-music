@@ -52,44 +52,41 @@ fn load_cache() -> (HashMap<String, CacheEntry>, bool) {
         None => return (HashMap::new(), false),
     };
 
-    if path.exists() {
-        if let Ok(content) = fs::read_to_string(&path) {
-            if let Ok(map) = serde_json::from_str::<HashMap<String, CacheEntry>>(&content) {
-                let now = SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs();
-                let initial_len = map.len();
-                let pruned_map: HashMap<String, CacheEntry> = map
-                    .into_iter()
-                    .filter(|(_, v)| now.saturating_sub(v.timestamp) < 86400)
-                    .collect();
-                let was_pruned = initial_len != pruned_map.len();
-                return (pruned_map, was_pruned);
-            }
-        }
+    if path.exists()
+        && let Ok(content) = fs::read_to_string(&path)
+        && let Ok(map) = serde_json::from_str::<HashMap<String, CacheEntry>>(&content)
+    {
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let initial_len = map.len();
+        let pruned_map: HashMap<String, CacheEntry> = map
+            .into_iter()
+            .filter(|(_, v)| now.saturating_sub(v.timestamp) < 86400)
+            .collect();
+        let was_pruned = initial_len != pruned_map.len();
+        return (pruned_map, was_pruned);
     }
     (HashMap::new(), false)
 }
 
 fn save_cache(cache: &HashMap<String, CacheEntry>) {
     if let Some(path) = get_cache_path() {
-        if let Some(parent) = path.parent() {
-            if let Err(e) = fs::create_dir_all(parent) {
-                log::error!("Failed to create cache dir: {}", e);
-            }
+        if let Some(parent) = path.parent()
+            && let Err(e) = fs::create_dir_all(parent)
+        {
+            log::error!("Failed to create cache dir: {}", e);
         }
         match serde_json::to_string(cache) {
             Ok(content) => {
                 let temp_path = path.with_extension("tmp");
                 if let Err(e) = fs::write(&temp_path, content) {
                     log::error!("Failed to write cache file {:?}: {}", temp_path, e);
+                } else if let Err(e) = fs::rename(&temp_path, &path) {
+                    log::error!("Failed to swap cache file {:?}: {}", path, e);
                 } else {
-                    if let Err(e) = fs::rename(&temp_path, &path) {
-                        log::error!("Failed to swap cache file {:?}: {}", path, e);
-                    } else {
-                        log::info!("Cache successfully saved to {:?}", path);
-                    }
+                    log::info!("Cache successfully saved to {:?}", path);
                 }
             }
             Err(e) => {

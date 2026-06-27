@@ -109,7 +109,11 @@ pub fn update_self() -> Result<()> {
             };
 
             if update_available {
-                let build_type = if is_latest_stable { "Stable Build" } else { "Development Build" };
+                let build_type = if is_latest_stable {
+                    "Stable Build"
+                } else {
+                    "Development Build"
+                };
                 println!("Update Status:    \x1b[32mYES\x1b[0m ({})", build_type);
                 #[cfg(any(target_os = "linux", target_os = "macos"))]
                 {

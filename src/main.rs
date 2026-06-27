@@ -2,8 +2,8 @@ mod cli;
 mod config;
 mod dep_check;
 mod indexer;
-mod moe;
 mod player;
+mod radio;
 mod search;
 mod tui;
 mod update;
@@ -227,12 +227,13 @@ fn main() -> Result<()> {
     }
     if let Some(None) = args.radio {
         log::info!("Empty radio flag. Opening Radio Picker.");
-        tui::run_radio_mode(&cfg, extra_mpv_args)?;
+        tui::run_radio_mode(&cfg, extra_mpv_args, None)?;
         return Ok(());
     }
 
     if let Some(Some(choice)) = args.radio {
-        return player::play_radio(&choice, &cfg, extra_mpv_args);
+        tui::run_radio_mode(&cfg, extra_mpv_args, Some(&choice))?;
+        return Ok(());
     }
 
     if let Some(ref extensions) = args.ext {

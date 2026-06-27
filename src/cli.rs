@@ -177,7 +177,7 @@ pub struct Cli {
     #[arg(
         long,
         num_args = 0..=1,
-        help = "Play listen.moe radio station (jpop or kpop)"
+        help = "Open Radio Mode directly or play a specific station (e.g. jpop, vocaloid)"
     )]
     pub radio: Option<Option<String>>,
     #[arg(long, allow_hyphen_values = true, num_args = 1.., help = "Pass arguments to mpv")]
