@@ -162,8 +162,27 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
-                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.3" target="_blank" class="tag">v0.26.3</a>
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.0" target="_blank" class="tag">v0.27.0</a>
                 <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">June 27, 2026</span>
+            </div>
+            <div class="body">
+                <p>This release significantly expands the radio functionality with new verified streams, improves CLI interaction, and bumps the core UI dependency.</p>
+<p>Features &amp; Improvements
+- <strong>Expanded Radio Stations</strong>: Refactored the radio system to support a diverse, verified list of ad-free internet radio stations (including SomaFM, Lofi 24/7, and Vocaloid Radio).
+- <strong>Flexible CLI Radio Matching</strong>: Enhanced the <code>--radio</code> CLI flag to perform fuzzy matching (ignoring hyphens and spaces). 
+- <strong>Smart Radio Auto-Play</strong>: If a <code>--radio</code> search yields exactly one match (e.g., <code>--radio jpop</code>), it instantly auto-plays. If it yields multiple matches, it seamlessly opens the TUI interactive picker narrowed down to those specific matches.
+- <strong>Dynamic MPV Title Sync</strong>: MPV now correctly identifies and capitalizes the current active radio station title in the terminal UI (e.g., <code>[ LOFI HIP HOP (LOFI 24/7) ]</code>).</p>
+<p>Dependencies &amp; Chores
+- Bumped <code>skim</code> to v4.9.0.
+- Assorted code hygiene and minor formatting improvements.</p>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.3" target="_blank" class="tag">v0.26.3</a>
+                
                 <span style="margin-left: auto;">May 14, 2026</span>
             </div>
             <div class="body">

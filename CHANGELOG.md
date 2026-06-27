@@ -2,6 +2,23 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.27.0](https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.0) - 2026-06-27
+
+This release significantly expands the radio functionality with new verified streams, improves CLI interaction, and bumps the core UI dependency.
+
+Features & Improvements
+- **Expanded Radio Stations**: Refactored the radio system to support a diverse, verified list of ad-free internet radio stations (including SomaFM, Lofi 24/7, and Vocaloid Radio).
+- **Flexible CLI Radio Matching**: Enhanced the `--radio` CLI flag to perform fuzzy matching (ignoring hyphens and spaces). 
+- **Smart Radio Auto-Play**: If a `--radio` search yields exactly one match (e.g., `--radio jpop`), it instantly auto-plays. If it yields multiple matches, it seamlessly opens the TUI interactive picker narrowed down to those specific matches.
+- **Dynamic MPV Title Sync**: MPV now correctly identifies and capitalizes the current active radio station title in the terminal UI (e.g., `[ LOFI HIP HOP (LOFI 24/7) ]`).
+
+Dependencies & Chores
+- Bumped `skim` to v4.9.0.
+- Assorted code hygiene and minor formatting improvements.
+
+
+---
+
 ## [v0.26.3](https://github.com/FurqanHun/mpv-music/releases/tag/v0.26.3) - 2026-05-14
 
 This patch release introduces OS-specific update instructions and bumps several core dependencies.
