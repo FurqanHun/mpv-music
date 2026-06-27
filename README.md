@@ -60,8 +60,8 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
     * **Lofi 24/7** (Lofi Hip Hop) - Provided via fastcast4u.
     * **Vocaloid Radio** (Vocaloid) - Independent SHOUTcast community stream ([vocaloidradio.com](https://vocaloidradio.com)).
 
-    > [!NOTE]
-    > Please consider donating directly to these independent stations through their websites to help keep their servers running!
+> [!NOTE]
+> Please consider donating directly to these independent stations through their websites to help keep their servers running!
 
   * **Settings:** Manage mpv-music settings directly from the menu.
 * **Direct File/URL Playback:** Instantly play local audio/video files or URLs (YouTube, streams) without going through the menu.
