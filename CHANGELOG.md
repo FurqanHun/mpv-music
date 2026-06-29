@@ -6,7 +6,7 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 
 This release brings major performance upgrades to YouTube search, expands the radio module with diverse ad-free stations, and introduces new configuration options.
 
-Features & Improvements
+### Features & Improvements
 - **YouTube Persistent Caching**: YouTube (`--yt`) search results are now persistently cached to disk using atomic file writes. This dramatically speeds up repeated searches and prevents redundant `yt-dlp` network calls. 
 - **Smart Cache Pruning**: The YouTube cache features an automatic 24-hour stale time expiration. Old search results are automatically pruned from the file during loads, ensuring the cache file never gets bloated over time.
 - **Hidden Directory Scanning**: Added a new `scan_hidden_dirs` option to the configuration file, giving you control over whether hidden folders (like `.music`) are indexed during library scans.
@@ -15,7 +15,7 @@ Features & Improvements
 - **Smart Radio Auto-Play**: If a `--radio` search yields exactly one match (e.g., `--radio jpop`), it instantly auto-plays. If it yields multiple matches, it seamlessly opens the TUI interactive picker narrowed down to those specific matches.
 - **Dynamic MPV Title Sync**: MPV now correctly identifies and capitalizes the current active radio station title in the terminal UI (e.g., `[ LOFI HIP HOP (LOFI 24/7) ]`).
 
-Dependencies & Chores
+### Dependencies & Chores
 - Bumped `skim` to v4.9.0.
 - Assorted code hygiene and minor formatting improvements.
 

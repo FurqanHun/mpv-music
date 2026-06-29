@@ -168,17 +168,21 @@
             </div>
             <div class="body">
                 <p>This release brings major performance upgrades to YouTube search, expands the radio module with diverse ad-free stations, and introduces new configuration options.</p>
-<p>Features &amp; Improvements
-- <strong>YouTube Persistent Caching</strong>: YouTube (<code>--yt</code>) search results are now persistently cached to disk using atomic file writes. This dramatically speeds up repeated searches and prevents redundant <code>yt-dlp</code> network calls. 
-- <strong>Smart Cache Pruning</strong>: The YouTube cache features an automatic 24-hour stale time expiration. Old search results are automatically pruned from the file during loads, ensuring the cache file never gets bloated over time.
-- <strong>Hidden Directory Scanning</strong>: Added a new <code>scan_hidden_dirs</code> option to the configuration file, giving you control over whether hidden folders (like <code>.music</code>) are indexed during library scans.
-- <strong>Expanded Radio Stations</strong>: Completely refactored the radio system to support a diverse, verified list of ad-free internet radio stations (including SomaFM, Lofi 24/7, and Vocaloid Radio).
-- <strong>Flexible CLI Radio Matching</strong>: Enhanced the <code>--radio</code> CLI flag to perform fuzzy matching (ignoring hyphens and spaces). 
-- <strong>Smart Radio Auto-Play</strong>: If a <code>--radio</code> search yields exactly one match (e.g., <code>--radio jpop</code>), it instantly auto-plays. If it yields multiple matches, it seamlessly opens the TUI interactive picker narrowed down to those specific matches.
-- <strong>Dynamic MPV Title Sync</strong>: MPV now correctly identifies and capitalizes the current active radio station title in the terminal UI (e.g., <code>[ LOFI HIP HOP (LOFI 24/7) ]</code>).</p>
-<p>Dependencies &amp; Chores
-- Bumped <code>skim</code> to v4.9.0.
-- Assorted code hygiene and minor formatting improvements.</p>
+<h3>Features &amp; Improvements</h3>
+<ul>
+<li><strong>YouTube Persistent Caching</strong>: YouTube (<code>--yt</code>) search results are now persistently cached to disk using atomic file writes. This dramatically speeds up repeated searches and prevents redundant <code>yt-dlp</code> network calls. </li>
+<li><strong>Smart Cache Pruning</strong>: The YouTube cache features an automatic 24-hour stale time expiration. Old search results are automatically pruned from the file during loads, ensuring the cache file never gets bloated over time.</li>
+<li><strong>Hidden Directory Scanning</strong>: Added a new <code>scan_hidden_dirs</code> option to the configuration file, giving you control over whether hidden folders (like <code>.music</code>) are indexed during library scans.</li>
+<li><strong>Expanded Radio Stations</strong>: Completely refactored the radio system to support a diverse, verified list of ad-free internet radio stations (including SomaFM, Lofi 24/7, and Vocaloid Radio).</li>
+<li><strong>Flexible CLI Radio Matching</strong>: Enhanced the <code>--radio</code> CLI flag to perform fuzzy matching (ignoring hyphens and spaces). </li>
+<li><strong>Smart Radio Auto-Play</strong>: If a <code>--radio</code> search yields exactly one match (e.g., <code>--radio jpop</code>), it instantly auto-plays. If it yields multiple matches, it seamlessly opens the TUI interactive picker narrowed down to those specific matches.</li>
+<li><strong>Dynamic MPV Title Sync</strong>: MPV now correctly identifies and capitalizes the current active radio station title in the terminal UI (e.g., <code>[ LOFI HIP HOP (LOFI 24/7) ]</code>).</li>
+</ul>
+<h3>Dependencies &amp; Chores</h3>
+<ul>
+<li>Bumped <code>skim</code> to v4.9.0.</li>
+<li>Assorted code hygiene and minor formatting improvements.</li>
+</ul>
             </div>
         </div>
         
