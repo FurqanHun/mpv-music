@@ -1,8 +1,12 @@
 # mpv-music
 
-[![version](https://img.shields.io/github/v/release/FurqanHun/mpv-music?include_prereleases&color=blue)](https://github.com/FurqanHun/mpv-music/releases)
-[![mpv-music build status](https://github.com/FurqanHun/mpv-music/actions/workflows/release.yml/badge.svg)](https://github.com/FurqanHun/mpv-music/actions/workflows/release.yml)
-[![crates.io](https://img.shields.io/crates/v/mpv-music.svg)](https://crates.io/crates/mpv-music)
+[![version](https://img.shields.io/github/v/release/FurqanHun/mpv-music?include_prereleases&label=release&labelColor=27303D&color=blue&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/FurqanHun/mpv-music/releases)
+[![mpv-music build status](https://img.shields.io/github/actions/workflow/status/FurqanHun/mpv-music/release.yml?label=build&labelColor=27303D&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/FurqanHun/mpv-music/actions/workflows/release.yml)
+[![crates.io](https://img.shields.io/crates/v/mpv-music?label=crates.io&labelColor=27303D&color=orange&logo=rust&logoColor=FFFFFF&style=flat)](https://crates.io/crates/mpv-music)
+
+[![github downloads](https://img.shields.io/github/downloads/FurqanHun/mpv-music/total?label=github%20downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/FurqanHun/mpv-music/releases)
+[![crates.io downloads](https://img.shields.io/crates/d/mpv-music?label=crates.io%20downloads&labelColor=27303D&color=0D1117&logo=rust&logoColor=FFFFFF&style=flat)](https://crates.io/crates/mpv-music)
+
 
 **mpv-music** is a blazing-fast, terminal-native music player and library browser. Originally a Bash hybrid, it has been completely rewritten in Rust for maximum performance, safety, and a seamless TUI experience.
 
