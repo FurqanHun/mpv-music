@@ -143,6 +143,13 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
 
     let mut warnings = Vec::new();
 
+    let legacy_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0";
+    if cfg.ytdlp_useragent == legacy_ua {
+        log::info!("Migrating legacy ytdlp_useragent to new default");
+        cfg.ytdlp_useragent = default_ytdlp_useragent();
+        warnings.push("Migrated legacy yt-dlp user agent to the new default.".to_string());
+    }
+
     if cfg.volume > 130 {
         warnings.push(format!(
             "Volume {} exceeds maximum (130). Reseting to 100.",
