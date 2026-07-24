@@ -226,6 +226,8 @@ async fn handle_payload(
     }
 }
 
+/// Establishes and manages a resilient WebSocket connection for live radio metadata syncing.
+/// Features exponential backoff for reconnections on failure.
 pub async fn start_radio_sync(target_url: &str, ipc_socket: String) -> Result<()> {
     let ws_url = if target_url.contains("kpop") {
         "wss://listen.moe/kpop/gateway_v2"

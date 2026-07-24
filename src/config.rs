@@ -3,6 +3,13 @@ use directories::{ProjectDirs, UserDirs};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+pub const DEFAULT_YTDLP_USER_AGENT: &str =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:153.0) Gecko/20100101 Firefox/153.0";
+
+fn default_ytdlp_useragent() -> String {
+    "default".to_string()
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     pub shuffle: bool,
@@ -18,7 +25,7 @@ pub struct Config {
     pub serial_mode: bool,
 
     pub ytdlp_ejs_remote_github: bool,
-    #[serde(default)]
+    #[serde(default = "default_ytdlp_useragent")]
     pub ytdlp_useragent: String,
     pub enable_file_logging: bool,
 
@@ -63,9 +70,7 @@ impl Default for Config {
             scan_hidden_dirs: false,
             serial_mode: false,
             ytdlp_ejs_remote_github: false,
-            ytdlp_useragent:
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0"
-                    .to_string(),
+            ytdlp_useragent: default_ytdlp_useragent(),
             enable_file_logging: true,
             audio_exts: vec![
                 "mp3", "flac", "wav", "m4a", "aac", "ogg", "opus", "wma", "alac", "aiff", "amr",
@@ -99,6 +104,7 @@ impl Default for Config {
     }
 }
 
+/// If no configuration exists, it creates one with default values.
 pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     log::debug!("Initializing config load sequence");
 
@@ -136,6 +142,13 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     log::debug!("Successfully parsed {} bytes of TOML", content.len());
 
     let mut warnings = Vec::new();
+
+    let legacy_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0";
+    if cfg.ytdlp_useragent == legacy_ua {
+        log::info!("Migrating legacy ytdlp_useragent to new default");
+        cfg.ytdlp_useragent = default_ytdlp_useragent();
+        warnings.push("Migrated legacy yt-dlp user agent to the new default.".to_string());
+    }
 
     if cfg.volume > 130 {
         warnings.push(format!(

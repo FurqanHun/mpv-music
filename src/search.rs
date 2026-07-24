@@ -96,6 +96,7 @@ fn save_cache(cache: &HashMap<String, CacheEntry>) {
     }
 }
 
+/// Returns a list of parsed search results, ignoring channels, mixes, and shorts.
 pub fn search_youtube(query: &str, limit: usize) -> Result<Vec<SearchResult>> {
     log::info!(
         "Starting YouTube search for: '{}' (Limit: {})",
