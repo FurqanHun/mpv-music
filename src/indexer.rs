@@ -247,6 +247,7 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
     Ok(tracks)
 }
 
+/// Serializes a slice of `Track` items into a JSON Lines format file on disk.
 pub fn save(tracks: &[Track]) -> Result<()> {
     let dirs = ProjectDirs::from("com", "furqanhun", "mpv-music")
         .context("Could not determine data directory")?;

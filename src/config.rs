@@ -104,6 +104,7 @@ impl Default for Config {
     }
 }
 
+/// If no configuration exists, it creates one with default values.
 pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     log::debug!("Initializing config load sequence");
 

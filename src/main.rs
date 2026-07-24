@@ -16,6 +16,7 @@ use flexi_logger::{FileSpec, Logger, WriteMode, style};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+/// Entry point
 fn main() -> Result<()> {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let args = Cli::parse();
