@@ -2,6 +2,25 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.27.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.1) - 2026-07-24
+
+This patch release updates core dependencies and significantly improves how the `yt-dlp` user agent is handled to prevent anti-bot blocking.
+
+### Features & Improvements
+- **User Agent Handling:** The `ytdlp_useragent` value in `config.toml` now defaults to the `default` keyword. This ensures that whenever the internal default user agent is updated in the codebase, users will automatically receive the update without needing to manually edit their config files.
+- **Smart Config Migration:** Added a load-time migration that automatically detects legacy hardcoded Firefox user agent strings in existing `config.toml` files and upgrades them to the new dynamic `default` keyword, while safely preserving any explicitly customized user agents.
+- **Optimized Anti-Bot Settings:** Switched the internal default user agent to a modern Windows Firefox signature (`Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:153.0) Gecko/20100101 Firefox/153.0`). This is the optimal configuration for scraping tools like `yt-dlp` to blend in as standard traffic and avoid CAPTCHAs or throttling.
+
+### Dependencies & Chores
+- Bumped `tokio` to **v1.53**
+- Bumped `tokio-tungstenite` to **v0.30**
+- Bumped `skim` to **v5.5.0** (Unlocks potential future TUI improvements like `--hide-nth` and mouse double-click bindings)
+- Bumped `futures-util` to **v0.3**
+- Assorted code hygiene and documentation improvements.
+
+
+---
+
 ## [v0.27.0](https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.0) - 2026-06-27
 
 This release brings major performance upgrades to YouTube search, expands the radio module with diverse ad-free stations, and introduces new configuration options.

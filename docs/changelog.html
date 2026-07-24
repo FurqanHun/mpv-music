@@ -162,8 +162,33 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
-                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.0" target="_blank" class="tag">v0.27.0</a>
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.1" target="_blank" class="tag">v0.27.1</a>
                 <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">July 24, 2026</span>
+            </div>
+            <div class="body">
+                <p>This patch release updates core dependencies and significantly improves how the <code>yt-dlp</code> user agent is handled to prevent anti-bot blocking.</p>
+<h3>Features &amp; Improvements</h3>
+<ul>
+<li><strong>User Agent Handling:</strong> The <code>ytdlp_useragent</code> value in <code>config.toml</code> now defaults to the <code>default</code> keyword. This ensures that whenever the internal default user agent is updated in the codebase, users will automatically receive the update without needing to manually edit their config files.</li>
+<li><strong>Smart Config Migration:</strong> Added a load-time migration that automatically detects legacy hardcoded Firefox user agent strings in existing <code>config.toml</code> files and upgrades them to the new dynamic <code>default</code> keyword, while safely preserving any explicitly customized user agents.</li>
+<li><strong>Optimized Anti-Bot Settings:</strong> Switched the internal default user agent to a modern Windows Firefox signature (<code>Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:153.0) Gecko/20100101 Firefox/153.0</code>). This is the optimal configuration for scraping tools like <code>yt-dlp</code> to blend in as standard traffic and avoid CAPTCHAs or throttling.</li>
+</ul>
+<h3>Dependencies &amp; Chores</h3>
+<ul>
+<li>Bumped <code>tokio</code> to <strong>v1.53</strong></li>
+<li>Bumped <code>tokio-tungstenite</code> to <strong>v0.30</strong></li>
+<li>Bumped <code>skim</code> to <strong>v5.5.0</strong> (Unlocks potential future TUI improvements like <code>--hide-nth</code> and mouse double-click bindings)</li>
+<li>Bumped <code>futures-util</code> to <strong>v0.3</strong></li>
+<li>Assorted code hygiene and documentation improvements.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.0" target="_blank" class="tag">v0.27.0</a>
+                
                 <span style="margin-left: auto;">June 27, 2026</span>
             </div>
             <div class="body">
