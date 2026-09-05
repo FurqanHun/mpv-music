@@ -306,7 +306,7 @@ serial_mode = false # Set to true to force single-threaded scanning (better for 
 # Set to true if you installed yt-dlp via package manager (apt/pacman). 
 # Keep false if you downloaded the binary directly from GitHub.
 ytdlp_ejs_remote_github = false 
-ytdlp_useragent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0"
+ytdlp_useragent = "default"
 
 # --- Logging ---
 # If true, INFO/WARN logs are saved to file. 
