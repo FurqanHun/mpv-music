@@ -2,6 +2,26 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.27.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.2) - 2026-09-06
+
+This patch release introduces a key UX improvement to the Main Menu alongside core dependency and documentation updates.
+
+### Features & Improvements
+- **Main Menu UX:** The application will no longer immediately exit when the local music library is empty, allowing users to seamlessly access the Main Menu to use Radio Mode, YouTube Search, and the Settings Manager.
+- **Documentation:** Removed outdated "Rust Rewrite" transition notes from the README and docs site, merging their benefits into the core feature list.
+- **Documentation:** Added the `scan_hidden_dirs` configuration option to the README.
+
+### Dependencies & Chores
+-  Bumped the internal default `yt-dlp` user-agent to Firefox 155.
+- Bumped `lofty` to **v0.25**
+- Bumped `ureq` to **v3.4**
+- Bumped `skim` to **v5.6.6**
+- Updated `Cargo.lock` to the latest compatible dependency versions.
+- Applied standard code formatting (`cargo fmt`).
+
+
+---
+
 ## [v0.27.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.1) - 2026-07-24
 
 This patch release updates core dependencies and significantly improves how the `yt-dlp` user agent is handled to prevent anti-bot blocking.
