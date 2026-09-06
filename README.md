@@ -298,9 +298,10 @@ music_dirs = [
     "/home/user/Music",
     "/mnt/storage/songs",
 ]
-video_ok = false    # Set to true to include video files in the index
-watch = false       # Set to true to actually show the video window when playing
-serial_mode = false # Set to true to force single-threaded scanning (better for HDDs)
+video_ok = false         # Set to true to include video files in the index
+watch = false            # Set to true to actually show the video window when playing
+serial_mode = false      # Set to true to force single-threaded scanning (better for HDDs)
+scan_hidden_dirs = false # Set to true to allow indexing of hidden directories (e.g. .music)
 
 # --- YT-DLP / Networking ---
 # Set to true if you installed yt-dlp via package manager (apt/pacman). 
