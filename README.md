@@ -8,22 +8,16 @@
 [![crates.io downloads](https://img.shields.io/crates/d/mpv-music?label=crates.io%20downloads&labelColor=27303D&color=0D1117&logo=rust&logoColor=FFFFFF&style=flat)](https://crates.io/crates/mpv-music)
 
 
-**mpv-music** is a blazing-fast, terminal-native music player and library browser. Originally a Bash hybrid, it has been completely rewritten in Rust for maximum performance, safety, and a seamless TUI experience.
+**mpv-music** is a blazing-fast, terminal-native music player and library browser written in Rust.
 
 It indexes your music collection into a lightning-fast library, providing fuzzy searching (via `skim`), metadata-rich previews, and deep integration with `mpv` for high-quality playback.
 
-> [!NOTE]
-> **This is the documentation for the Rust-native rewrite (v0.24+).**
-> mpv-music has migrated from the legacy Bash hybrid system to a unified Rust core.
->
-> If you are looking for the archived **Bash-based version**, see:
-> [mpv-music-sh-archive](https://github.com/FurqanHun/mpv-music/tree/mpv-music-sh-archive)
+*(Looking for the legacy Bash version? See [mpv-music-sh-archive](https://github.com/FurqanHun/mpv-music/tree/mpv-music-sh-archive))*
 
 ---
 
 ## Table of Contents
 
-- [Key changes in Rust Rewrite](#key-changes-in-rust-rewrite)
 - [Features](#features)
 - [Dependencies](#dependencies)
 - [Installation](#installation)
@@ -37,18 +31,10 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 
 ---
 
-## Key changes in Rust Rewrite
-
-- **Single Binary:** No more managing a Bash script + a separate indexer binary. Everything is now one efficient executable.
-- **Native TUI:** Replaced external fzf calls with an integrated Rust TUI based on skim, allowing for deeper UI customization and better performance.
-- **Static Linking:** Linux releases are now built with musl, making them "portable"—they run on almost any distribution without worrying about GLIBC versions.
-- **Faster Scans:** The indexing engine is now part of the main app, leveraging Rust's multi-threading to scan thousands of files in milliseconds.
-- **Leaner Dependencies:** Significantly reduced the number of external tools required to run.
-
 ## Features
 
-- **Lightning-Fast Indexing:** Automatically scans your music directories and caches metadata (Artist, Album, Title, Genre) into a JSONL index.
-- **Advanced Fuzzy Search:** Instant, interactive searching through your entire library.
+- **Native TUI:** Integrated Rust TUI (powered by `skim`) for deep UI customization and instant fuzzy searching.
+- **Lightning-Fast Indexing:** Automatically scans your music directories utilizing multi-threading, caching metadata (Artist, Album, Title, Genre) into a JSONL index.
 - **Self-Healing Index:** Automatically validates index integrity on startup. It detects corruption (e.g., from power loss), surgically repairs broken lines to save your library, or triggers a smart rebuild to prevent crashes. In a blink of an eye.
 * **Rich Metadata Previews:** View song title, artist, album, and genre directly in the skim preview window.
 * **Interactive Selection with Multiple Modes:**
@@ -104,7 +90,7 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 
 ### Supported Systems
 
-* **Linux:** Native. The script is built and tested primarily for Linux (GNU tools).
+* **Linux:** Native. The app is built and tested primarily for Linux.
 * **WSL (Windows Subsystem for Linux):** Fully Supported.
 * **macOS / BSD:** It should work fine on macOS and BSD systems (haven't tested it, please do... any feedback is appreciated).
 * **Windows (Native/Git Bash):** Fully Supported. Check [FAQ](#windows-support).
@@ -132,7 +118,7 @@ cargo install mpv-music
     chmod +x mpv-music
     mv mpv-music ~/.local/bin/
     ```
-or Alternatively, you can use the following command and let the script handle the process
+or Alternatively, you can use the following command and let the installer handle the process
 
 ```bash
 curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash
@@ -154,7 +140,7 @@ mpv-music
 
 > [!IMPORTANT]
 > Running `mpv-music` for the first time will automatically index `$HOME/Music`.
-> It is **recommended** that you first run `mpv-music --manage-dirs` to customize music directories before indexing (unless you only keep your music in `$HOME/Music`). And if your music is on an HDD, you may want to run `--serial` or set `SERIAL_MODE=true` in your config, using `mpv-music --config`.
+> It is **recommended** that you first run `mpv-music --manage-dirs` to customize music directories before indexing (unless you only keep your music in `$HOME/Music`). And if your music is on an HDD, you may want to run `--serial` or set `serial_mode = true` in your config, using `mpv-music --config`.
 
 That creates:
 
@@ -164,7 +150,7 @@ That creates:
 
 - Logs: `~/.local/share/mpv-music/mpv-music.log`
 
-The project now respects XDG standards. and only uses config folder to dump all as a fallback. And by `directories` library used does support config/data dirs in windows/mac.
+The project respects XDG standards and uses the `directories` crate to automatically support proper config/data paths across Linux, Windows, and macOS.
 
 ---
 
@@ -224,7 +210,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 
 Any mpv flag also works: `--no-video`, `--volume=50`, `--shuffle`, etc.
 
-Instead of using the log rotation method now log is overwritten each time the program is run. And you can turn the logging off by setting `enable_file_logging = false` in your config.
+Logs are overwritten each time the program is run. You can disable file logging by setting `enable_file_logging = false` in your config.
 
 ### Examples:
 
