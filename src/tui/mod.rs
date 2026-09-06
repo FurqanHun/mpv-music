@@ -33,6 +33,23 @@ pub fn run_main_menu(
             "q) Quit",
         ];
         let selected = run_skim_simple(options, "🎧 Pick mode > ");
+
+        if let Some(ref s) = selected {
+            let is_local_mode = s.starts_with("1)")
+                || s.starts_with("2)")
+                || s.starts_with("3)")
+                || s.starts_with("4)")
+                || s.starts_with("5)");
+
+            if is_local_mode && tracks.is_empty() {
+                let _ = run_skim_simple(
+                    vec!["q) Back"],
+                    "No tracks in library! Use Settings (8) to add directories.",
+                );
+                continue;
+            }
+        }
+
         match selected.as_deref() {
             Some(s) if s.starts_with("1)") => run_dir_mode(tracks, cfg, extra_args)?,
             Some(s) if s.starts_with("2)") => run_track_mode(tracks, cfg, extra_args)?,

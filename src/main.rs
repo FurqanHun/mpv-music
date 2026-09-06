@@ -327,8 +327,15 @@ fn main() -> Result<()> {
         tracks = loaded_tracks;
     }
 
-    if tracks.is_empty() {
-        eprintln!("No music found. Run from terminal with --manage-dirs or add dirs to config.");
+    let local_cli_mode_requested = args.genre.is_some()
+        || args.artist.is_some()
+        || args.album.is_some()
+        || args.title.is_some()
+        || args.playlist.is_some()
+        || args.play_all;
+
+    if tracks.is_empty() && local_cli_mode_requested {
+        eprintln!("No music found in local library. Run with --manage-dirs or add dirs to config.");
         if cfg!(windows) {
             eprintln!("\nPress Enter to exit...");
             let _ = std::io::stdin().read_line(&mut String::new());
