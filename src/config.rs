@@ -142,6 +142,7 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     log::debug!("Successfully parsed {} bytes of TOML", content.len());
 
     let mut warnings = Vec::new();
+    let mut needs_save = false;
 
     let legacy_ua =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0";
@@ -149,6 +150,7 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
         log::info!("Migrating legacy ytdlp_useragent to new default");
         cfg.ytdlp_useragent = default_ytdlp_useragent();
         warnings.push("Migrated legacy yt-dlp user agent to the new default.".to_string());
+        needs_save = true;
     }
 
     if cfg.volume > 130 {
@@ -157,6 +159,7 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
             cfg.volume
         ));
         cfg.volume = 100;
+        needs_save = true;
     }
 
     let valid_loop_modes = ["inf", "playlist", "no", "off", "false", "track", "file"];
@@ -168,6 +171,7 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
             cfg.loop_mode
         ));
         cfg.loop_mode = "inf".to_string();
+        needs_save = true;
     }
 
     if cfg.music_dirs.is_empty() {
@@ -180,6 +184,12 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     for warning in warnings {
         log::warn!("Config validation: {}", warning);
         eprintln!("\x1b[33;1m[Config Warning]\x1b[0m {}", warning);
+    }
+
+    if needs_save {
+        if let Err(e) = save(&cfg) {
+            log::error!("Failed to save auto-corrected config: {}", e);
+        }
     }
 
     log::trace!("Loaded Config State: {:#?}", cfg);
