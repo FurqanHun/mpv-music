@@ -2,6 +2,15 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.27.3-dev.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.3-dev.1) - 2026-09-07 (Pre-release)
+
+- Switched update checker to use `latest.json` to bypass GitHub API rate limits
+- Added `curl` fallback mechanism for update checker to fix Termux/Android DNS resolution bug
+- Added `info` and `debug` logging to update checker for troubleshooting
+
+
+---
+
 ## [v0.27.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.2) - 2026-09-06
 
 This patch release introduces a key UX improvement to the Main Menu alongside core dependency and documentation updates.
