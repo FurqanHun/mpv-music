@@ -97,8 +97,16 @@ if (-not [string]::IsNullOrWhiteSpace($AssetUrl)) {
     $ExtractedExe = Get-ChildItem -Path $TempDir -Filter "mpv-music.exe" -Recurse | Select-Object -First 1
     
     if ($ExtractedExe) {
-        # If updating, the binary might be running. Move-Item -Force usually handles overwriting if not locked.
-        # If locked, it will fail.
+        if (Test-Path $InstalledBinary) {
+            $OldBinary = "$InstalledBinary.old"
+            if (Test-Path $OldBinary) {
+                Remove-Item -Path $OldBinary -Force -ErrorAction SilentlyContinue
+            }
+            Rename-Item -Path $InstalledBinary -NewName "mpv-music.exe.old" -Force -ErrorAction SilentlyContinue
+            
+            $CleanupCmd = "Start-Sleep -Seconds 3; Remove-Item -Path '$OldBinary' -Force -ErrorAction SilentlyContinue"
+            Start-Process -FilePath "powershell.exe" -WindowStyle Hidden -ArgumentList "-NoProfile", "-Command", $CleanupCmd
+        }
         Move-Item -Path $ExtractedExe.FullName -Destination $InstalledBinary -Force
         Write-Host "[OK] Extracted and installed successfully." -ForegroundColor Green
     } else {
