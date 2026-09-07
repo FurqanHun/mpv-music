@@ -2,6 +2,15 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.27.3-dev.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.3-dev.2) - 2026-09-07 (Pre-release)
+
+- Added a native PowerShell installer (`install.ps1`) for seamless updates on Windows without requiring a web browser
+- Added an interactive `[Y/n]` prompt and an auto-confirm `--yes` flag to the update checker
+- Refined terminal output in the Linux/macOS installation script to be contextual when running in update mode
+- Fixed a bug where auto-corrected configuration values were not being saved back to `config.tom
+
+---
+
 ## [v0.27.3-dev.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.3-dev.1) - 2026-09-07 (Pre-release)
 
 - Switched update checker to use `latest.json` to bypass GitHub API rate limits
