@@ -83,7 +83,7 @@ if (-not [string]::IsNullOrWhiteSpace($Tag)) {
 if (-not [string]::IsNullOrWhiteSpace($AssetUrl)) {
     Write-Host "[OK] Found pre-compiled binary for $ArchPlatform ($LatestTag)" -ForegroundColor Green
     
-    $TempDir = Join-Path [System.IO.Path]::GetTempPath() ([guid]::NewGuid().ToString())
+    $TempDir = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ([guid]::NewGuid().ToString())
     New-Item -ItemType Directory -Path $TempDir | Out-Null
     
     $ZipPath = Join-Path $TempDir "mpv-music.zip"
