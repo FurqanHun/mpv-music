@@ -2,6 +2,26 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.28.0](https://github.com/FurqanHun/mpv-music/releases/tag/v0.28.0) - 2026-09-07
+
+This minor release brings full native Windows support, a smarter interactive auto-updater, and a brand new downloads page.
+
+### Features & Improvements
+- **Windows Support:** Added a native PowerShell installer (`install.ps1`) for seamless terminal updates on Windows without requiring a web browser.
+- **Auto-Updater:** Added an interactive `[Y/n]` prompt and an auto-confirm `--yes` flag to the in-app update checker.
+- **Auto-Updater:** Switched update checker to use `latest.json` to completely bypass GitHub API rate limits.
+- **Documentation:** Added a new interactive Downloads webpage for direct binary access across all OS platforms.
+
+### Bug Fixes
+- **Configuration:** Fixed a bug where auto-corrected configuration values (like legacy yt-dlp user agents) were not being saved back to `config.toml`.
+- **Auto-Updater:** Added a `curl` fallback mechanism for the update checker to fix Termux/Android DNS resolution bugs.
+- **Installation:** Refined terminal output in the Linux/macOS installation script to be contextual when running in update mode.
+
+### Dependencies & Chores
+- Updated `Cargo.lock` to the latest compatible dependency versions.
+
+---
+
 ## [v0.27.3-dev.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.3-dev.2) - 2026-09-07 (Pre-release)
 
 - Added a native PowerShell installer (`install.ps1`) for seamless updates on Windows without requiring a web browser
