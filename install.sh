@@ -28,7 +28,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo -e "${BLUE}🎧 mpv-music Rust Installer${NC}"
+if [[ "$UPDATE_MODE" == "true" ]]; then
+    echo -e "${BLUE}🎧 mpv-music Updater${NC}"
+else
+    echo -e "${BLUE}🎧 mpv-music Rust Installer${NC}"
+fi
 
 if ! command -v jq &>/dev/null; then
     echo -e "${RED}[ERROR]${NC} 'jq' is not installed. It is required for the installer to parse release data."
@@ -64,7 +68,9 @@ EXISTING_PATH=$(command -v mpv-music || echo "")
 
 if [[ -n "$EXISTING_PATH" ]]; then
     INSTALL_DIR=$(dirname "$EXISTING_PATH")
-    echo -e "${GREEN}[OK]${NC} Using existing installation directory: $INSTALL_DIR"
+    if [[ "$UPDATE_MODE" == "false" ]]; then
+        echo -e "${GREEN}[OK]${NC} Using existing installation directory: $INSTALL_DIR"
+    fi
 else
     echo -e "\nWhere would you like to install the binary?"
     read -rp "Installation directory [$DEFAULT_INSTALL_DIR]: " USER_INPUT < /dev/tty
@@ -78,7 +84,11 @@ INSTALLED_BINARY="$INSTALL_DIR/mpv-music"
 
 # --- 3. Fetch Release and Asset ---
 if [[ -n "$TARGET_TAG" ]]; then
-    echo -e "\n${BLUE}[INFO]${NC} Using provided tag: $TARGET_TAG"
+    if [[ "$UPDATE_MODE" == "false" ]]; then
+        echo -e "\n${BLUE}[INFO]${NC} Using provided tag: $TARGET_TAG"
+    else
+        echo -e "\n${BLUE}[INFO]${NC} Fetching update: $TARGET_TAG"
+    fi
     LATEST_TAG="$TARGET_TAG"
     ASSET_URL="https://github.com/FurqanHun/mpv-music/releases/download/$LATEST_TAG/mpv-music-${LATEST_TAG}-${ARCH}-${PLATFORM}.tar.gz"
 else
@@ -120,7 +130,11 @@ else
 fi
 
 chmod +x "$INSTALLED_BINARY"
-echo -e "${GREEN}[OK]${NC} mpv-music installed to $INSTALLED_BINARY"
+if [[ "$UPDATE_MODE" == "true" ]]; then
+    echo -e "${GREEN}[OK]${NC} mpv-music successfully updated in $INSTALLED_BINARY"
+else
+    echo -e "${GREEN}[OK]${NC} mpv-music installed to $INSTALLED_BINARY"
+fi
 
 # --- 5. Initial Configuration ---
 if [[ "$UPDATE_MODE" == "false" ]]; then
@@ -150,7 +164,11 @@ fi
 # --- 6. PATH Verification ---
 case ":$PATH:" in
     *":$INSTALL_DIR:"*)
-        echo -e "\n${GREEN}Installation complete!${NC} Run 'mpv-music' to start."
+        if [[ "$UPDATE_MODE" == "true" ]]; then
+            echo -e "\n${GREEN}Update complete!${NC} You are now running the latest version."
+        else
+            echo -e "\n${GREEN}Installation complete!${NC} Run 'mpv-music' to start."
+        fi
         ;;
     *)
         echo -e "\n${YELLOW}[WARNING]${NC} $INSTALL_DIR is not in your PATH."
