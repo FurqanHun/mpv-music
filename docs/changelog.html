@@ -162,6 +162,34 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.28.0" target="_blank" class="tag">v0.28.0</a>
+                <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">September 07, 2026</span>
+            </div>
+            <div class="body">
+                <p>This minor release brings full native Windows support, a smarter interactive auto-updater, and a brand new downloads page.</p>
+<h3>Features &amp; Improvements</h3>
+<ul>
+<li><strong>Windows Support:</strong> Added a native PowerShell installer (<code>install.ps1</code>) for seamless terminal updates on Windows without requiring a web browser.</li>
+<li><strong>Auto-Updater:</strong> Added an interactive <code>[Y/n]</code> prompt and an auto-confirm <code>--yes</code> flag to the in-app update checker.</li>
+<li><strong>Auto-Updater:</strong> Switched update checker to use <code>latest.json</code> to completely bypass GitHub API rate limits.</li>
+<li><strong>Documentation:</strong> Added a new interactive Downloads webpage for direct binary access across all OS platforms.</li>
+</ul>
+<h3>Bug Fixes</h3>
+<ul>
+<li><strong>Configuration:</strong> Fixed a bug where auto-corrected configuration values (like legacy yt-dlp user agents) were not being saved back to <code>config.toml</code>.</li>
+<li><strong>Auto-Updater:</strong> Added a <code>curl</code> fallback mechanism for the update checker to fix Termux/Android DNS resolution bugs.</li>
+<li><strong>Installation:</strong> Refined terminal output in the Linux/macOS installation script to be contextual when running in update mode.</li>
+</ul>
+<h3>Dependencies &amp; Chores</h3>
+<ul>
+<li>Updated <code>Cargo.lock</code> to the latest compatible dependency versions.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.27.3-dev.2" target="_blank" class="tag">v0.27.3-dev.2</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">September 07, 2026</span>
