@@ -17,24 +17,48 @@ fn parse_version(v: &str) -> (u32, u32, u32) {
 }
 
 #[cfg(feature = "update")]
+fn fetch_json_from_url(url: &str) -> Result<serde_json::Value> {
+    log::info!("Fetching update information from: {}", url);
+    match ureq::get(url).call() {
+        Ok(mut response) => {
+            log::debug!("Native request successful, parsing JSON...");
+            let json: serde_json::Value = serde_json::from_reader(response.body_mut().as_reader())
+                .context("Failed to parse JSON from GitHub via ureq")?;
+            Ok(json)
+        }
+        Err(e) => {
+            log::warn!("Native request failed ({}). Attempting curl fallback...", e);
+            let output = std::process::Command::new("curl")
+                .args(["-sL", url])
+                .output()
+                .context("Failed to run curl fallback. Are you connected to the internet?")?;
+
+            if !output.status.success() {
+                anyhow::bail!("Curl fallback failed with status: {}", output.status);
+            }
+
+            log::debug!("Curl fallback request successful, parsing JSON...");
+            let json: serde_json::Value = serde_json::from_slice(&output.stdout)
+                .context("Failed to parse JSON from GitHub via curl")?;
+            Ok(json)
+        }
+    }
+}
+
+#[cfg(feature = "update")]
 pub fn update_self() -> Result<()> {
     let current_ver_str = env!("CARGO_PKG_VERSION");
     let is_dev = current_ver_str.contains("dev");
 
     println!("Checking for updates...");
 
-    let mut response =
-        ureq::get("https://api.github.com/repos/FurqanHun/mpv-music/releases/latest")
-            .call()
-            .map_err(|e| anyhow::anyhow!("Failed to check GitHub: {}", e))?;
+    let json = fetch_json_from_url("https://furqanhun.github.io/mpv-music/latest.json")?;
 
-    let json: serde_json::Value = serde_json::from_reader(response.body_mut().as_reader())
-        .context("Failed to parse JSON from GitHub")?;
-
-    let remote_tag = json["tag_name"]
+    let remote_tag = json["stable"]["tag_name"]
         .as_str()
-        .context("Release missing tag_name")?;
+        .context("Release missing stable tag_name")?;
     let remote_ver_str = remote_tag.trim_start_matches('v');
+    log::debug!("Parsed stable version: v{}", remote_ver_str);
 
     println!("\n--- Version Info ---");
     println!("Current Version:  v{}", current_ver_str);
@@ -69,18 +93,10 @@ pub fn update_self() -> Result<()> {
             println!("Update Status:    \x1b[32mUp to date\x1b[0m");
         }
     } else {
-        let mut dev_resp =
-            ureq::get("https://api.github.com/repos/FurqanHun/mpv-music/releases?per_page=1")
-                .call()
-                .map_err(|e| anyhow::anyhow!("Failed to check dev updates: {}", e))?;
-
-        let dev_list: Vec<serde_json::Value> =
-            serde_json::from_reader(dev_resp.body_mut().as_reader())
-                .context("Failed to parse releases list")?;
-
-        if let Some(latest_obj) = dev_list.first() {
+        if let Some(latest_obj) = json.get("dev") {
             let latest_tag = latest_obj["tag_name"].as_str().unwrap_or("?");
             let latest_ver = latest_tag.trim_start_matches('v');
+            log::debug!("Parsed dev version: v{}", latest_ver);
 
             println!("Latest Release:   v{}", latest_ver);
 
