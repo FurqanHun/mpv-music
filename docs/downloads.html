@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101010" />
+    <title>mpv-music | Downloads</title>
+
+    <meta name="description" content="Download native binaries of mpv-music for Linux, Windows, and macOS." />
+    <meta name="keywords" content="mpv-music download, mpv, cli, terminal, music player, linux, rust, tui, mpv wrapper, mpvmusic, library manager, music, mpv music" />
+    <link rel="canonical" href="https://furqanhun.github.io/mpv-music/downloads.html" />
+
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "mpv-music",
+            "operatingSystem": "Linux, macOS, Windows",
+            "applicationCategory": "MultimediaApplication",
+            "description": "Open Source terminal-based music library manager for mpv.",
+            "license": "https://github.com/furqanhun/mpv-music/blob/main/LICENSE",
+            "softwareRequirements": "mpv, yt-dlp",
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+            },
+            "author": {
+                "@type": "Person",
+                "name": "furqanhun"
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #101010;
+            --fg: #eeeeee;
+            --accent: #00ff00;
+            --dim: #666666;
+            --link: #58a6ff;
+            --alert: #ffcc00;
+            --dev-color: #ff00ff;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: "Menlo", "Consolas", "Monaco", monospace;
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.5;
+            font-size: 16px;
+            overflow-y: scroll;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: var(--accent);
+            font-size: 1.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 2px solid var(--dim);
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        a {
+            color: var(--fg);
+            text-decoration: underline;
+            text-decoration-color: var(--dim);
+            text-underline-offset: 4px;
+        }
+
+        a:hover {
+            color: var(--accent);
+            text-decoration-color: var(--accent);
+            background-color: #002200;
+        }
+
+        .os-section {
+            margin-top: 2rem;
+            border: 1px solid var(--dim);
+            padding: 1.5rem;
+            background: #080808;
+        }
+
+        .os-title {
+            color: var(--accent);
+            margin-top: 0;
+            font-size: 1.2rem;
+            border-bottom: 1px dashed var(--dim);
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 1.2rem;
+            border: 1px solid var(--dim);
+            background: #000;
+            color: var(--fg);
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .btn:hover {
+            background: #002200;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn.dev {
+            border-color: var(--dev-color);
+        }
+
+        .btn.dev:hover {
+            background: #220022;
+            color: var(--dev-color);
+        }
+
+        .tag-label {
+            font-size: 0.85rem;
+            color: var(--dim);
+            font-weight: normal;
+            display: block;
+            margin-top: 0.4rem;
+        }
+
+        #loading {
+            margin-top: 2rem;
+            color: var(--alert);
+            font-weight: bold;
+        }
+
+        .cmd-block {
+            background: #000;
+            border: 1px solid var(--dim);
+            padding: 1rem;
+            overflow-x: auto;
+            color: var(--accent);
+            margin: 1rem 0 0.5rem 0;
+            user-select: all;
+            position: relative;
+        }
+
+        .cmd-block::before {
+            content: "$ ";
+            color: var(--dim);
+            user-select: none;
+        }
+        
+        h2 {
+            font-size: 1.2rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Downloads</h1>
+        <p>Select your operating system and preferred release channel to download the pre-compiled native binaries
+            directly.</p>
+
+        <div id="loading">Loading latest release data from GitHub...</div>
+        <div id="content" style="display: none;">
+
+            <div class="os-section">
+                <h2 class="os-title">Linux (x86_64)</h2>
+                <p style="font-size: 0.9rem; color: var(--dim); margin: 0;">Tested on Fedora, Ubuntu, Arch, etc.</p>
+                <div class="btn-group">
+                    <a id="linux-stable" class="btn" href="#">Download Stable <span class="tag-label"
+                            id="lbl-linux-stable"></span></a>
+                    <a id="linux-dev" class="btn dev" href="#">Download Dev <span class="tag-label"
+                            id="lbl-linux-dev"></span></a>
+                </div>
+            </div>
+
+            <div class="os-section">
+                <h2 class="os-title">Windows (x86_64)</h2>
+                <p style="font-size: 0.9rem; color: var(--dim); margin: 0;">Extract and run mpv-music.exe in your
+                    terminal.</p>
+                <div class="btn-group">
+                    <a id="win-stable" class="btn" href="#">Download Stable <span class="tag-label"
+                            id="lbl-win-stable"></span></a>
+                    <a id="win-dev" class="btn dev" href="#">Download Dev <span class="tag-label"
+                            id="lbl-win-dev"></span></a>
+                </div>
+            </div>
+
+            <div class="os-section">
+                <h2 class="os-title">macOS (Apple Silicon)</h2>
+                <p style="font-size: 0.9rem; color: var(--dim); margin: 0;">For M1/M2/M3 Macs (aarch64).</p>
+                <div class="btn-group">
+                    <a id="mac-arm-stable" class="btn" href="#">Download Stable <span class="tag-label"
+                            id="lbl-mac-arm-stable"></span></a>
+                    <a id="mac-arm-dev" class="btn dev" href="#">Download Dev <span class="tag-label"
+                            id="lbl-mac-arm-dev"></span></a>
+                </div>
+            </div>
+
+            <div class="os-section">
+                <h2 class="os-title">macOS (Intel)</h2>
+                <p style="font-size: 0.9rem; color: var(--dim); margin: 0;">For older Intel Macs (x86_64).</p>
+                <div class="btn-group">
+                    <a id="mac-intel-stable" class="btn" href="#">Download Stable <span class="tag-label"
+                            id="lbl-mac-intel-stable"></span></a>
+                    <a id="mac-intel-dev" class="btn dev" href="#">Download Dev <span class="tag-label"
+                            id="lbl-mac-intel-dev"></span></a>
+                </div>
+            </div>
+
+        </div>
+
+        <div style="margin-top: 3rem; border-top: 1px dashed var(--dim); padding-top: 2rem;">
+            <h2 style="border-bottom: 1px dashed var(--dim); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">Automated Installers</h2>
+            
+            <p style="margin-bottom: 0; font-size: 0.9rem; color: var(--dim);"><strong>Rust (1.93.0+)</strong></p>
+            <div class="cmd-block" style="margin-top: 0.2rem;">cargo install mpv-music</div>
+
+            <p style="margin-bottom: 0; margin-top: 1.5rem; font-size: 0.9rem; color: var(--dim);"><strong>Linux / macOS</strong></p>
+            <div class="cmd-block" style="margin-top: 0.2rem;">
+                curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash
+            </div>
+
+            <p style="margin-bottom: 0; margin-top: 1.5rem; font-size: 0.9rem; color: var(--dim);"><strong>Windows (PowerShell)</strong></p>
+            <div class="cmd-block" style="margin-top: 0.2rem;">
+                iwr https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.ps1 -UseBasicParsing | iex
+            </div>
+        </div>
+
+        <div style="margin-top: 3rem;">
+            <a href="index.html">← Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        async function loadReleases() {
+            try {
+                // Fetch latest tags from the automatically generated latest.json
+                const res = await fetch('latest.json');
+                const data = await res.json();
+
+                const stable = data.stable.tag_name;
+
+                let dev = null;
+                const stableDate = new Date(data.stable.published_at);
+
+                if (data.dev) {
+                    const devDate = new Date(data.dev.published_at);
+                    if (devDate > stableDate) {
+                        dev = data.dev.tag_name;
+                    }
+                }
+
+                const ownerRepo = "FurqanHun/mpv-music";
+                const baseUrl = `https://github.com/${ownerRepo}/releases/download`;
+
+                // Helper to build asset URLs matching the CI output
+                const buildUrl = (tag, target, isWin) => `${baseUrl}/${tag}/mpv-music-${tag}-${target}.${isWin ? 'zip' : 'tar.gz'}`;
+
+                // Hide dev buttons if no dev version is active
+                if (!dev) {
+                    document.querySelectorAll('.btn.dev').forEach(btn => btn.style.display = 'none');
+                }
+
+                // Update Labels with version numbers
+                document.querySelectorAll('[id^="lbl-"]').forEach(el => {
+                    if (el.id.endsWith("-stable")) el.innerText = stable;
+                    if (dev && el.id.endsWith("-dev")) el.innerText = dev;
+                });
+
+                // Map URLs to buttons
+                document.getElementById('linux-stable').href = buildUrl(stable, "x86_64-unknown-linux-musl", false);
+                if (dev) document.getElementById('linux-dev').href = buildUrl(dev, "x86_64-unknown-linux-musl", false);
+
+                document.getElementById('win-stable').href = buildUrl(stable, "x86_64-pc-windows-msvc", true);
+                if (dev) document.getElementById('win-dev').href = buildUrl(dev, "x86_64-pc-windows-msvc", true);
+
+                document.getElementById('mac-arm-stable').href = buildUrl(stable, "aarch64-apple-darwin", false);
+                if (dev) document.getElementById('mac-arm-dev').href = buildUrl(dev, "aarch64-apple-darwin", false);
+
+                document.getElementById('mac-intel-stable').href = buildUrl(stable, "x86_64-apple-darwin", false);
+                if (dev) document.getElementById('mac-intel-dev').href = buildUrl(dev, "x86_64-apple-darwin", false);
+
+                // Show content
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+
+            } catch (e) {
+                document.getElementById('loading').innerText = "Failed to load latest release data from latest.json! Are you offline?";
+                document.getElementById('loading').style.color = "red";
+                console.error(e);
+            }
+        }
+
+        loadReleases();
+    </script>
+</body>
+
+</html>
