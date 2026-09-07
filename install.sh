@@ -17,10 +17,12 @@ NC='\033[0m'
 
 # --- 0. Parse Arguments ---
 DEV_MODE=false
+UPDATE_MODE=false
 for arg in "$@"; do
     if [[ "$arg" == "--dev" ]]; then
         DEV_MODE=true
-        break
+    elif [[ "$arg" == "--update" ]]; then
+        UPDATE_MODE=true
     fi
 done
 
@@ -113,7 +115,8 @@ chmod +x "$INSTALLED_BINARY"
 echo -e "${GREEN}[OK]${NC} mpv-music installed to $INSTALLED_BINARY"
 
 # --- 5. Initial Configuration ---
-echo -e "\n${BLUE}[INFO]${NC} Initial Setup"
+if [[ "$UPDATE_MODE" == "false" ]]; then
+    echo -e "\n${BLUE}[INFO]${NC} Initial Setup"
 echo "Would you like to add music directories now?"
 read -rp "[y/N]: " SETUP_CHOICE < /dev/tty
 
@@ -135,7 +138,7 @@ if [[ "$SETUP_CHOICE" =~ ^[Yy]$ ]]; then
         "$INSTALLED_BINARY" --add-dir "${COLLECTED_PATHS[@]}"
     fi
 fi
-
+fi
 # --- 6. PATH Verification ---
 case ":$PATH:" in
     *":$INSTALL_DIR:"*)
