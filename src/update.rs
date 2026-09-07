@@ -65,7 +65,11 @@ fn prompt_and_update(is_dev: bool, latest_tag: &str, auto_confirm: bool) {
         #[cfg(any(target_os = "linux", target_os = "macos"))]
         {
             println!("Starting update...");
-            let script_args = if is_dev { "--dev --update" } else { "--update" };
+            let script_args = if is_dev {
+                format!("--dev --update --tag {}", latest_tag)
+            } else {
+                format!("--update --tag {}", latest_tag)
+            };
             let cmd_str = format!("curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash -s -- {}", script_args);
             
             let status = std::process::Command::new("bash")

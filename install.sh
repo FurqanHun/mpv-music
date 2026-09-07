@@ -18,12 +18,14 @@ NC='\033[0m'
 # --- 0. Parse Arguments ---
 DEV_MODE=false
 UPDATE_MODE=false
-for arg in "$@"; do
-    if [[ "$arg" == "--dev" ]]; then
-        DEV_MODE=true
-    elif [[ "$arg" == "--update" ]]; then
-        UPDATE_MODE=true
-    fi
+TARGET_TAG=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dev) DEV_MODE=true; shift ;;
+        --update) UPDATE_MODE=true; shift ;;
+        --tag) TARGET_TAG="$2"; shift 2 ;;
+        *) shift ;;
+    esac
 done
 
 echo -e "${BLUE}🎧 mpv-music Rust Installer${NC}"
@@ -75,17 +77,23 @@ mkdir -p "$INSTALL_DIR"
 INSTALLED_BINARY="$INSTALL_DIR/mpv-music"
 
 # --- 3. Fetch Release and Asset ---
-echo -e "\n${BLUE}[INFO]${NC} Fetching release info..."
-if [[ "$DEV_MODE" == "true" ]]; then
-    API_ENDPOINT="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases"
-    LATEST_JSON=$(curl -sL "$API_ENDPOINT" | jq '.[0]')
+if [[ -n "$TARGET_TAG" ]]; then
+    echo -e "\n${BLUE}[INFO]${NC} Using provided tag: $TARGET_TAG"
+    LATEST_TAG="$TARGET_TAG"
+    ASSET_URL="https://github.com/FurqanHun/mpv-music/releases/download/$LATEST_TAG/mpv-music-${LATEST_TAG}-${ARCH}-${PLATFORM}.tar.gz"
 else
-    API_ENDPOINT="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
-    LATEST_JSON=$(curl -sL "$API_ENDPOINT")
-fi
+    echo -e "\n${BLUE}[INFO]${NC} Fetching release info..."
+    if [[ "$DEV_MODE" == "true" ]]; then
+        API_ENDPOINT="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases"
+        LATEST_JSON=$(curl -sL "$API_ENDPOINT" | jq '.[0]')
+    else
+        API_ENDPOINT="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
+        LATEST_JSON=$(curl -sL "$API_ENDPOINT")
+    fi
 
-LATEST_TAG=$(echo "$LATEST_JSON" | jq -r ".tag_name // empty")
-ASSET_URL=$(echo "$LATEST_JSON" | jq -r ".assets[] | select(.name | contains(\"$ARCH\") and contains(\"$PLATFORM\")) | .browser_download_url" 2>/dev/null || echo "")
+    LATEST_TAG=$(echo "$LATEST_JSON" | jq -r ".tag_name // empty")
+    ASSET_URL=$(echo "$LATEST_JSON" | jq -r ".assets[] | select(.name | contains(\"$ARCH\") and contains(\"$PLATFORM\")) | .browser_download_url" 2>/dev/null || echo "")
+fi
 
 # --- 4. Install Logic ---
 if [[ -n "$ASSET_URL" && "$ASSET_URL" != "null" ]]; then
