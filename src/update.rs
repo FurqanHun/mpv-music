@@ -83,18 +83,25 @@ fn prompt_and_update(is_dev: bool, latest_tag: &str, auto_confirm: bool) {
         }
         #[cfg(target_os = "windows")]
         {
-            let url = if is_dev {
-                format!("https://github.com/FurqanHun/mpv-music/releases/tag/{}", latest_tag)
-            } else {
-                "https://github.com/FurqanHun/mpv-music/releases/latest".to_string()
-            };
-            println!("Opening {} in your browser...", url);
-            let status = std::process::Command::new("cmd")
-                .args(["/C", "start", &url])
+            println!("Starting update...");
+            
+            let mut ps_args = vec!["-Update".to_string(), format!("-Tag '{}'", latest_tag)];
+            if is_dev {
+                ps_args.push("-Dev".to_string());
+            }
+            
+            let args_str = ps_args.join(" ");
+            let ps_cmd = format!(
+                "& ([scriptblock]::Create((iwr https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.ps1 -UseBasicParsing).Content)) {}",
+                args_str
+            );
+            
+            let status = std::process::Command::new("powershell")
+                .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &ps_cmd])
                 .status();
                 
             if let Err(e) = status {
-                log::error!("Failed to open browser: {}", e);
+                log::error!("Failed to launch updater: {}", e);
             }
         }
         #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
