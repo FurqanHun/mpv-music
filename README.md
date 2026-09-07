@@ -118,10 +118,16 @@ cargo install mpv-music
     chmod +x mpv-music
     mv mpv-music ~/.local/bin/
     ```
-or Alternatively, you can use the following command and let the installer handle the process
+or Alternatively, you can use the automated installer scripts to handle the process:
 
+**Linux / macOS:**
 ```bash
 curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+iwr https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.ps1 -UseBasicParsing | iex
 ```
 
 ### From Source
@@ -175,6 +181,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `-r`, `--refresh-index` | Update index (incremental scan). Detects new/changed files. |
 | `--reindex` | Force a full re-scan of the library. |
 | `-u`, `--update` | Check for application updates. |
+| `-y`, `--yes` | Auto-confirm update prompts (use with `--update`). |
 | `--add-dir <PATH>...` | Add directory (e.g. `--add-dir /music /other`). |
 | `--remove-dir <PATH>...` | Remove directory (aliases: `--rm-dir`). |
 | `--manage-dirs` | Open the Interactive Directory Manager. |
