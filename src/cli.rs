@@ -28,6 +28,10 @@ pub struct Cli {
     #[arg(short = 'u', long, help = "Update the application")]
     pub update: bool,
 
+    #[cfg(feature = "update")]
+    #[arg(short = 'y', long, help = "Auto-confirm the update prompt")]
+    pub yes: bool,
+
     #[arg(
         long,
         num_args = 1..,

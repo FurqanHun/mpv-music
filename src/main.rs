@@ -214,7 +214,7 @@ fn main() -> Result<()> {
     }
     #[cfg(feature = "update")]
     if args.update {
-        update::update_self()?;
+        update::update_self(args.yes)?;
         return Ok(());
     }
     if let Some(ref mode) = args.loop_arg {
