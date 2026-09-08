@@ -301,46 +301,53 @@
 
             <h2>Why?</h2>
             <p>
-                Because GUIs are bloated. The old Bash script was good, but
-                <strong>Rust</strong> is instant.
+                While I do appreciate a good GUI, I prefer my tools to be lightweight, incredibly fast, and follow the UNIX philosophy. There's an abundance of terminal music players and scripts out there, but they almost always try to do <em>too much</em>—whether it's rendering heavy visualizers, managing podcasts, or running background daemons (which I'm firmly against for a simple music app). 
+            </p>
+            <p>
+                I just wanted something that plays music and gets out of the way, without reinventing the wheel. I love <code>mpv</code> and <code>yt-dlp</code>, and since they are already installed on my system, why write a custom audio engine from scratch? It's not that I hate having multiple tools doing similar things, but I have a strong personal bias toward <code>mpv</code>. Because no existing player fit my workflow, I built a blazing-fast Rust frontend around the tools I already use and love.
             </p>
 
-            <h2>Manifesto</h2>
+            <h2>Manifesto & Features</h2>
             <ul>
                 <li>
-                    <strong>Native Rust Engine:</strong> No more external
-                    indexers. The entire app is a single, static binary.
+                    <strong>Do One Thing Well:</strong> Stay lightweight and never chew more than what should be chewed. No daemons, no background services, no feature bloat.
                 </li>
                 <li>
-                    <strong>Keyboard Driven:</strong> Fuzzy find (skim)
-                    everything.
+                    <strong>Forgiving & Smart CLI:</strong> Powerful command-line filters. If your query has exactly one match, it auto-plays instantly. If it's ambiguous, it safely drops you into the interactive picker.
                 </li>
                 <li>
-                    <strong>Universal:</strong> Plays local files and URLs (via
-                    yt-dlp) seamlessly.
+                    <strong>Minimal TUI Menu:</strong> Initially added because an early tester hated CLI arguments, but having a minimal interactive menu actually ended up being much smoother for browsing the library.
                 </li>
                 <li>
-                    <strong>Forgiving:</strong> Smart shortcuts (`-l`, `-a`,
-                    `-g`) that auto-play single matches or open menus if
-                    ambiguous.
+                    <strong>Keyboard Native:</strong> Designed for an entirely keyboard-driven workflow. (Though the UI technically supports mouse clicks, the keyboard is just faster).
+                </li>
+                <li>
+                    <strong>Radio & Web Streams:</strong> Seamless integration with ad-free internet radio streams (SomaFM, LISTEN.moe, Lofi) and native YouTube streaming.
                 </li>
             </ul>
 
             <h2>Usage</h2>
-            <p>Run <code>mpv-music</code> to launch the menu, or use args:</p>
+            <p>Simply run <code>mpv-music</code> to launch the interactive TUI, or use arguments for instant playback:</p>
             <ul>
                 <li>
-                    <code>mpv-music -a "Daft Punk"</code> (Filter by artist,
-                    instant-play if 1 match)
+                    <code>mpv-music -a "Daft Punk"</code> (Filter by artist, instant-play if 1 match)
                 </li>
                 <li>
-                    <code>mpv-music -l "Gym"</code> (Play playlist directly)
+                    <code>mpv-music --radio lofi</code> (Jump straight into ad-free Lofi Hip Hop)
                 </li>
                 <li>
-                    <code>mpv-music "https://youtu.be/..."</code> (Stream URL)
+                    <code>mpv-music --yt "never gonna give you up"</code> (Search & stream directly from YouTube)
+                </li>
+                <li>
+                    <code>mpv-music "https://youtu.be/..."</code> (Instantly play a URL)
+                </li>
+                <li>
+                    <code>mpv-music --help</code> (See all available commands and shortcuts)
                 </li>
             </ul>
-
+            <p style="margin-top: 1.5rem; color: var(--dim); font-size: 0.9rem;">
+                For full documentation, configuration options, and keybindings, please refer to the <a href="https://github.com/FurqanHun/mpv-music#readme" target="_blank" rel="noopener noreferrer">README</a>.
+            </p>
             <footer>
                 <h1>mpv-music</h1>
                 <p>

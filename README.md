@@ -112,6 +112,9 @@ cargo install mpv-music
 
 ### Pre-built Binaries (Recommended)
 
+> [!TIP]
+> Unsure which binary is right for your system? Visit the interactive **[Downloads Page](https://furqanhun.github.io/mpv-music/downloads)** to download the exact version compiled for your OS and architecture.
+
 1. Download the latest binary for your architecture from the [Releases](https://github.com/FurqanHun/mpv-music/releases) page.
 2. Make it executable and move it to your path:
     ```bash
