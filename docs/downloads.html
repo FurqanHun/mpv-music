@@ -59,14 +59,19 @@
             margin: 0 auto;
         }
 
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px dashed var(--dim);
+            padding-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
         h1 {
+            font-size: 1.5rem;
             color: var(--accent);
-            font-size: 1.8rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            border-bottom: 2px solid var(--dim);
-            padding-bottom: 0.5rem;
-            margin-bottom: 0.5rem;
+            margin: 0;
         }
 
         a {
@@ -178,7 +183,10 @@
 
 <body>
     <div class="container">
-        <h1>Downloads</h1>
+        <header>
+            <h1>/downloads</h1>
+            <a href="index.html">← Back to Home</a>
+        </header>
         <p>Select your operating system and preferred release channel to download the pre-compiled native binaries
             directly.</p>
 
@@ -193,6 +201,17 @@
                             id="lbl-linux-stable"></span></a>
                     <a id="linux-dev" class="btn dev" href="#">Download Dev <span class="tag-label"
                             id="lbl-linux-dev"></span></a>
+                </div>
+            </div>
+
+            <div class="os-section">
+                <h2 class="os-title">Linux (ARM64)</h2>
+                <p style="font-size: 0.9rem; color: var(--dim); margin: 0;">For aarch64 devices (e.g., Raspberry Pi).</p>
+                <div class="btn-group">
+                    <a id="linux-arm-stable" class="btn" href="#">Download Stable <span class="tag-label"
+                            id="lbl-linux-arm-stable"></span></a>
+                    <a id="linux-arm-dev" class="btn dev" href="#">Download Dev <span class="tag-label"
+                            id="lbl-linux-arm-dev"></span></a>
                 </div>
             </div>
 
@@ -248,10 +267,6 @@
                 iwr https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.ps1 -UseBasicParsing | iex
             </div>
         </div>
-
-        <div style="margin-top: 3rem;">
-            <a href="index.html">← Back to Home</a>
-        </div>
     </div>
 
     <script>
@@ -293,6 +308,9 @@
                 // Map URLs to buttons
                 document.getElementById('linux-stable').href = buildUrl(stable, "x86_64-unknown-linux-musl", false);
                 if (dev) document.getElementById('linux-dev').href = buildUrl(dev, "x86_64-unknown-linux-musl", false);
+
+                document.getElementById('linux-arm-stable').href = buildUrl(stable, "aarch64-unknown-linux-musl", false);
+                if (dev) document.getElementById('linux-arm-dev').href = buildUrl(dev, "aarch64-unknown-linux-musl", false);
 
                 document.getElementById('win-stable').href = buildUrl(stable, "x86_64-pc-windows-msvc", true);
                 if (dev) document.getElementById('win-dev').href = buildUrl(dev, "x86_64-pc-windows-msvc", true);
