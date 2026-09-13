@@ -95,9 +95,6 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 * **macOS / BSD:** It should work fine on macOS and BSD systems (haven't tested it, please do... any feedback is appreciated).
 * **Windows (Native/Git Bash):** Fully Supported. Check [FAQ](#windows-support).
 
-> [!Tip]
-> You can use WSL (Windows Subsystem for Linux) to run `mpv-music` on Windows.
-
 ### From crates.io (Recommended)
 
 If you have Rust installed:
@@ -297,6 +294,9 @@ mpv-music --config
 shuffle = true
 loop_mode = "inf"  # Options: "playlist" (same as inf), "track", "no", "inf", "5" (number of loops)
 volume = 100
+
+# --- Appearance ---
+nerd_fonts = "none"       # Options: "none" (standard emojis), "mono", "normal"
 
 # --- Library Management ---
 music_dirs = [
