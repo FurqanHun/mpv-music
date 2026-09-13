@@ -6,6 +6,7 @@ use std::borrow::Cow;
 pub struct TrackItem {
     pub track: indexer::Track,
     pub display_text: String,
+    pub icon: &'static str,
 }
 
 impl SkimItem for TrackItem {
@@ -27,11 +28,7 @@ impl SkimItem for TrackItem {
         } else {
             "Audio"
         };
-        let icon = if self.track.media_type == "video" {
-            "🎬"
-        } else {
-            "🎵"
-        };
+        let icon = self.icon;
 
         let text = format!(
             "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mArtist:\x1b[0m {}\n  \x1b[1;32mAlbum:\x1b[0m  {}\n  \x1b[1;35mGenre:\x1b[0m  {}\n  \x1b[1;34mType:\x1b[0m   {} ({})\n\n  \x1b[90mPath: {}\x1b[0m",
@@ -82,6 +79,7 @@ pub struct DirItem {
     pub path: String,
     pub count: usize,
     pub samples: Vec<String>,
+    pub icon: &'static str,
 }
 
 impl SkimItem for DirItem {
@@ -102,8 +100,8 @@ impl SkimItem for DirItem {
         }
 
         let output = format!(
-            "\n  📁 \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mPath:\x1b[0m {}\n  \x1b[1;33mFiles:\x1b[0m {}\n\n  \x1b[1;32mContents:\x1b[0m\n{}",
-            self.dirname, self.path, self.count, sample_text
+            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mPath:\x1b[0m {}\n  \x1b[1;33mFiles:\x1b[0m {}\n\n  \x1b[1;32mContents:\x1b[0m\n{}",
+            self.icon, self.dirname, self.path, self.count, sample_text
         );
         ItemPreview::AnsiText(output)
     }
@@ -114,6 +112,7 @@ pub struct PlaylistItem {
     pub path: String,
     pub count: usize,
     pub preview_lines: Vec<String>,
+    pub icon: &'static str,
 }
 
 impl SkimItem for PlaylistItem {
@@ -138,8 +137,8 @@ impl SkimItem for PlaylistItem {
         }
 
         let output = format!(
-            "\n  📜 \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mPath:\x1b[0m {}\n  \x1b[1;33mEntries:\x1b[0m {}\n\n  \x1b[1;32mFirst Few Tracks:\x1b[0m\n{}",
-            self.name, self.path, self.count, content
+            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mPath:\x1b[0m {}\n  \x1b[1;33mEntries:\x1b[0m {}\n\n  \x1b[1;32mFirst Few Tracks:\x1b[0m\n{}",
+            self.icon, self.name, self.path, self.count, content
         );
         ItemPreview::AnsiText(output)
     }
@@ -147,6 +146,8 @@ impl SkimItem for PlaylistItem {
 
 pub struct SearchItem {
     pub result: search::SearchResult,
+    pub playlist_icon: &'static str,
+    pub video_icon: &'static str,
 }
 
 impl SkimItem for SearchItem {
@@ -161,9 +162,9 @@ impl SkimItem for SearchItem {
 
     fn preview(&self, _ctx: PreviewContext) -> ItemPreview {
         let (icon, type_str) = if self.result.is_playlist {
-            ("📜", "Playlist / Mix")
+            (self.playlist_icon, "Playlist / Mix")
         } else {
-            ("📺", "Video")
+            (self.video_icon, "Video")
         };
 
         let details = format!(

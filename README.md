@@ -161,6 +161,15 @@ That creates:
 
 The project respects XDG standards and uses the `directories` crate to automatically support proper config/data paths across Linux, Windows, and macOS.
 
+> [!TIP]
+> **Optional: Clean Terminal Icons (Nerd Fonts)**
+> By default, `mpv-music` uses standard emojis that work everywhere out of the box. If you prefer crisp monochrome icons that automatically follow your terminal's color theme, set `nerd_fonts` in `config.toml`:
+> ```toml
+> # Options: "none" (default), "mono", "normal"
+> nerd_fonts = "mono"
+> ```
+> * **Font Recommendation**: You don't need to replace your system font. Simply download [Symbols Nerd Font](https://github.com/ryanoasis/nerd-fonts/tree/master/patched-fonts/NerdFontsSymbolsOnly) (`SymbolsNerdFontMono-Regular.ttf` for `"mono"`, or `SymbolsNerdFont-Regular.ttf` for `"normal"`) as a fallback font.
+
 ---
 
 ## Usage
@@ -440,6 +449,7 @@ For unsupported formats, the indexer falls back to filename parsing. I may imple
   - **`tui/`**: The Terminal User Interface module.
     * **`mod.rs`**: Core orchestration, menu loops, and user interaction logic.
     * **`items.rs`**: Data structures for list items (Tracks, Directories, Playlists).
+    * **`icons.rs`**: Universal emoji and Symbols Nerd Font (Mono/Normal) abstractions.
   * **`config.rs`**: Manages configuration loading, validation, and defaults (Toml).
   * **`indexer.rs`**: The core library scanner. Uses `walkdir`, `rayon` (parallelism), and `lofty` for metadata.
   * **`player.rs`**: Wraps the `mpv` process, handling playback control, queue generation, and temporary file cleanup.

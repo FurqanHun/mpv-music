@@ -10,6 +10,58 @@ fn default_ytdlp_useragent() -> String {
     "default".to_string()
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum NerdFontMode {
+    #[default]
+    None,
+    Mono,
+    Normal,
+}
+
+fn deserialize_nerd_fonts<'de, D>(deserializer: D) -> std::result::Result<NerdFontMode, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct NerdFontVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for NerdFontVisitor {
+        type Value = NerdFontMode;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a boolean or string (\"none\", \"mono\", \"normal\", \"symbols\")")
+        }
+
+        fn visit_bool<E>(self, value: bool) -> std::result::Result<NerdFontMode, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(if value {
+                NerdFontMode::Mono
+            } else {
+                NerdFontMode::None
+            })
+        }
+
+        fn visit_str<E>(self, value: &str) -> std::result::Result<NerdFontMode, E>
+        where
+            E: serde::de::Error,
+        {
+            match value.to_lowercase().as_str() {
+                "none" | "off" | "false" | "no" => Ok(NerdFontMode::None),
+                "mono" | "true" | "yes" | "on" => Ok(NerdFontMode::Mono),
+                "normal" | "symbols" | "prop" | "propo" => Ok(NerdFontMode::Normal),
+                other => Err(E::custom(format!(
+                    "Invalid nerd_fonts value '{}'. Valid options are: \"none\", \"mono\", \"normal\"",
+                    other
+                ))),
+            }
+        }
+    }
+
+    deserializer.deserialize_any(NerdFontVisitor)
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     pub shuffle: bool,
@@ -23,6 +75,9 @@ pub struct Config {
     #[serde(default)]
     pub scan_hidden_dirs: bool,
     pub serial_mode: bool,
+
+    #[serde(default, deserialize_with = "deserialize_nerd_fonts")]
+    pub nerd_fonts: NerdFontMode,
 
     pub ytdlp_ejs_remote_github: bool,
     #[serde(default = "default_ytdlp_useragent")]
@@ -69,6 +124,7 @@ impl Default for Config {
             watch: false,
             scan_hidden_dirs: false,
             serial_mode: false,
+            nerd_fonts: NerdFontMode::None,
             ytdlp_ejs_remote_github: false,
             ytdlp_useragent: default_ytdlp_useragent(),
             enable_file_logging: true,
@@ -331,5 +387,30 @@ mod tests {
                 .iter()
                 .any(|arg| arg.contains("--no-video"))
         );
+    }
+
+    #[test]
+    fn test_nerd_fonts_deserialization() {
+        #[derive(Deserialize)]
+        struct TestCfg {
+            #[serde(default, deserialize_with = "deserialize_nerd_fonts")]
+            nerd_fonts: NerdFontMode,
+        }
+
+        let cases = vec![
+            ("nerd_fonts = 'mono'", NerdFontMode::Mono),
+            ("nerd_fonts = true", NerdFontMode::Mono),
+            ("nerd_fonts = 'normal'", NerdFontMode::Normal),
+            ("nerd_fonts = 'symbols'", NerdFontMode::Normal),
+            ("nerd_fonts = 'none'", NerdFontMode::None),
+            ("nerd_fonts = false", NerdFontMode::None),
+            ("", NerdFontMode::None),
+        ];
+
+        for (toml_input, expected) in cases {
+            let parsed: TestCfg = toml::from_str(toml_input)
+                .unwrap_or_else(|e| panic!("Failed to parse '{}': {}", toml_input, e));
+            assert_eq!(parsed.nerd_fonts, expected, "Failed for: {}", toml_input);
+        }
     }
 }

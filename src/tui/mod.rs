@@ -1,6 +1,9 @@
 mod items;
 use items::*;
 
+pub mod icons;
+pub use icons::Icons;
+
 use crate::cli::Cli;
 use crate::config;
 use crate::indexer;
@@ -21,6 +24,7 @@ pub fn run_main_menu(
     extra_args: &[String],
 ) -> Result<()> {
     loop {
+        let icons = Icons::new(cfg.nerd_fonts);
         let options = vec![
             "1) Directory Mode",
             "2) Track Mode",
@@ -32,7 +36,8 @@ pub fn run_main_menu(
             "8) Settings",
             "q) Quit",
         ];
-        let selected = run_skim_simple(options, "🎧 Pick mode > ");
+        let mode_prompt = icons.prompt(icons.mode_prompt(), "Pick mode");
+        let selected = run_skim_simple(options, &mode_prompt);
 
         if let Some(ref s) = selected {
             let is_local_mode = s.starts_with("1)")
@@ -87,8 +92,10 @@ pub fn run_tag_mode(
     }
 
     loop {
+        let icons = Icons::new(cfg.nerd_fonts);
         let choices = vec!["1) Genre", "2) Artist", "3) Album", "q) Back"];
-        let choice = run_skim_simple(choices, "🔎 Filter by > ");
+        let filter_prompt = icons.prompt(icons.filter(), "Filter by");
+        let choice = run_skim_simple(choices, &filter_prompt);
 
         let key = match choice.as_deref() {
             Some(s) if s.contains("Genre") => "genre",
@@ -114,10 +121,11 @@ pub fn run_tag_picker(
     key: &str,
     extra_args: &[String],
 ) -> Result<bool> {
+    let icons = Icons::new(cfg.nerd_fonts);
     let (icon, prompt) = match key {
-        "genre" => ("🏷️", "🏷️  Pick Genre > "),
-        "artist" => ("🎤", "🎤 Pick Artist > "),
-        "album" => ("💿", "💿 Pick Album > "),
+        "genre" => (icons.genre(), icons.prompt(icons.genre(), "Pick Genre")),
+        "artist" => (icons.artist(), icons.prompt(icons.artist(), "Pick Artist")),
+        "album" => (icons.album(), icons.prompt(icons.album(), "Pick Album")),
         _ => return Ok(false),
     };
 
@@ -166,7 +174,7 @@ pub fn run_tag_picker(
 
     let opts = SkimOptionsBuilder::default()
         .multi(true)
-        .prompt(prompt)
+        .prompt(&prompt)
         .preview("")
         .reverse(true)
         //.typos(2)
@@ -253,8 +261,9 @@ pub fn run_manage_dirs_mode(cfg: &mut config::Config) -> Result<bool> {
     let mut any_changes = false;
 
     loop {
+        let icons = Icons::new(cfg.nerd_fonts);
         let count = cfg.music_dirs.len();
-        let prompt = format!("📂 Manage ({} dirs) >    ", count);
+        let prompt = format!("{}Manage ({} dirs) >    ", icons.pad(icons.folder_open()), count);
 
         let options = vec!["1) Add Directory", "2) Remove Directory", "q) Back"];
 
@@ -282,7 +291,8 @@ pub fn run_manage_dirs_mode(cfg: &mut config::Config) -> Result<bool> {
 }
 
 pub fn manage_add_loop(cfg: &mut config::Config) -> Result<bool> {
-    println!("\n📂 --- Add Directory Mode ---");
+    let icons = Icons::new(cfg.nerd_fonts);
+    println!("\n{}--- Add Directory Mode ---", icons.pad(icons.folder_open()));
     println!("Type a full path and press ENTER.");
     println!("Press ENTER (empty) to go back.\n");
 
@@ -331,9 +341,11 @@ pub fn manage_remove_menu(cfg: &mut config::Config) -> Result<bool> {
         })
         .collect();
 
+    let icons = Icons::new(cfg.nerd_fonts);
+    let remove_prompt = format!("{}Remove >    ", icons.pad(icons.trash()));
     let opts = SkimOptionsBuilder::default()
         .multi(true)
-        .prompt("🗑️  Remove >    ")
+        .prompt(&remove_prompt)
         .header("   Select directories to remove (TAB to select)")
         .reverse(true)
         //.typos(2)
@@ -488,7 +500,9 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
             "q) Back",
         ];
 
-        let selection = run_skim_simple(options, "⚙️ Settings > ");
+        let icons = Icons::new(cfg.nerd_fonts);
+        let settings_prompt = icons.prompt(icons.settings(), "Settings");
+        let selection = run_skim_simple(options, &settings_prompt);
         match selection.as_deref() {
             // dirs
             Some(s) if s.contains("Manage Directories") => {
@@ -668,6 +682,7 @@ pub fn run_track_mode<T>(tracks: &[T], cfg: &config::Config, extra_args: &[Strin
 where
     T: Borrow<indexer::Track>,
 {
+    let icons = Icons::new(cfg.nerd_fonts);
     let skim_items: Vec<TrackItem> = tracks
         .iter()
         .filter_map(|item| {
@@ -676,19 +691,26 @@ where
                 return None;
             }
             let display = format!("{} - {}", track.artist, track.title);
+            let icon = if track.media_type == "video" {
+                icons.video()
+            } else {
+                icons.track()
+            };
 
             Some(TrackItem {
                 track: track.clone(),
                 display_text: display,
+                icon,
             })
         })
         .collect();
 
+    let track_prompt = icons.prompt(icons.track(), "Tracks");
     let opts = SkimOptionsBuilder::default()
         .height("100%")
         .multi(true)
         .preview("")
-        .prompt("🎵 Tracks > ")
+        .prompt(&track_prompt)
         .header("   Artist                Title")
         .reverse(true)
         //.typos(2)
@@ -738,6 +760,7 @@ pub fn run_dir_mode(
         dir_map.entry(parent).or_default().push(file_name);
     }
 
+    let icons = Icons::new(cfg.nerd_fonts);
     let skim_items: Vec<DirItem> = dir_map
         .into_iter()
         .map(|(path, files)| {
@@ -753,13 +776,15 @@ pub fn run_dir_mode(
                 path,
                 count,
                 samples: files,
+                icon: icons.folder(),
             }
         })
         .collect();
 
+    let folder_prompt = icons.prompt(icons.folder(), "Folders");
     let opts = SkimOptionsBuilder::default()
         .multi(true)
-        .prompt("📁 Folders > ")
+        .prompt(&folder_prompt)
         .header("   Directory Name")
         .reverse(true)
         //.typos(2)
@@ -795,6 +820,7 @@ pub fn run_playlist_mode(
     cfg: &config::Config,
     extra_args: &[String],
 ) -> Result<()> {
+    let icons = Icons::new(cfg.nerd_fonts);
     let skim_items: Vec<PlaylistItem> = tracks
         .iter()
         .filter_map(|t| {
@@ -858,6 +884,7 @@ pub fn run_playlist_mode(
                     path: t.path.clone(),
                     count,
                     preview_lines: lines,
+                    icon: icons.playlist(),
                 })
             } else {
                 None
@@ -865,9 +892,10 @@ pub fn run_playlist_mode(
         })
         .collect();
 
+    let playlist_prompt = icons.prompt(icons.playlist(), "Playlists");
     let opts = SkimOptionsBuilder::default()
         .multi(true)
-        .prompt("📜 Playlists > ")
+        .prompt(&playlist_prompt)
         .reverse(true)
         //.typos(2)
         .inline_info(true)
@@ -899,11 +927,12 @@ pub fn run_search_mode(
         return Ok(());
     }
 
+    let icons = Icons::new(cfg.nerd_fonts);
     let query = if let Some(q) = initial_query {
         q
     } else {
         println!("Search YouTube or Paste URL:");
-        print!("🔎 > ");
+        print!("{} > ", icons.search());
         use std::io::Write;
         std::io::stdout().flush()?;
 
@@ -932,13 +961,18 @@ pub fn run_search_mode(
 
     let skim_items: Vec<SearchItem> = results
         .into_iter()
-        .map(|r| SearchItem { result: r })
+        .map(|r| SearchItem {
+            result: r,
+            playlist_icon: icons.playlist(),
+            video_icon: icons.video_stream(),
+        })
         .collect();
 
+    let search_prompt = icons.prompt(icons.target_search(), "Search");
     let opts = SkimOptionsBuilder::default()
         .height("100%")
         .multi(true)
-        .prompt("🎯 Search > ")
+        .prompt(&search_prompt)
         .reverse(true)
         //.typos(2)
         .inline_info(true)
@@ -1006,7 +1040,12 @@ pub fn run_radio_mode(
         }
     }
 
-    let selected = run_skim_simple(options, "📻 Choose Station (Please consider donating!) > ");
+    let icons = Icons::new(cfg.nerd_fonts);
+    let radio_prompt = format!(
+        "{}Choose Station (Please consider donating!) > ",
+        icons.pad(icons.radio())
+    );
+    let selected = run_skim_simple(options, &radio_prompt);
 
     if let Some(s) = selected.as_deref()
         && let Some((name, url, _is_listen_moe)) = RADIO_STATIONS.iter().find(|(n, _, _)| *n == s)

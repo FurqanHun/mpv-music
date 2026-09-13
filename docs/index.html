@@ -1,23 +1,19 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta name="theme-color" content="#101010" />
 
-        <title>mpv-music | Native Rust Music Player</title>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101010" />
 
-        <meta
-            name="description"
-            content="A blazing-fast terminal-based music library browser for mpv written in Rust."
-        />
-        <meta
-            name="keywords"
-            content="mpv-music, mpv, cli, terminal, music player, linux, rust, tui, mpv wrapper, mpvmusic, library manager, music, mpv music"
-        />
-        <link rel="canonical" href="https://furqanhun.github.io/mpv-music/" />
+    <title>mpv-music | Native Rust Music Player</title>
 
-        <script type="application/ld+json">
+    <meta name="description" content="A blazing-fast terminal-based music library browser for mpv written in Rust." />
+    <meta name="keywords"
+        content="mpv-music, mpv, cli, terminal, music player, linux, rust, tui, mpv wrapper, mpvmusic, library manager, music, mpv music" />
+    <link rel="canonical" href="https://furqanhun.github.io/mpv-music/" />
+
+    <script type="application/ld+json">
             {
                 "@context": "https://schema.org",
                 "@type": "SoftwareApplication",
@@ -39,197 +35,236 @@
             }
         </script>
 
-        <style>
-            :root {
-                --bg: #101010;
-                --fg: #eeeeee;
-                --accent: #00ff00;
-                --dim: #666666;
-                --link: #58a6ff;
-                --alert: #ffcc00;
-                --dev-color: #ff00ff;
+    <style>
+        :root {
+            --bg: #101010;
+            --fg: #eeeeee;
+            --accent: #00ff00;
+            --dim: #666666;
+            --link: #58a6ff;
+            --alert: #ffcc00;
+            --dev-color: #ff00ff;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: "Menlo", "Consolas", "Monaco", monospace;
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.5;
+            font-size: 16px;
+            overflow-y: scroll;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+        }
+
+        pre.ascii-art {
+            color: var(--accent);
+            font-size: 12px;
+            line-height: 12px;
+            white-space: pre;
+            overflow: hidden;
+            margin-bottom: 2rem;
+            font-weight: bold;
+            width: 100%;
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            border-bottom: 1px dashed var(--dim);
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        a {
+            color: var(--fg);
+            text-decoration: underline;
+            text-decoration-color: var(--dim);
+            text-underline-offset: 4px;
+        }
+
+        a:hover {
+            color: var(--accent);
+            text-decoration-color: var(--accent);
+            background-color: #002200;
+        }
+
+        .cmd-block {
+            background: #000;
+            border: 1px solid var(--dim);
+            padding: 1rem;
+            overflow-x: auto;
+            color: var(--accent);
+            margin: 1rem 0 0.5rem 0;
+            user-select: all;
+            position: relative;
+        }
+
+        .cmd-block::before {
+            content: "$ ";
+            color: var(--dim);
+            user-select: none;
+        }
+
+        .sub-link {
+            font-size: 0.85rem;
+            color: var(--dim);
+            text-align: center;
+            display: block;
+            margin-bottom: 2rem;
+        }
+
+        /* Dual Channel Styles */
+        .release-info {
+            font-size: 0.85rem;
+            color: var(--dim);
+            text-align: right;
+            margin-bottom: 1rem;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        .release-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .release-tag {
+            color: var(--alert);
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .release-tag.dev {
+            color: var(--dev-color);
+        }
+
+        .release-tag:hover {
+            background: none;
+            text-decoration: underline;
+        }
+
+        ul {
+            padding-left: 1.2rem;
+            list-style-type: square;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.2em;
+            background-color: var(--accent);
+            animation: blink 1s step-end infinite;
+            vertical-align: text-bottom;
+            margin-left: 5px;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        footer {
+            margin-top: 4rem;
+            border-top: 1px solid var(--dim);
+            padding-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--dim);
+            text-align: center;
+        }
+
+        footer h1 {
+            font-size: 1rem;
+            color: #333;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border: none;
+        }
+
+        @media (max-width: 600px) {
+            pre.ascii-art {
+                font-size: 8px;
+                line-height: 8px;
             }
 
             body {
-                background-color: var(--bg);
-                color: var(--fg);
-                font-family: "Menlo", "Consolas", "Monaco", monospace;
-                margin: 0;
-                padding: 2rem;
-                line-height: 1.5;
-                font-size: 16px;
-                overflow-y: scroll;
-            }
-
-            .container {
-                max-width: 680px;
-                margin: 0 auto;
-            }
-
-            pre.ascii-art {
-                color: var(--accent);
-                font-size: 12px;
-                line-height: 12px;
-                white-space: pre;
-                overflow: hidden;
-                margin-bottom: 2rem;
-                font-weight: bold;
-                width: 100%;
-            }
-
-            h2 {
-                font-size: 1.2rem;
-                border-bottom: 1px dashed var(--dim);
-                padding-bottom: 0.5rem;
-                margin-top: 2rem;
-                color: var(--accent);
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }
-
-            a {
-                color: var(--fg);
-                text-decoration: underline;
-                text-decoration-color: var(--dim);
-                text-underline-offset: 4px;
-            }
-
-            a:hover {
-                color: var(--accent);
-                text-decoration-color: var(--accent);
-                background-color: #002200;
-            }
-
-            .cmd-block {
-                background: #000;
-                border: 1px solid var(--dim);
                 padding: 1rem;
-                overflow-x: auto;
-                color: var(--accent);
-                margin: 1rem 0 0.5rem 0;
-                user-select: all;
-                position: relative;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <a href="https://github.com/FurqanHun/mpv-music" class="github-corner" aria-label="View source on GitHub">
+        <svg width="80" height="80" viewBox="0 0 250 250"
+            style="fill:var(--accent); color:var(--bg); position: absolute; top: 0; border: 0; right: 0;"
+            aria-hidden="true">
+            <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+            <path
+                d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+                fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+            <path
+                d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+                fill="currentColor" class="octo-body"></path>
+        </svg>
+    </a>
+    <style>
+        .github-corner:hover .octo-arm {
+            animation: octocat-wave 560ms ease-in-out
+        }
+
+        @keyframes octocat-wave {
+
+            0%,
+            100% {
+                transform: rotate(0)
             }
 
-            .cmd-block::before {
-                content: "$ ";
-                color: var(--dim);
-                user-select: none;
+            20%,
+            60% {
+                transform: rotate(-25deg)
             }
 
-            .sub-link {
-                font-size: 0.85rem;
-                color: var(--dim);
-                text-align: center;
-                display: block;
-                margin-bottom: 2rem;
+            40%,
+            80% {
+                transform: rotate(10deg)
+            }
+        }
+
+        @media (max-width:500px) {
+            .github-corner:hover .octo-arm {
+                animation: none
             }
 
-            /* Dual Channel Styles */
-            .release-info {
-                font-size: 0.85rem;
-                color: var(--dim);
-                text-align: right;
-                margin-bottom: 1rem;
-                font-family: monospace;
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 4px;
+            .github-corner .octo-arm {
+                animation: octocat-wave 560ms ease-in-out
             }
-            .release-row {
-                display: flex;
-                gap: 8px;
-            }
-            .release-tag {
-                color: var(--alert);
-                font-weight: bold;
-                text-decoration: none;
-            }
-            .release-tag.dev {
-                color: var(--dev-color);
-            }
-            .release-tag:hover {
-                background: none;
-                text-decoration: underline;
-            }
-
-            ul {
-                padding-left: 1.2rem;
-                list-style-type: square;
-            }
-
-            li {
-                margin-bottom: 0.5rem;
-            }
-
-            .cursor {
-                display: inline-block;
-                width: 10px;
-                height: 1.2em;
-                background-color: var(--accent);
-                animation: blink 1s step-end infinite;
-                vertical-align: text-bottom;
-                margin-left: 5px;
-            }
-
-            @keyframes blink {
-                0%,
-                100% {
-                    opacity: 1;
-                }
-                50% {
-                    opacity: 0;
-                }
-            }
-
-            footer {
-                margin-top: 4rem;
-                border-top: 1px solid var(--dim);
-                padding-top: 1rem;
-                font-size: 0.9rem;
-                color: var(--dim);
-                text-align: center;
-            }
-
-            footer h1 {
-                font-size: 1rem;
-                color: #333;
-                margin-bottom: 0.5rem;
-                text-transform: uppercase;
-                letter-spacing: 2px;
-                border: none;
-            }
-
-            @media (max-width: 600px) {
-                pre.ascii-art {
-                    font-size: 8px;
-                    line-height: 8px;
-                }
-                body {
-                    padding: 1rem;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <a href="https://github.com/FurqanHun/mpv-music" class="github-corner" aria-label="View source on GitHub">
-            <svg width="80" height="80" viewBox="0 0 250 250" style="fill:var(--accent); color:var(--bg); position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true">
-                <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
-                <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
-                <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path>
-            </svg>
-        </a>
-        <style>
-            .github-corner:hover .octo-arm { animation: octocat-wave 560ms ease-in-out }
-            @keyframes octocat-wave { 0%,100%{transform:rotate(0)} 20%,60%{transform:rotate(-25deg)} 40%,80%{transform:rotate(10deg)} }
-            @media (max-width:500px) {
-                .github-corner:hover .octo-arm { animation:none }
-                .github-corner .octo-arm { animation: octocat-wave 560ms ease-in-out }
-            }
-        </style>
-        <div class="container">
-            <pre class="ascii-art">
+        }
+    </style>
+    <div class="container">
+        <pre class="ascii-art">
 ███╗   ███╗██████╗ ██╗   ██╗
 ████╗ ████║██╔══██╗██║   ██║
 ██╔████╔██║██████╔╝██║   ██║
@@ -243,182 +278,176 @@
 ██║╚██╔╝██║██║   ██║╚════██║██║██║
 ██║ ╚═╝ ██║╚██████╔╝███████║██║╚██████╗
 ╚═╝     ╚═╝ ╚═════╝ ╚══════╝╚═╝ ╚═════╝
-</pre
-            >
+</pre>
 
-            <p>
-                Music for your terminal.<br />
-                Blazing fast, <strong>Rust</strong> native 🦀.<br />
-                <strong>Stable v0.27.0+</strong> available.<span
-                    class="cursor"
-                ></span>
-            </p>
+        <p>
+            Music for your terminal.<br />
+            Blazing fast, <strong>Rust</strong> native 🦀.<br />
+            <strong>Stable v0.27.0+</strong> available.<span class="cursor"></span>
+        </p>
 
-            <p style="margin-bottom: 0; font-size: 0.9rem; color: var(--dim);"><strong>Rust (1.93.0+)</strong></p>
-            <div class="cmd-block" style="margin-top: 0.2rem;">cargo install mpv-music</div>
+        <p style="margin-bottom: 0; font-size: 0.9rem; color: var(--dim);"><strong>Rust (1.93.0+)</strong></p>
+        <div class="cmd-block" style="margin-top: 0.2rem;">cargo install mpv-music</div>
 
-            <p style="margin-bottom: 0; margin-top: 1.5rem; font-size: 0.9rem; color: var(--dim);"><strong>Linux / macOS</strong></p>
-            <div class="cmd-block" style="margin-top: 0.2rem;">
-                curl -sL
-                https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh
-                | bash
-            </div>
-
-            <p style="margin-bottom: 0; margin-top: 1.5rem; font-size: 0.9rem; color: var(--dim);"><strong>Windows (PowerShell)</strong></p>
-            <div class="cmd-block" style="margin-top: 0.2rem;">
-                iwr https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.ps1 -UseBasicParsing | iex
-            </div>
-
-            <a
-                href="downloads"
-                class="sub-link"
-                >Or download binary manually (Direct Downloads)</a
-            >
-
-            <div class="release-info">
-                <div class="release-row">
-                    <span>Latest Stable:</span>
-                    <a
-                        id="stable-link"
-                        href="https://github.com/furqanhun/mpv-music/releases/latest"
-                        class="release-tag"
-                        >Checking...</a
-                    >
-                </div>
-                <div class="release-row">
-                    <span>Dev Channel:</span>
-                    <a
-                        id="dev-link"
-                        href="https://github.com/furqanhun/mpv-music/releases/latest"
-                        class="release-tag dev"
-                        >...</a
-                    >
-                </div>
-            </div>
-
-            <h2>Supported Systems</h2>
-            <p>Linux (x86_64, ARM64), BSD/macOS, WSL, Windows (Beta)</p>
-
-            <h2>Why?</h2>
-            <p>
-                While I do appreciate a good GUI, I prefer my tools to be lightweight, incredibly fast, and follow the UNIX philosophy. There's an abundance of terminal music players and scripts out there, but they almost always try to do <em>too much</em>—whether it's rendering heavy visualizers, managing podcasts, or running background daemons (which I'm firmly against for a simple music app). 
-            </p>
-            <p>
-                I just wanted something that plays music and gets out of the way, without reinventing the wheel. I love <code>mpv</code> and <code>yt-dlp</code>, and since they are already installed on my system, why write a custom audio engine from scratch? It's not that I hate having multiple tools doing similar things, but I have a strong personal bias toward <code>mpv</code>. Because no existing player fit my workflow, I built a blazing-fast Rust frontend around the tools I already use and love.
-            </p>
-
-            <h2>Manifesto & Features</h2>
-            <ul>
-                <li>
-                    <strong>Do One Thing Well:</strong> Stay lightweight and never chew more than what should be chewed. No daemons, no background services, no feature bloat.
-                </li>
-                <li>
-                    <strong>Forgiving & Smart CLI:</strong> Powerful command-line filters. If your query has exactly one match, it auto-plays instantly. If it's ambiguous, it safely drops you into the interactive picker.
-                </li>
-                <li>
-                    <strong>Minimal TUI Menu:</strong> Initially added because an early tester hated CLI arguments, but having a minimal interactive menu actually ended up being much smoother for browsing the library.
-                </li>
-                <li>
-                    <strong>Keyboard Native:</strong> Designed for an entirely keyboard-driven workflow. (Though the UI technically supports mouse clicks, the keyboard is just faster).
-                </li>
-                <li>
-                    <strong>Radio & Web Streams:</strong> Seamless integration with ad-free internet radio streams (SomaFM, LISTEN.moe, Lofi) and native YouTube streaming.
-                </li>
-            </ul>
-
-            <h2>Usage</h2>
-            <p>Simply run <code>mpv-music</code> to launch the interactive TUI, or use arguments for instant playback:</p>
-            <ul>
-                <li>
-                    <code>mpv-music -a "Daft Punk"</code> (Filter by artist, instant-play if 1 match)
-                </li>
-                <li>
-                    <code>mpv-music --radio lofi</code> (Jump straight into ad-free Lofi Hip Hop)
-                </li>
-                <li>
-                    <code>mpv-music --yt "never gonna give you up"</code> (Search & stream directly from YouTube)
-                </li>
-                <li>
-                    <code>mpv-music "https://youtu.be/..."</code> (Instantly play a URL)
-                </li>
-                <li>
-                    <code>mpv-music --help</code> (See all available commands and shortcuts)
-                </li>
-            </ul>
-            <p style="margin-top: 1.5rem; color: var(--dim); font-size: 0.9rem;">
-                For full documentation, configuration options, and keybindings, please refer to the <a href="https://github.com/FurqanHun/mpv-music#readme" target="_blank" rel="noopener noreferrer">README</a>.
-            </p>
-            <footer>
-                <h1>mpv-music</h1>
-                <p>
-                    <a href="changelog">Changelog</a> •
-                    <a
-                        href="https://github.com/furqanhun/mpv-music"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >Source Code</a
-                    >
-                    /
-                    <a
-                        href="https://github.com/furqanhun/mpv-music/blob/main/LICENSE"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >MIT License</a
-                    >
-                </p>
-                <p>
-                    Maintained by
-                    <a
-                        href="https://github.com/furqanhun"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style="text-decoration: none; color: #fff"
-                        >furqanhun</a
-                    >.
-                </p>
-            </footer>
+        <p style="margin-bottom: 0; margin-top: 1.5rem; font-size: 0.9rem; color: var(--dim);"><strong>Linux /
+                macOS</strong></p>
+        <div class="cmd-block" style="margin-top: 0.2rem;">
+            curl -sL
+            https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh
+            | bash
         </div>
 
-        <script>
-            fetch("./latest.json")
-                .then((response) => {
-                    if (!response.ok)
-                        throw new Error("Network response was not ok");
-                    return response.json();
-                })
-                .then((data) => {
-                    // STABLE (Bash)
-                    const stableEl = document.getElementById("stable-link");
-                    if (data.stable) {
-                        stableEl.textContent = data.stable.tag_name;
-                        stableEl.href = data.stable.html_url;
-                    } else {
-                        stableEl.textContent = "n/a";
-                    }
+        <p style="margin-bottom: 0; margin-top: 1.5rem; font-size: 0.9rem; color: var(--dim);"><strong>Windows
+                (PowerShell)</strong></p>
+        <div class="cmd-block" style="margin-top: 0.2rem;">
+            iwr https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.ps1 -UseBasicParsing | iex
+        </div>
 
-                    // LATEST (DEV)
-                    const devEl = document.getElementById("dev-link");
-                    if (data.dev) {
-                        devEl.textContent = data.dev.tag_name;
-                        devEl.href = data.dev.html_url;
+        <a href="downloads" class="sub-link">Or download binary manually (Direct Downloads)</a>
 
-                        // If Dev matches Stable exactly, mark it visually
-                        if (
-                            data.stable &&
-                            data.dev.tag_name === data.stable.tag_name
-                        ) {
-                            devEl.textContent += " (same)";
-                            devEl.style.opacity = "0.5";
-                        }
-                    } else {
-                        devEl.textContent = "n/a";
+        <div class="release-info">
+            <div class="release-row">
+                <span>Latest Stable:</span>
+                <a id="stable-link" href="https://github.com/furqanhun/mpv-music/releases/latest"
+                    class="release-tag">Checking...</a>
+            </div>
+            <div class="release-row">
+                <span>Dev Channel:</span>
+                <a id="dev-link" href="https://github.com/furqanhun/mpv-music/releases/latest"
+                    class="release-tag dev">...</a>
+            </div>
+        </div>
+
+        <h2>Supported Systems</h2>
+        <p>Linux (x86_64, ARM64), BSD/macOS, WSL, Windows (Beta)</p>
+
+        <h2>Why?</h2>
+        <p>
+            While I do appreciate a good GUI, I prefer my tools to be lightweight, incredibly fast, and follow the UNIX
+            philosophy. There's an abundance of terminal music players and scripts out there, but they almost always try
+            to do <em>too much</em>—whether it's rendering heavy visualizers, managing podcasts, or running background
+            daemons (which I'm firmly against for a simple music app).
+        </p>
+        <p>
+            I just wanted something that plays music and gets out of the way, without reinventing the wheel. I love
+            <code>mpv</code> and <code>yt-dlp</code>, and since they are already installed on my system, why write a
+            custom audio engine from scratch? It's not that I hate having multiple tools doing similar things, but I
+            have a strong personal bias toward <code>mpv</code>. Because no existing player fit my workflow, I built a
+            blazing-fast Rust frontend around the tools I already use and love.
+        </p>
+
+        <h2>Manifesto & Features</h2>
+        <ul>
+            <li>
+                <strong>Do One Thing Well:</strong> Stay lightweight and never chew more than what should be chewed. No
+                daemons, no background services, no feature bloat.
+            </li>
+            <li>
+                <strong>Forgiving & Smart CLI:</strong> Powerful command-line filters. If your query has exactly one
+                match, it auto-plays instantly. If it's ambiguous, it safely drops you into the interactive picker.
+            </li>
+            <li>
+                <strong>Minimal TUI Menu:</strong> Initially added because an early tester hated CLI arguments, but
+                having a minimal interactive menu actually ended up being much smoother for browsing the library.
+            </li>
+            <li>
+                <strong>Keyboard Native:</strong> Designed for an entirely keyboard-driven workflow. (Though the UI
+                technically supports mouse clicks, the keyboard is just faster).
+            </li>
+            <li>
+                <strong>Radio & Web Streams:</strong> Seamless integration with ad-free internet radio streams (SomaFM,
+                LISTEN.moe, Lofi) and native YouTube streaming.
+            </li>
+            <li>
+                <strong>Terminal-Native Aesthetics:</strong> Standard emojis by default for 100% out-of-the-box
+                reliability, plus optional <strong>Symbols Nerd Font</strong> support (Mono & Normal) for crisp
+                monochrome icons that automatically blend into your terminal's color theme.
+            </li>
+        </ul>
+
+        <h2>Usage</h2>
+        <p>Simply run <code>mpv-music</code> to launch the interactive TUI, or use arguments for instant playback:</p>
+        <ul>
+            <li>
+                <code>mpv-music -a "Daft Punk"</code> (Filter by artist, instant-play if 1 match)
+            </li>
+            <li>
+                <code>mpv-music --radio lofi</code> (Jump straight into ad-free Lofi Hip Hop)
+            </li>
+            <li>
+                <code>mpv-music --yt "never gonna give you up"</code> (Search & stream directly from YouTube)
+            </li>
+            <li>
+                <code>mpv-music "https://youtu.be/..."</code> (Instantly play a URL)
+            </li>
+            <li>
+                <code>mpv-music --help</code> (See all available commands and shortcuts)
+            </li>
+        </ul>
+        <p style="margin-top: 1.5rem; color: var(--dim); font-size: 0.9rem;">
+            For full documentation, configuration options, and keybindings, please refer to the <a
+                href="https://github.com/FurqanHun/mpv-music#readme" target="_blank"
+                rel="noopener noreferrer">README</a>.
+        </p>
+        <footer>
+            <h1>mpv-music</h1>
+            <p>
+                <a href="changelog">Changelog</a> •
+                <a href="https://github.com/furqanhun/mpv-music" target="_blank" rel="noopener noreferrer">Source
+                    Code</a>
+                /
+                <a href="https://github.com/furqanhun/mpv-music/blob/main/LICENSE" target="_blank"
+                    rel="noopener noreferrer">MIT License</a>
+            </p>
+            <p>
+                Maintained by
+                <a href="https://github.com/furqanhun" target="_blank" rel="noopener noreferrer"
+                    style="text-decoration: none; color: #fff">furqanhun</a>.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        fetch("./latest.json")
+            .then((response) => {
+                if (!response.ok)
+                    throw new Error("Network response was not ok");
+                return response.json();
+            })
+            .then((data) => {
+                // STABLE (Bash)
+                const stableEl = document.getElementById("stable-link");
+                if (data.stable) {
+                    stableEl.textContent = data.stable.tag_name;
+                    stableEl.href = data.stable.html_url;
+                } else {
+                    stableEl.textContent = "n/a";
+                }
+
+                // LATEST (DEV)
+                const devEl = document.getElementById("dev-link");
+                if (data.dev) {
+                    devEl.textContent = data.dev.tag_name;
+                    devEl.href = data.dev.html_url;
+
+                    // If Dev matches Stable exactly, mark it visually
+                    if (
+                        data.stable &&
+                        data.dev.tag_name === data.stable.tag_name
+                    ) {
+                        devEl.textContent += " (same)";
+                        devEl.style.opacity = "0.5";
                     }
-                })
-                .catch((error) => {
-                    console.error("Error fetching release:", error);
-                    document.getElementById("stable-link").textContent =
-                        "Error";
-                });
-        </script>
-    </body>
+                } else {
+                    devEl.textContent = "n/a";
+                }
+            })
+            .catch((error) => {
+                console.error("Error fetching release:", error);
+                document.getElementById("stable-link").textContent =
+                    "Error";
+            });
+    </script>
+</body>
+
 </html>
