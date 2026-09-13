@@ -70,13 +70,16 @@ fn prompt_and_update(is_dev: bool, latest_tag: &str, auto_confirm: bool) {
             } else {
                 format!("--update --tag {}", latest_tag)
             };
-            let cmd_str = format!("curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash -s -- {}", script_args);
-            
+            let cmd_str = format!(
+                "curl -sL https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.sh | bash -s -- {}",
+                script_args
+            );
+
             let status = std::process::Command::new("bash")
                 .arg("-c")
                 .arg(&cmd_str)
                 .status();
-                
+
             if let Err(e) = status {
                 log::error!("Failed to launch updater: {}", e);
             }
@@ -84,29 +87,37 @@ fn prompt_and_update(is_dev: bool, latest_tag: &str, auto_confirm: bool) {
         #[cfg(target_os = "windows")]
         {
             println!("Starting update...");
-            
+
             let mut ps_args = vec!["-Update".to_string(), format!("-Tag '{}'", latest_tag)];
             if is_dev {
                 ps_args.push("-Dev".to_string());
             }
-            
+
             let args_str = ps_args.join(" ");
             let ps_cmd = format!(
                 "& ([scriptblock]::Create((iwr https://raw.githubusercontent.com/FurqanHun/mpv-music/master/install.ps1 -UseBasicParsing).Content)) {}",
                 args_str
             );
-            
+
             let status = std::process::Command::new("powershell")
-                .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &ps_cmd])
+                .args([
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    &ps_cmd,
+                ])
                 .status();
-                
+
             if let Err(e) = status {
                 log::error!("Failed to launch updater: {}", e);
             }
         }
         #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
         {
-            println!("Please download the update manually from: https://github.com/FurqanHun/mpv-music");
+            println!(
+                "Please download the update manually from: https://github.com/FurqanHun/mpv-music"
+            );
         }
     } else {
         println!("Update aborted. You can run the update later.");

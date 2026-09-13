@@ -263,7 +263,11 @@ pub fn run_manage_dirs_mode(cfg: &mut config::Config) -> Result<bool> {
     loop {
         let icons = Icons::new(cfg.nerd_fonts);
         let count = cfg.music_dirs.len();
-        let prompt = format!("{}Manage ({} dirs) >    ", icons.pad(icons.folder_open()), count);
+        let prompt = format!(
+            "{}Manage ({} dirs) >    ",
+            icons.pad(icons.folder_open()),
+            count
+        );
 
         let options = vec!["1) Add Directory", "2) Remove Directory", "q) Back"];
 
@@ -292,7 +296,10 @@ pub fn run_manage_dirs_mode(cfg: &mut config::Config) -> Result<bool> {
 
 pub fn manage_add_loop(cfg: &mut config::Config) -> Result<bool> {
     let icons = Icons::new(cfg.nerd_fonts);
-    println!("\n{}--- Add Directory Mode ---", icons.pad(icons.folder_open()));
+    println!(
+        "\n{}--- Add Directory Mode ---",
+        icons.pad(icons.folder_open())
+    );
     println!("Type a full path and press ENTER.");
     println!("Press ENTER (empty) to go back.\n");
 
