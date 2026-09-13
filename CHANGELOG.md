@@ -2,6 +2,22 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.28.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.28.1) - 2026-09-13
+
+This patch release introduces optional Nerd Font icons for a cleaner, theme-matching terminal aesthetic, alongside dependency bumps and installer improvements.
+
+### Features & Improvements
+- **Nerd Fonts Support:** Added optional Nerd Font icons via the `nerd_fonts` configuration option (`"none"` [default], `"mono"`, `"normal"`). When enabled, menus, modes, item previews, and skim prompts render crisp monochrome glyphs that automatically follow your terminal's color theme while retaining standard emojis as the zero-dependency default.
+- **Windows Installer:** Resolved executable file-locking issues during self-updates in the native PowerShell installer (`install.ps1`).
+- **Documentation:** Added `nerd_fonts` configuration documentation to the README, refined website styling, and updated the navigation banner.
+
+### Dependencies & Chores
+- Bumped `skim` to **v5.7.0**.
+- Updated `Cargo.lock` to the latest compatible dependency versions.
+- Applied standard code formatting (`cargo fmt`).
+
+---
+
 ## [v0.28.0](https://github.com/FurqanHun/mpv-music/releases/tag/v0.28.0) - 2026-09-07
 
 This minor release brings full native Windows support, a smarter interactive auto-updater, and a brand new downloads page.
