@@ -28,6 +28,27 @@ pub const LEGACY_MPV_DEFAULT_ARGS: &[&str] = &[
     "--term-status-msg=▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${media-title}} • ${time-pos} / ${duration} • (${percent-pos}%)",
 ];
 
+pub const KNOWN_CONFIG_KEYS: &[&str] = &[
+    "shuffle",
+    "loop_mode",
+    "volume",
+    "music_dirs",
+    "video_ok",
+    "watch",
+    "scan_hidden_dirs",
+    "serial_mode",
+    "nerd_fonts",
+    "ytdlp_ejs_remote_github",
+    "ytdlp_useragent",
+    "enable_file_logging",
+    "ytdlp",
+    "player",
+    "audio_exts",
+    "video_exts",
+    "playlist_exts",
+    "mpv_args",
+];
+
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum NerdFontMode {
@@ -81,6 +102,7 @@ where
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct Config {
     pub shuffle: bool,
     pub loop_mode: String, // "playlist", "track", "no", "inf", "5"
@@ -266,6 +288,35 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
         needs_save = true;
     }
 
+    if let Ok(table) = toml::from_str::<toml::Table>(&content) {
+        let mut missing_keys = Vec::new();
+        for &key in KNOWN_CONFIG_KEYS {
+            if key == "mpv_args" && table.contains_key("mpv_default_args") {
+                continue;
+            }
+            if !table.contains_key(key) {
+                missing_keys.push(key);
+            }
+        }
+        if !missing_keys.is_empty() {
+            let is_verbose_or_debug = std::env::args().any(|a| {
+                a == "-v" || a == "--verbose" || a.starts_with("-v") || a == "-d" || a == "--debug"
+            });
+            let missing_str = missing_keys.join(", ");
+            log::info!(
+                "Config file missing keys: [{}]; auto-populating with defaults",
+                missing_str
+            );
+            if is_verbose_or_debug {
+                eprintln!(
+                    "[Info] Config: Auto-populated missing options with defaults: {}",
+                    missing_str
+                );
+            }
+            needs_save = true;
+        }
+    }
+
     if cfg.volume > 130 {
         warnings.push(format!(
             "Volume {} exceeds maximum (130). Reseting to 100.",
@@ -300,7 +351,7 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     }
 
     if needs_save {
-        if let Err(e) = save(&cfg) {
+        if let Err(e) = save_to(&cfg, &config_path) {
             log::error!("Failed to save auto-corrected config: {}", e);
         }
     }
@@ -310,18 +361,21 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     Ok(cfg)
 }
 
+pub fn save_to(config: &Config, config_path: &std::path::Path) -> Result<()> {
+    log::info!("Saving configuration to {:?}", config_path);
+
+    let toml_str = toml::to_string_pretty(config)?;
+    std::fs::write(config_path, toml_str)?;
+
+    log::debug!("Configuration saved successfully.");
+    Ok(())
+}
+
 pub fn save(config: &Config) -> Result<()> {
     let dirs = ProjectDirs::from("com", "furqanhun", "mpv-music")
         .context("Could not determine config paths")?;
     let config_path = dirs.config_dir().join("config.toml");
-
-    log::info!("Saving configuration to {:?}", config_path);
-
-    let toml_str = toml::to_string_pretty(config)?;
-    std::fs::write(&config_path, toml_str)?;
-
-    log::debug!("Configuration saved successfully.");
-    Ok(())
+    save_to(config, &config_path)
 }
 
 #[cfg(test)]
@@ -442,6 +496,22 @@ mod tests {
     }
 
     #[test]
+    fn test_missing_keys_detection() {
+        let partial_toml = "volume = 60\nshuffle = true\n";
+        let table: toml::Table = toml::from_str(partial_toml).unwrap();
+        let missing: Vec<&str> = KNOWN_CONFIG_KEYS
+            .iter()
+            .copied()
+            .filter(|&k| !table.contains_key(k))
+            .collect();
+        assert!(missing.contains(&"player"));
+        assert!(missing.contains(&"ytdlp"));
+        assert!(missing.contains(&"mpv_args"));
+        assert!(!missing.contains(&"volume"));
+        assert!(!missing.contains(&"shuffle"));
+    }
+
+    #[test]
     fn test_mpv_default_args_alias() {
         let default_cfg = Config::default();
         let toml_str = toml::to_string_pretty(&default_cfg).unwrap();
@@ -541,5 +611,34 @@ mod tests {
         let mut custom_path = Config::default();
         custom_path.ytdlp = "/usr/local/bin/yt-dlp".to_string();
         assert_eq!(custom_path.ytdlp_bin(), "/usr/local/bin/yt-dlp");
+    }
+
+    #[test]
+    fn test_load_autopopulates_missing_keys() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "mpv_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let config_file = temp_dir.join("config.toml");
+
+        std::fs::write(&config_file, "volume = 77\nshuffle = false\n").unwrap();
+
+        let loaded = load(Some(config_file.clone())).unwrap();
+        assert_eq!(loaded.volume, 77);
+        assert!(!loaded.shuffle);
+        assert_eq!(loaded.player, "mpv");
+        assert_eq!(loaded.ytdlp, "yt-dlp");
+
+        let on_disk = std::fs::read_to_string(&config_file).unwrap();
+        assert!(on_disk.contains("volume = 77"));
+        assert!(on_disk.contains("player = \"mpv\""));
+        assert!(on_disk.contains("ytdlp = \"yt-dlp\""));
+        assert!(on_disk.contains("mpv_args = []"));
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }
