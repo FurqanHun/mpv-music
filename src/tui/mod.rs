@@ -931,13 +931,18 @@ pub fn run_search_mode(
     if !cfg.ytdlp_available {
         let ytdlp_cmd = cfg.ytdlp_bin();
         eprintln!(
-            "\n\x1b[33mFeature Unavailable:\x1b[0m {} is not installed or not found.",
+            "\n\x1b[33;1m[Warning]\x1b[0m Feature unavailable: '{}' not found.",
             ytdlp_cmd
         );
         eprintln!(
-            "Please install '{}' to use Search and Streaming.",
+            "mpv-music requires '{}' to use Search and Streaming.",
             ytdlp_cmd
         );
+        if ytdlp_cmd != "yt-dlp" {
+            eprintln!("Check your 'ytdlp' setting in config.toml or the --ytdlp CLI option.");
+        } else {
+            eprintln!("Please install 'yt-dlp' to use Search and Streaming.");
+        }
         return Ok(());
     }
 
@@ -1043,7 +1048,9 @@ pub fn run_radio_mode(
 
     if options.is_empty() {
         log::error!("No radio stations found matching filter: {:?}", filter);
-        eprintln!("Radio station not found. Please use the interactive menu.");
+        eprintln!(
+            "\x1b[33;1m[Warning]\x1b[0m Radio station not found. Please use the interactive menu."
+        );
         return Ok(());
     }
 

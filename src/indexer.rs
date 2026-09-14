@@ -44,6 +44,7 @@ pub(crate) fn parse_filename_metadata(filename: &str) -> (String, String) {
 pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
     if config.music_dirs.is_empty() {
         log::warn!("Scan aborted: No music directories configured.");
+        eprintln!("\x1b[33;1m[Warning]\x1b[0m No music directories configured.");
         eprintln!("   Run 'mpv-music --add-dir <PATH>' to add your music folder.");
         eprintln!("   Or use 'mpv-music --manage-dirs' for the menu.");
         return Ok(Vec::new());

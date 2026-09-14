@@ -275,7 +275,7 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
 
     for warning in warnings {
         log::warn!("Config validation: {}", warning);
-        eprintln!("\x1b[33;1m[Config Warning]\x1b[0m {}", warning);
+        eprintln!("\x1b[33;1m[Warning]\x1b[0m Config: {}", warning);
     }
 
     if needs_save {

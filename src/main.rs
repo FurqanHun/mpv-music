@@ -104,7 +104,7 @@ fn main() -> Result<()> {
 
         if let Err(e) = status {
             eprintln!(
-                "Error: Failed to launch editor. Is '{}' installed? ({})",
+                "\x1b[31;1m[Error]\x1b[0m Failed to launch editor. Is '{}' installed? ({})",
                 editor, e
             );
         }
@@ -303,7 +303,10 @@ fn main() -> Result<()> {
             tracks = indexer::scan(&temp_cfg, true)?;
 
             if tracks.is_empty() {
-                eprintln!("No music files found in: {}", target_str);
+                eprintln!(
+                    "\x1b[33;1m[Warning]\x1b[0m No music files found in: {}",
+                    target_str
+                );
                 return Ok(());
             }
         } else {
@@ -342,7 +345,9 @@ fn main() -> Result<()> {
         || args.play_all;
 
     if tracks.is_empty() && local_cli_mode_requested {
-        eprintln!("No music found in local library. Run with --manage-dirs or add dirs to config.");
+        eprintln!(
+            "\x1b[33;1m[Warning]\x1b[0m No music found in local library. Run with --manage-dirs or add dirs to config."
+        );
         if cfg!(windows) {
             eprintln!("\nPress Enter to exit...");
             let _ = std::io::stdin().read_line(&mut String::new());
@@ -423,7 +428,7 @@ fn main() -> Result<()> {
             let partials = tui::apply_cli_filters(&tracks, &args, false);
 
             if partials.is_empty() {
-                eprintln!("No match.");
+                eprintln!("\x1b[33;1m[Warning]\x1b[0m No match.");
                 return Ok(());
             }
 
@@ -490,7 +495,7 @@ fn main() -> Result<()> {
         }
 
         if filtered.is_empty() {
-            eprintln!("No match.");
+            eprintln!("\x1b[33;1m[Warning]\x1b[0m No match.");
             return Ok(());
         }
 

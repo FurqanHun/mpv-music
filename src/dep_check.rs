@@ -59,7 +59,7 @@ pub fn check(cfg: &mut Config) -> Result<()> {
         }
         Err(_) => {
             eprintln!(
-                "\n\x1b[31;1mCRITICAL ERROR: '{}' not found!\x1b[0m",
+                "\n\x1b[31;1m[Critical Error]\x1b[0m '{}' not found!",
                 player_cmd
             );
             eprintln!(
@@ -120,7 +120,7 @@ pub fn check(cfg: &mut Config) -> Result<()> {
                     );
                     if ytdlp_cmd == "yt-dlp" {
                         println!(
-                            "\x1b[33m[Suggestion]\x1b[0m yt-dlp nightly is recommended for best performance."
+                            "\x1b[33;1m[Suggestion]\x1b[0m yt-dlp nightly is recommended for best performance."
                         );
                         println!(
                             "             Get it here: https://github.com/yt-dlp/yt-dlp-nightly-builds/releases"
