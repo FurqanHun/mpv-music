@@ -10,6 +10,10 @@ fn default_ytdlp_useragent() -> String {
     "default".to_string()
 }
 
+fn default_player() -> String {
+    "mpv".to_string()
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum NerdFontMode {
@@ -84,6 +88,9 @@ pub struct Config {
     pub ytdlp_useragent: String,
     pub enable_file_logging: bool,
 
+    #[serde(default = "default_player")]
+    pub player: String,
+
     pub audio_exts: Vec<String>,
     pub video_exts: Vec<String>,
     pub playlist_exts: Vec<String>,
@@ -128,6 +135,7 @@ impl Default for Config {
             ytdlp_ejs_remote_github: false,
             ytdlp_useragent: default_ytdlp_useragent(),
             enable_file_logging: true,
+            player: default_player(),
             audio_exts: vec![
                 "mp3", "flac", "wav", "m4a", "aac", "ogg", "opus", "wma", "alac", "aiff", "amr",
             ]
@@ -156,6 +164,17 @@ impl Default for Config {
             ],
             ytdlp_available: false,
             ytdlp_is_nightly: false,
+        }
+    }
+}
+
+impl Config {
+    pub fn player_bin(&self) -> &str {
+        let p = self.player.trim();
+        if p.is_empty() || p.eq_ignore_ascii_case("default") || p.eq_ignore_ascii_case("mpv") {
+            if cfg!(windows) { "mpv.com" } else { "mpv" }
+        } else {
+            p
         }
     }
 }
@@ -412,5 +431,28 @@ mod tests {
                 .unwrap_or_else(|e| panic!("Failed to parse '{}': {}", toml_input, e));
             assert_eq!(parsed.nerd_fonts, expected, "Failed for: {}", toml_input);
         }
+    }
+
+    #[test]
+    fn test_player_configuration() {
+        let default_cfg = Config::default();
+        assert_eq!(default_cfg.player, "mpv");
+        if cfg!(windows) {
+            assert_eq!(default_cfg.player_bin(), "mpv.com");
+        } else {
+            assert_eq!(default_cfg.player_bin(), "mpv");
+        }
+
+        let mut custom_cfg = Config::default();
+        custom_cfg.player = "mpvnet".to_string();
+        assert_eq!(custom_cfg.player_bin(), "mpvnet");
+
+        let mut custom_path = Config::default();
+        custom_path.player = "/usr/local/bin/my-mpv".to_string();
+        assert_eq!(custom_path.player_bin(), "/usr/local/bin/my-mpv");
+
+        let mut custom_exe = Config::default();
+        custom_exe.player = "mpv.exe".to_string();
+        assert_eq!(custom_exe.player_bin(), "mpv.exe");
     }
 }

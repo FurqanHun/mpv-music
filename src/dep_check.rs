@@ -8,9 +8,9 @@ use std::os::windows::process::CommandExt;
 pub fn check(cfg: &mut Config) -> Result<()> {
     log::info!("Checking external dependencies...");
 
-    // Spawn both processes WITHOUT waiting (true parallelism without thread overhead)
-    let mpv_cmd = if cfg!(windows) { "mpv.com" } else { "mpv" };
-    let mut mpv_command = Command::new(mpv_cmd);
+    // Spawn both proc without waiting
+    let player_cmd = cfg.player_bin();
+    let mut mpv_command = Command::new(player_cmd);
     mpv_command
         .arg("--version")
         .stdin(Stdio::null())
@@ -38,30 +38,42 @@ pub fn check(cfg: &mut Config) -> Result<()> {
         Ok(child) => child.wait_with_output(),
         Err(_) => Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            "mpv not found",
+            format!("player '{}' not found", player_cmd),
         )),
     };
 
     match mpv_output {
         Ok(output) => {
             let raw_output = String::from_utf8_lossy(&output.stdout);
-            let mpv_line = raw_output.lines().next().unwrap_or("Unknown Version");
+            let player_line = raw_output.lines().next().unwrap_or("Unknown Version");
             let ffmpeg_line = raw_output
                 .lines()
                 .find(|l| l.contains("FFmpeg version"))
                 .map(|s| s.trim())
                 .unwrap_or("FFmpeg version: Unknown");
 
-            log::info!("Dependency 'mpv': Found");
-            log::info!(" └─ {}", mpv_line);
+            log::info!("Dependency '{}': Found", player_cmd);
+            log::info!(" └─ {}", player_line);
             log::info!(" └─ {}", ffmpeg_line);
         }
         Err(_) => {
-            eprintln!("\n\x1b[31;1mCRITICAL ERROR: 'mpv' not found!\x1b[0m");
-            eprintln!("mpv-music requires 'mpv' to be installed and in your PATH.");
-            eprintln!("Please install it via your package manager (e.g. sudo dnf install mpv).");
+            eprintln!(
+                "\n\x1b[31;1mCRITICAL ERROR: '{}' not found!\x1b[0m",
+                player_cmd
+            );
+            eprintln!(
+                "mpv-music requires '{}' to be installed and in your PATH.",
+                player_cmd
+            );
+            if player_cmd != "mpv" && player_cmd != "mpv.com" {
+                eprintln!("Check your 'player' setting in config.toml or the --player CLI option.");
+            } else {
+                eprintln!(
+                    "Please install it via your package manager (e.g. sudo dnf install mpv)."
+                );
+            }
 
-            log::error!("Critical dependency missing: mpv. Exiting.");
+            log::error!("Critical dependency missing: {}. Exiting.", player_cmd);
 
             if cfg!(windows) {
                 eprintln!("\nPress Enter to exit...");

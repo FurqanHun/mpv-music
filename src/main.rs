@@ -171,6 +171,10 @@ fn main() -> Result<()> {
     log::debug!("CLI Args: {:?}", args);
     log::debug!("Config loaded from: {:?}", config_file);
 
+    if let Some(ref p) = args.player {
+        cfg.player = p.clone();
+    }
+
     dep_check::check(&mut cfg)?;
 
     if args.serial {

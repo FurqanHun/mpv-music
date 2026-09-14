@@ -104,6 +104,13 @@ pub struct Cli {
     pub no_watch: bool,
 
     #[arg(
+        long,
+        value_name = "BIN",
+        help = "Specify the player binary (defaults to 'mpv')"
+    )]
+    pub player: Option<String>,
+
+    #[arg(
             long = "loop",
             num_args = 0..=1,
             default_missing_value = "inf",

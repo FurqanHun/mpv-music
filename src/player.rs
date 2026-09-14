@@ -39,7 +39,7 @@ impl Drop for IpcCleaner {
 pub fn play(target: &str, config: &Config, extra_args: &[String]) -> Result<()> {
     log::info!("Preparing playback for target: {}", target);
 
-    let cmd_name = if cfg!(windows) { "mpv.com" } else { "mpv" };
+    let cmd_name = config.player_bin();
     let mut cmd = Command::new(cmd_name);
 
     apply_common_args(&mut cmd, config, extra_args);
@@ -79,10 +79,15 @@ pub fn play(target: &str, config: &Config, extra_args: &[String]) -> Result<()> 
 
     log::debug!("Exec: {:?}", cmd);
 
-    let status = cmd.status().context("Failed to launch mpv")?;
+    let status = cmd
+        .status()
+        .with_context(|| format!("Failed to launch player '{}'", cmd_name))?;
 
     if !status.success() && classify_target_weight(&optimization_target) > 0 {
-        log::error!("MPV process exited with error status. Checking yt-dlp health...");
+        log::error!(
+            "Player '{}' process exited with error status. Checking yt-dlp health...",
+            cmd_name
+        );
         check_ytdlp_status();
     }
 
@@ -96,7 +101,7 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
     }
 
     log::info!("Preparing playback for {} files", paths.len());
-    let cmd_name = if cfg!(windows) { "mpv.com" } else { "mpv" };
+    let cmd_name = config.player_bin();
     let mut cmd = Command::new(cmd_name);
 
     apply_common_args(&mut cmd, config, extra_args);
@@ -182,11 +187,12 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
     // pass the file to MPV
     cmd.arg(format!("--playlist={}", queue_path.to_string_lossy()));
 
-    log::info!("Launching MPV for playlist playback...");
+    log::info!("Launching player '{}' for playlist playback...", cmd_name);
     log::debug!("Exec: {:?}", cmd);
 
     // blocks until mpv closes
-    cmd.status().context("Failed to launch mpv for playlist")?;
+    cmd.status()
+        .with_context(|| format!("Failed to launch player '{}' for playlist", cmd_name))?;
 
     Ok(())
 }
