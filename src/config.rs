@@ -18,6 +18,16 @@ fn default_player() -> String {
     "mpv".to_string()
 }
 
+pub const LEGACY_MPV_DEFAULT_ARGS: &[&str] = &[
+    "--no-video",
+    "--audio-display=no",
+    "--msg-level=cplayer=warn",
+    "--display-tags=",
+    "--no-term-osd-bar",
+    "--term-playing-msg=╔══  MPV-MUSIC  ══╗",
+    "--term-status-msg=▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${media-title}} • ${time-pos} / ${duration} • (${percent-pos}%)",
+];
+
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum NerdFontMode {
@@ -102,7 +112,8 @@ pub struct Config {
     pub video_exts: Vec<String>,
     pub playlist_exts: Vec<String>,
 
-    pub mpv_default_args: Vec<String>,
+    #[serde(alias = "mpv_default_args", default)]
+    pub mpv_args: Vec<String>,
 
     #[serde(skip, default)]
     pub ytdlp_available: bool,
@@ -125,9 +136,6 @@ impl Default for Config {
                 music_dirs.push(fallback);
             }
         }
-
-        let banner_text = "╔══  MPV-MUSIC  ══╗";
-        let status_msg = "▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${media-title}} • ${time-pos} / ${duration} • (${percent-pos}%)";
 
         Self {
             shuffle: true,
@@ -161,15 +169,7 @@ impl Default for Config {
                 .into_iter()
                 .map(String::from)
                 .collect(),
-            mpv_default_args: vec![
-                "--no-video".to_string(),
-                "--audio-display=no".to_string(),
-                "--msg-level=cplayer=warn".to_string(),
-                "--display-tags=".to_string(),
-                "--no-term-osd-bar".to_string(),
-                format!("--term-playing-msg={}", banner_text),
-                format!("--term-status-msg={}", status_msg),
-            ],
+            mpv_args: Vec::new(),
             ytdlp_available: false,
             ytdlp_is_nightly: false,
         }
@@ -242,6 +242,27 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
         log::info!("Migrating legacy ytdlp_useragent to new default");
         cfg.ytdlp_useragent = default_ytdlp_useragent();
         warnings.push("Migrated legacy yt-dlp user agent to the new default.".to_string());
+        needs_save = true;
+    }
+
+    if content.contains("mpv_default_args") {
+        log::info!("Detected legacy 'mpv_default_args' in config.toml; migrating to 'mpv_args'");
+        let is_exact_legacy = cfg.mpv_args.len() == LEGACY_MPV_DEFAULT_ARGS.len()
+            && cfg
+                .mpv_args
+                .iter()
+                .zip(LEGACY_MPV_DEFAULT_ARGS.iter())
+                .all(|(a, b)| a == *b);
+
+        if is_exact_legacy {
+            cfg.mpv_args.clear();
+            warnings.push(
+                "Migrated legacy mpv_default_args to built-in defaults (mpv_args = [])."
+                    .to_string(),
+            );
+        } else {
+            warnings.push("Migrated mpv_default_args key to mpv_args.".to_string());
+        }
         needs_save = true;
     }
 
@@ -415,14 +436,48 @@ mod tests {
     }
 
     #[test]
-    fn test_mpv_default_args_present() {
+    fn test_mpv_args_default() {
         let cfg = Config::default();
-        assert!(!cfg.mpv_default_args.is_empty());
-        assert!(
-            cfg.mpv_default_args
-                .iter()
-                .any(|arg| arg.contains("--no-video"))
+        assert!(cfg.mpv_args.is_empty());
+    }
+
+    #[test]
+    fn test_mpv_default_args_alias() {
+        let default_cfg = Config::default();
+        let toml_str = toml::to_string_pretty(&default_cfg).unwrap();
+        let legacy_toml = toml_str.replace(
+            "mpv_args = []",
+            "mpv_default_args = [\"--gapless-audio=yes\"]",
         );
+        let cfg: Config = toml::from_str(&legacy_toml).unwrap();
+        assert_eq!(cfg.mpv_args, vec!["--gapless-audio=yes"]);
+    }
+
+    #[test]
+    fn test_legacy_mpv_default_args_migration() {
+        let default_cfg = Config::default();
+        let toml_str = toml::to_string_pretty(&default_cfg).unwrap();
+        let legacy_array_str = serde_json::to_string(&LEGACY_MPV_DEFAULT_ARGS).unwrap();
+        let legacy_toml = toml_str.replace(
+            "mpv_args = []",
+            &format!("mpv_default_args = {}", legacy_array_str),
+        );
+
+        let mut cfg: Config = toml::from_str(&legacy_toml).unwrap();
+        assert_eq!(cfg.mpv_args.len(), LEGACY_MPV_DEFAULT_ARGS.len());
+
+        if legacy_toml.contains("mpv_default_args") {
+            let is_exact = cfg.mpv_args.len() == LEGACY_MPV_DEFAULT_ARGS.len()
+                && cfg
+                    .mpv_args
+                    .iter()
+                    .zip(LEGACY_MPV_DEFAULT_ARGS.iter())
+                    .all(|(a, b)| a == *b);
+            if is_exact {
+                cfg.mpv_args.clear();
+            }
+        }
+        assert!(cfg.mpv_args.is_empty());
     }
 
     #[test]

@@ -322,6 +322,9 @@ fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
     }
 }
 
+pub const DEFAULT_BANNER_TEXT: &str = "╔══  MPV-MUSIC  ══╗";
+pub const DEFAULT_STATUS_MSG: &str = "▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${media-title}} • ${time-pos} / ${duration} • (${percent-pos}%)";
+
 fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[String]) {
     log::debug!("Applying common MPV arguments from config");
 
@@ -336,7 +339,26 @@ fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[String]) 
         cmd.arg("--audio-display=no");
     }
 
-    for arg in &config.mpv_default_args {
+    // Built-in base defaults (UI & terminal formatting)
+    cmd.arg("--msg-level=cplayer=warn");
+    cmd.arg("--display-tags=");
+    cmd.arg("--no-term-osd-bar");
+
+    let is_debug = log::max_level() >= log::LevelFilter::Debug;
+    if is_debug {
+        log::debug!("Skipping screen clear to preserve logs");
+        cmd.arg(format!("--term-playing-msg=\n{}\n", DEFAULT_BANNER_TEXT));
+    } else {
+        log::debug!("Injecting ANSI clear codes into banner");
+        cmd.arg(format!(
+            "--term-playing-msg=\x1b[H\x1b[2J\x1b[3J\n{}\n",
+            DEFAULT_BANNER_TEXT
+        ));
+    }
+    cmd.arg(format!("--term-status-msg={}", DEFAULT_STATUS_MSG));
+
+    // User-configured extra args from config.toml (overrides base defaults if repeated)
+    for arg in &config.mpv_args {
         if config.watch
             && (arg == "--no-video" || arg == "--video=no" || arg == "--audio-display=no")
         {
@@ -348,7 +370,6 @@ fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[String]) 
             let parts: Vec<&str> = arg.splitn(2, '=').collect();
             if parts.len() == 2 {
                 let banner_text = parts[1];
-                let is_debug = log::max_level() >= log::LevelFilter::Debug;
                 if is_debug {
                     log::debug!("Skipping screen clear to preserve logs");
                     cmd.arg(format!("--term-playing-msg=\n{}\n", banner_text.trim()));
@@ -632,6 +653,31 @@ mod tests {
         );
     }
 
-    // Note: We can't reliably test has_command for real commands
-    // because they might not be installed in CI environment
+    #[test]
+    fn test_apply_common_args_defaults() {
+        let config = Config::default();
+        let mut cmd = Command::new("mpv");
+        apply_common_args(&mut cmd, &config, &[]);
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args.iter().any(|a| a == "--msg-level=cplayer=warn"));
+        assert!(args.iter().any(|a| a == "--no-term-osd-bar"));
+        assert!(args.iter().any(|a| a.contains("MPV-MUSIC")));
+        assert!(args.iter().any(|a| a.contains("term-status-msg")));
+    }
+
+    #[test]
+    fn test_apply_common_args_custom_mpv_args() {
+        let mut config = Config::default();
+        config.mpv_args = vec!["--gapless-audio=yes".to_string()];
+        let mut cmd = Command::new("mpv");
+        apply_common_args(&mut cmd, &config, &[]);
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args.iter().any(|a| a == "--gapless-audio=yes"));
+    }
 }
