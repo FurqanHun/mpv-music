@@ -10,6 +10,10 @@ fn default_ytdlp_useragent() -> String {
     "default".to_string()
 }
 
+fn default_ytdlp() -> String {
+    "yt-dlp".to_string()
+}
+
 fn default_player() -> String {
     "mpv".to_string()
 }
@@ -88,6 +92,9 @@ pub struct Config {
     pub ytdlp_useragent: String,
     pub enable_file_logging: bool,
 
+    #[serde(default = "default_ytdlp")]
+    pub ytdlp: String,
+
     #[serde(default = "default_player")]
     pub player: String,
 
@@ -135,6 +142,7 @@ impl Default for Config {
             ytdlp_ejs_remote_github: false,
             ytdlp_useragent: default_ytdlp_useragent(),
             enable_file_logging: true,
+            ytdlp: default_ytdlp(),
             player: default_player(),
             audio_exts: vec![
                 "mp3", "flac", "wav", "m4a", "aac", "ogg", "opus", "wma", "alac", "aiff", "amr",
@@ -175,6 +183,15 @@ impl Config {
             if cfg!(windows) { "mpv.com" } else { "mpv" }
         } else {
             p
+        }
+    }
+
+    pub fn ytdlp_bin(&self) -> &str {
+        let y = self.ytdlp.trim();
+        if y.is_empty() || y.eq_ignore_ascii_case("default") {
+            "yt-dlp"
+        } else {
+            y
         }
     }
 }
@@ -454,5 +471,20 @@ mod tests {
         let mut custom_exe = Config::default();
         custom_exe.player = "mpv.exe".to_string();
         assert_eq!(custom_exe.player_bin(), "mpv.exe");
+    }
+
+    #[test]
+    fn test_ytdlp_configuration() {
+        let default_cfg = Config::default();
+        assert_eq!(default_cfg.ytdlp, "yt-dlp");
+        assert_eq!(default_cfg.ytdlp_bin(), "yt-dlp");
+
+        let mut custom_cfg = Config::default();
+        custom_cfg.ytdlp = "yt-dlp-nightly".to_string();
+        assert_eq!(custom_cfg.ytdlp_bin(), "yt-dlp-nightly");
+
+        let mut custom_path = Config::default();
+        custom_path.ytdlp = "/usr/local/bin/yt-dlp".to_string();
+        assert_eq!(custom_path.ytdlp_bin(), "/usr/local/bin/yt-dlp");
     }
 }

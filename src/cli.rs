@@ -111,6 +111,13 @@ pub struct Cli {
     pub player: Option<String>,
 
     #[arg(
+        long,
+        value_name = "BIN",
+        help = "Specify the yt-dlp binary (defaults to 'yt-dlp')"
+    )]
+    pub ytdlp: Option<String>,
+
+    #[arg(
             long = "loop",
             num_args = 0..=1,
             default_missing_value = "inf",

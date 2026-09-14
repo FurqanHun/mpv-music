@@ -84,11 +84,13 @@ pub fn play(target: &str, config: &Config, extra_args: &[String]) -> Result<()> 
         .with_context(|| format!("Failed to launch player '{}'", cmd_name))?;
 
     if !status.success() && classify_target_weight(&optimization_target) > 0 {
+        let ytdlp_cmd = config.ytdlp_bin();
         log::error!(
-            "Player '{}' process exited with error status. Checking yt-dlp health...",
-            cmd_name
+            "Player '{}' process exited with error status. Checking {} health...",
+            cmd_name,
+            ytdlp_cmd
         );
-        check_ytdlp_status();
+        check_ytdlp_status(ytdlp_cmd);
     }
 
     Ok(())
@@ -257,6 +259,14 @@ fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
         }
 
         cmd.arg("--msg-level=ytdl_hook=info");
+        let ytdlp_bin = config.ytdlp_bin();
+        if ytdlp_bin != "yt-dlp" {
+            log::debug!("Configuring custom yt-dlp binary for player: {}", ytdlp_bin);
+            cmd.arg(format!(
+                "--script-opts-append=ytdl_hook-ytdl_path={}",
+                ytdlp_bin
+            ));
+        }
 
         if is_youtube {
             if !config.video_ok && !config.watch {
@@ -283,12 +293,12 @@ fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
             };
             ytdl_opts.push_str(&format!("user-agent={},", ua));
 
-            if config.ytdlp_ejs_remote_github && !config.ytdlp_is_nightly {
+            if config.ytdlp_ejs_remote_github && !config.ytdlp_is_nightly && ytdlp_bin == "yt-dlp" {
                 log::debug!("Enabling remote EJS components");
                 ytdl_opts.push_str("remote-components=ejs:github,");
             }
 
-            if check_deno_availability() {
+            if check_deno_availability(ytdlp_bin) {
                 log::debug!("JS runtime check: Deno found (skipping fallbacks)");
             } else if has_command("node") {
                 log::debug!("JS runtime check: node found");
@@ -391,9 +401,19 @@ fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[String]) 
     }
 }
 
-fn check_deno_availability() -> bool {
+fn check_deno_availability(ytdlp_bin: &str) -> bool {
+    let p = std::path::Path::new(ytdlp_bin);
+    if p.parent().is_some_and(|parent| {
+        parent
+            .join(if cfg!(windows) { "deno.exe" } else { "deno" })
+            .exists()
+            || parent.join("deno").exists()
+    }) {
+        return true;
+    }
+
     let check_cmd = if cfg!(windows) { "where" } else { "which" };
-    let Ok(output) = Command::new(check_cmd).arg("yt-dlp").output() else {
+    let Ok(output) = Command::new(check_cmd).arg(ytdlp_bin).output() else {
         return has_command("deno");
     };
 
@@ -402,9 +422,14 @@ fn check_deno_availability() -> bool {
     }
 
     let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let ytdlp_path = std::path::Path::new(&path_str);
+    let first_line = path_str.lines().next().unwrap_or("").trim();
+    let ytdlp_path = std::path::Path::new(first_line);
 
-    if ytdlp_path.parent().is_some_and(|p| p.join("deno").exists()) {
+    if ytdlp_path.parent().is_some_and(|p| {
+        p.join(if cfg!(windows) { "deno.exe" } else { "deno" })
+            .exists()
+            || p.join("deno").exists()
+    }) {
         return true;
     }
 
@@ -425,12 +450,12 @@ fn has_command(cmd: &str) -> bool {
     exists
 }
 
-fn check_ytdlp_status() {
-    log::info!("Attempting yt-dlp self-update (yt-dlp -U)...");
-    let output = match Command::new("yt-dlp").arg("-U").output() {
+fn check_ytdlp_status(ytdlp_bin: &str) {
+    log::info!("Attempting {} self-update ({} -U)...", ytdlp_bin, ytdlp_bin);
+    let output = match Command::new(ytdlp_bin).arg("-U").output() {
         Ok(o) => o,
         Err(_) => {
-            log::error!("yt-dlp executable not found in PATH");
+            log::error!("{} executable not found in PATH", ytdlp_bin);
             return;
         }
     };
@@ -439,12 +464,13 @@ fn check_ytdlp_status() {
     let combined = format!("{}\n{}", stdout, String::from_utf8_lossy(&output.stderr));
 
     if combined.contains("is up to date") {
-        log::info!("yt-dlp is verified up to date.");
+        log::info!("{} is verified up to date.", ytdlp_bin);
     } else if combined.contains("Latest version:") || combined.contains("Available version:") {
-        log::warn!("yt-dlp update available. Local version is outdated.");
+        log::warn!("{} update available. Local version is outdated.", ytdlp_bin);
     } else {
         log::debug!(
-            "yt-dlp status check returned unexpected output:\n{}",
+            "{} status check returned unexpected output:\n{}",
+            ytdlp_bin,
             combined
         );
     }
@@ -558,6 +584,52 @@ mod tests {
     fn test_has_command_invalid() {
         // These commands should NOT exist
         assert!(!has_command("this_command_definitely_does_not_exist_12345"));
+    }
+
+    #[test]
+    fn test_apply_url_optimizations_custom_ytdlp() {
+        let mut config = Config::default();
+        config.ytdlp = "custom-dlp".to_string();
+        let mut cmd = Command::new("mpv");
+        apply_url_optimizations(&mut cmd, "https://youtube.com/watch?v=123", &config);
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(
+            args.iter()
+                .any(|a| a == "--script-opts-append=ytdl_hook-ytdl_path=custom-dlp")
+        );
+    }
+
+    #[test]
+    fn test_apply_url_optimizations_default_ytdlp() {
+        let config = Config::default();
+        let mut cmd = Command::new("mpv");
+        apply_url_optimizations(&mut cmd, "https://youtube.com/watch?v=123", &config);
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(!args.iter().any(|a| a.contains("ytdl_hook-ytdl_path")));
+    }
+
+    #[test]
+    fn test_apply_url_optimizations_custom_ytdlp_skips_remote_ejs() {
+        let mut config = Config::default();
+        config.ytdlp = "custom-fork".to_string();
+        config.ytdlp_ejs_remote_github = true;
+        let mut cmd = Command::new("mpv");
+        apply_url_optimizations(&mut cmd, "https://youtube.com/watch?v=123", &config);
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(
+            !args
+                .iter()
+                .any(|a| a.contains("remote-components=ejs:github"))
+        );
     }
 
     // Note: We can't reliably test has_command for real commands

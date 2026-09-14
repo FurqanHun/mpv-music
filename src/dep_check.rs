@@ -9,8 +9,8 @@ pub fn check(cfg: &mut Config) -> Result<()> {
     log::info!("Checking external dependencies...");
 
     // Spawn both proc without waiting
-    let player_cmd = cfg.player_bin();
-    let mut mpv_command = Command::new(player_cmd);
+    let player_cmd = cfg.player_bin().to_string();
+    let mut mpv_command = Command::new(&player_cmd);
     mpv_command
         .arg("--version")
         .stdin(Stdio::null())
@@ -22,7 +22,8 @@ pub fn check(cfg: &mut Config) -> Result<()> {
 
     let mpv_child = mpv_command.spawn();
 
-    let mut ytdlp_command = Command::new("yt-dlp");
+    let ytdlp_cmd = cfg.ytdlp_bin().to_string();
+    let mut ytdlp_command = Command::new(&ytdlp_cmd);
     ytdlp_command
         .arg("--version")
         .stdin(Stdio::null())
@@ -86,7 +87,10 @@ pub fn check(cfg: &mut Config) -> Result<()> {
     let ytdlp_output = match ytdlp_child {
         Ok(child) => child.wait_with_output(),
         Err(_) => {
-            log::warn!("Dependency 'yt-dlp' not found. Search and Streaming features disabled.");
+            log::warn!(
+                "Dependency '{}' not found. Search and Streaming features disabled.",
+                ytdlp_cmd
+            );
             cfg.ytdlp_available = false;
             cfg.ytdlp_is_nightly = false;
             return Ok(());
@@ -102,26 +106,42 @@ pub fn check(cfg: &mut Config) -> Result<()> {
                 let is_nightly = version.split('.').count() >= 4 || version.contains("nightly");
 
                 if is_nightly {
-                    log::info!("Dependency 'yt-dlp': Found Nightly (Version: {})", version);
+                    log::info!(
+                        "Dependency '{}': Found Nightly (Version: {})",
+                        ytdlp_cmd,
+                        version
+                    );
                     cfg.ytdlp_is_nightly = true;
                 } else {
-                    log::info!("Dependency 'yt-dlp': Found Stable (Version: {})", version);
-                    println!(
-                        "\x1b[33m[Suggestion]\x1b[0m yt-dlp nightly is recommended for best performance."
+                    log::info!(
+                        "Dependency '{}': Found Stable (Version: {})",
+                        ytdlp_cmd,
+                        version
                     );
-                    println!(
-                        "             Get it here: https://github.com/yt-dlp/yt-dlp-nightly-builds/releases"
-                    );
+                    if ytdlp_cmd == "yt-dlp" {
+                        println!(
+                            "\x1b[33m[Suggestion]\x1b[0m yt-dlp nightly is recommended for best performance."
+                        );
+                        println!(
+                            "             Get it here: https://github.com/yt-dlp/yt-dlp-nightly-builds/releases"
+                        );
+                    }
                     cfg.ytdlp_is_nightly = false;
                 }
             } else {
-                log::warn!("Dependency 'yt-dlp' found but returned error status.");
+                log::warn!(
+                    "Dependency '{}' found but returned error status.",
+                    ytdlp_cmd
+                );
                 cfg.ytdlp_available = false;
                 cfg.ytdlp_is_nightly = false;
             }
         }
         Err(_) => {
-            log::warn!("Dependency 'yt-dlp' not found. Search and Streaming features disabled.");
+            log::warn!(
+                "Dependency '{}' not found. Search and Streaming features disabled.",
+                ytdlp_cmd
+            );
             cfg.ytdlp_available = false;
             cfg.ytdlp_is_nightly = false;
         }

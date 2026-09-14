@@ -7,7 +7,7 @@ use std::fs;
 use std::process::Command;
 use std::time::SystemTime;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SearchResult {
     pub title: String,
     pub url: String,
@@ -97,11 +97,12 @@ fn save_cache(cache: &HashMap<String, CacheEntry>) {
 }
 
 /// Returns a list of parsed search results, ignoring channels, mixes, and shorts.
-pub fn search_youtube(query: &str, limit: usize) -> Result<Vec<SearchResult>> {
+pub fn search_youtube(query: &str, limit: usize, ytdlp_bin: &str) -> Result<Vec<SearchResult>> {
     log::info!(
-        "Starting YouTube search for: '{}' (Limit: {})",
+        "Starting YouTube search for: '{}' (Limit: {}, Binary: '{}')",
         query,
-        limit
+        limit,
+        ytdlp_bin
     );
 
     let cache_key = format!("{}|{}", query, limit);
@@ -127,16 +128,20 @@ pub fn search_youtube(query: &str, limit: usize) -> Result<Vec<SearchResult>> {
         "--ignore-errors", // dont crash on restricted videos
         &search_url,
     ];
-    log::debug!("Exec: yt-dlp {:?}", args);
+    log::debug!("Exec: {} {:?}", ytdlp_bin, args);
 
-    let output = Command::new("yt-dlp")
+    let output = Command::new(ytdlp_bin)
         .args(args)
         .output()
-        .context("Failed to execute yt-dlp search")?;
+        .with_context(|| format!("Failed to execute {} search", ytdlp_bin))?;
 
     if !output.status.success() {
-        log::warn!("yt-dlp exited with error status");
-        log::debug!("yt-dlp stderr: {}", String::from_utf8_lossy(&output.stderr));
+        log::warn!("{} exited with error status", ytdlp_bin);
+        log::debug!(
+            "{} stderr: {}",
+            ytdlp_bin,
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -338,5 +343,13 @@ mod tests {
         assert!("https://youtube.com/channel/UC123".contains("/channel/"));
         assert!("https://youtube.com/@channelname".contains("/@"));
         assert!("https://youtube.com/c/channelname".contains("/c/"));
+    }
+
+    #[test]
+    fn test_search_youtube_missing_binary() {
+        let res = search_youtube("test_query_unique_12345", 5, "non_existent_ytdlp_bin_99999");
+        assert!(res.is_err());
+        let err_msg = format!("{:#}", res.unwrap_err());
+        assert!(err_msg.contains("non_existent_ytdlp_bin_99999"));
     }
 }

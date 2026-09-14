@@ -174,6 +174,9 @@ fn main() -> Result<()> {
     if let Some(ref p) = args.player {
         cfg.player = p.clone();
     }
+    if let Some(ref y) = args.ytdlp {
+        cfg.ytdlp = y.clone();
+    }
 
     dep_check::check(&mut cfg)?;
 

@@ -929,8 +929,15 @@ pub fn run_search_mode(
     extra_args: &[String],
 ) -> Result<()> {
     if !cfg.ytdlp_available {
-        eprintln!("\n\x1b[33mFeature Unavailable:\x1b[0m yt-dlp is not installed.");
-        eprintln!("Please install 'yt-dlp' to use Search and Streaming.");
+        let ytdlp_cmd = cfg.ytdlp_bin();
+        eprintln!(
+            "\n\x1b[33mFeature Unavailable:\x1b[0m {} is not installed or not found.",
+            ytdlp_cmd
+        );
+        eprintln!(
+            "Please install '{}' to use Search and Streaming.",
+            ytdlp_cmd
+        );
         return Ok(());
     }
 
@@ -959,7 +966,7 @@ pub fn run_search_mode(
     }
 
     println!("Fetching results for '{}'...", query);
-    let results = search::search_youtube(&query, 25)?;
+    let results = search::search_youtube(&query, 25, cfg.ytdlp_bin())?;
 
     if results.is_empty() {
         println!("No results found.");
