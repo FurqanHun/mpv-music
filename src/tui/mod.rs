@@ -296,27 +296,17 @@ pub fn run_manage_dirs_mode(cfg: &mut config::Config) -> Result<bool> {
 
 pub fn manage_add_loop(cfg: &mut config::Config) -> Result<bool> {
     let icons = Icons::new(cfg.nerd_fonts);
-    println!(
-        "\n{}--- Add Directory Mode ---",
-        icons.pad(icons.folder_open())
-    );
-    println!("Type a full path and press ENTER.");
-    println!("Press ENTER (empty) to go back.\n");
+    let prompt = format!("{}(Add) Path > ", icons.pad(icons.folder_open()));
+    let header = "Type a full path and press ENTER (empty to go back).";
 
     let mut changed = false;
 
     loop {
-        print!("(Add) Path > ");
-        use std::io::Write;
-        std::io::stdout().flush()?;
-
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input)?;
-        let path_str = input.trim().to_string();
-
-        if path_str.is_empty() {
-            break;
-        }
+        let input = run_skim_input_prompt(&prompt, header);
+        let path_str = match input {
+            Some(s) if !s.is_empty() => s,
+            _ => break,
+        };
 
         // true if added a new path
         if add_directory(cfg, path_str)? {
@@ -645,6 +635,29 @@ pub fn run_skim_simple(items: Vec<&str>, prompt: &str) -> Option<String> {
     output.selected_items.first().map(|i| i.text().to_string())
 }
 
+pub fn run_skim_input_prompt(prompt: &str, header: &str) -> Option<String> {
+    let opts = SkimOptionsBuilder::default()
+        .height("50%")
+        .reverse(true)
+        .prompt(prompt)
+        .header(header)
+        .inline_info(true)
+        .build()
+        .unwrap();
+
+    let output = Skim::run_items(opts, Vec::<MenuItem>::new()).ok()?;
+    if output.is_abort {
+        return None;
+    }
+
+    let q = output.query.trim().to_string();
+    if q.is_empty() {
+        None
+    } else {
+        Some(q)
+    }
+}
+
 pub fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<String>> {
     let skim_items: Vec<MenuItem> = items
         .into_iter()
@@ -950,14 +963,12 @@ pub fn run_search_mode(
     let query = if let Some(q) = initial_query {
         q
     } else {
-        println!("Search YouTube or Paste URL:");
-        print!("{} > ", icons.search());
-        use std::io::Write;
-        std::io::stdout().flush()?;
-
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input)?;
-        input.trim().to_string()
+        let prompt = format!("{}Search / URL > ", icons.pad(icons.search()));
+        let header = "Search YouTube or paste URL (press ENTER on empty to go back).";
+        match run_skim_input_prompt(&prompt, header) {
+            Some(q) => q,
+            None => return Ok(()),
+        }
     };
 
     if query.is_empty() {
