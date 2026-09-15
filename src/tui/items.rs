@@ -23,7 +23,7 @@ impl SkimItem for TrackItem {
             .unwrap_or("???")
             .to_uppercase();
 
-        let type_str = if self.track.media_type == "video" {
+        let type_str = if self.track.is_video() {
             "Video"
         } else {
             "Audio"

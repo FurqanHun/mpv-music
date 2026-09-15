@@ -136,13 +136,13 @@ pub fn apply_cli_overrides(cfg: &mut config::Config, args: &Cli) -> Result<()> {
         cfg.watch = false;
     }
     if let Some(ref mode) = args.loop_arg {
-        cfg.loop_mode = mode.clone();
+        cfg.loop_mode = mode.parse().unwrap_or(config::LoopMode::Inf);
     }
     if args.no_loop {
-        cfg.loop_mode = "no".to_string();
+        cfg.loop_mode = config::LoopMode::No;
     }
     if args.repeat {
-        cfg.loop_mode = "track".to_string();
+        cfg.loop_mode = config::LoopMode::Track;
     }
 
     if let Some(ref extensions) = args.ext {

@@ -126,9 +126,7 @@ pub fn run(args: Cli) -> Result<()> {
             let name_lower = playlist_name.to_lowercase();
             let matches: Vec<&indexer::Track> = tracks
                 .iter()
-                .filter(|t| {
-                    t.media_type == "playlist" && t.title.to_lowercase().contains(&name_lower)
-                })
+                .filter(|t| t.is_playlist() && t.title.to_lowercase().contains(&name_lower))
                 .collect();
 
             if matches.len() == 1 {

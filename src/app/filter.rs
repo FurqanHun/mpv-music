@@ -23,17 +23,45 @@ pub fn has_filter_flags(args: &Cli) -> bool {
     args.genre.is_some() || args.artist.is_some() || args.album.is_some() || args.title.is_some()
 }
 
-pub fn active_filter_key(args: &Cli) -> &'static str {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TagField {
+    Artist,
+    Genre,
+    Album,
+    Title,
+}
+
+impl TagField {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Artist => "artist",
+            Self::Genre => "genre",
+            Self::Album => "album",
+            Self::Title => "title",
+        }
+    }
+
+    pub fn extract<'a>(&self, track: &'a Track) -> &'a str {
+        match self {
+            Self::Artist => &track.artist,
+            Self::Genre => &track.genre,
+            Self::Album => &track.album,
+            Self::Title => &track.title,
+        }
+    }
+}
+
+pub fn active_filter_field(args: &Cli) -> Option<TagField> {
     if args.artist.is_some() {
-        "artist"
+        Some(TagField::Artist)
     } else if args.genre.is_some() {
-        "genre"
+        Some(TagField::Genre)
     } else if args.album.is_some() {
-        "album"
+        Some(TagField::Album)
     } else if args.title.is_some() {
-        "title"
+        Some(TagField::Title)
     } else {
-        ""
+        None
     }
 }
 
@@ -64,51 +92,32 @@ pub fn handle_cli_filters(
 
         // identify active tag
         let mut unique_options: HashSet<String> = HashSet::new();
-        let active_key = active_filter_key(args);
+        let field_opt = active_filter_field(args);
 
-        for t in &partials {
-            match active_key {
-                "artist" => {
-                    unique_options.insert(t.artist.clone());
-                }
-                "genre" => {
-                    unique_options.insert(t.genre.clone());
-                }
-                "album" => {
-                    unique_options.insert(t.album.clone());
-                }
-                "title" => {
-                    unique_options.insert(t.title.clone());
-                }
-                _ => {}
+        if let Some(field) = field_opt {
+            for t in &partials {
+                unique_options.insert(field.extract(t).to_string());
             }
-        }
 
-        if !args.play_all && unique_options.len() > 1 && !active_key.is_empty() {
-            let mut options_vec: Vec<String> = unique_options.into_iter().collect();
-            options_vec.sort();
+            if !args.play_all && unique_options.len() > 1 {
+                let mut options_vec: Vec<String> = unique_options.into_iter().collect();
+                options_vec.sort();
 
-            if let Some(selected_vals) = tui::run_skim_multi_selection(
-                options_vec,
-                &format!("Which {}s? (TAB to select multiple) > ", active_key),
-            ) {
-                let selected_set: HashSet<String> = selected_vals.into_iter().collect();
+                if let Some(selected_vals) = tui::run_skim_multi_selection(
+                    options_vec,
+                    &format!("Which {}s? (TAB to select multiple) > ", field.as_str()),
+                ) {
+                    let selected_set: HashSet<String> = selected_vals.into_iter().collect();
 
-                filtered = partials
-                    .into_iter()
-                    .filter(|t| {
-                        let val = match active_key {
-                            "artist" => &t.artist,
-                            "genre" => &t.genre,
-                            "album" => &t.album,
-                            "title" => &t.title,
-                            _ => "",
-                        };
-                        selected_set.contains(val)
-                    })
-                    .collect();
+                    filtered = partials
+                        .into_iter()
+                        .filter(|t| selected_set.contains(field.extract(t)))
+                        .collect();
+                } else {
+                    return Ok(());
+                }
             } else {
-                return Ok(());
+                filtered = partials;
             }
         } else {
             filtered = partials;
@@ -152,20 +161,20 @@ mod tests {
     }
 
     #[test]
-    fn test_active_filter_key() {
+    fn test_active_filter_field() {
         let args_artist = Cli::parse_from(["mpv-music", "--artist", "queen"]);
-        assert_eq!(active_filter_key(&args_artist), "artist");
+        assert_eq!(active_filter_field(&args_artist), Some(TagField::Artist));
 
         let args_genre = Cli::parse_from(["mpv-music", "--genre", "rock"]);
-        assert_eq!(active_filter_key(&args_genre), "genre");
+        assert_eq!(active_filter_field(&args_genre), Some(TagField::Genre));
 
         let args_album = Cli::parse_from(["mpv-music", "--album", "innuendo"]);
-        assert_eq!(active_filter_key(&args_album), "album");
+        assert_eq!(active_filter_field(&args_album), Some(TagField::Album));
 
         let args_title = Cli::parse_from(["mpv-music", "--title", "bohemian"]);
-        assert_eq!(active_filter_key(&args_title), "title");
+        assert_eq!(active_filter_field(&args_title), Some(TagField::Title));
 
         let args_none = Cli::parse_from(["mpv-music"]);
-        assert_eq!(active_filter_key(&args_none), "");
+        assert_eq!(active_filter_field(&args_none), None);
     }
 }

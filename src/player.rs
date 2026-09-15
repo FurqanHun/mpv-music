@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::{Config, LoopMode};
 use crate::tui::Icons;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
@@ -84,7 +84,7 @@ pub fn play(target: &str, config: &Config, extra_args: &[String]) -> Result<()> 
         .status()
         .with_context(|| format!("Failed to launch player '{}'", cmd_name))?;
 
-    if !status.success() && classify_target_weight(&optimization_target) > 0 {
+    if !status.success() && classify_target(&optimization_target).is_network() {
         let ytdlp_cmd = config.ytdlp_bin();
         log::error!(
             "Player '{}' process exited with error status. Checking {} health...",
@@ -110,18 +110,15 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
     apply_common_args(&mut cmd, config, extra_args);
 
     // O(N) Single-Pass Scan: Find the item with the highest requirement.
-    // 0 = Local (Default)
-    // 1 = HTTP/FTP (Basic network opts)
-    // 2 = YouTube (Needs JS runtimes & headers)
     let mut best_target = paths.first();
-    let mut max_weight = 0;
+    let mut max_kind = TargetKind::LocalFile;
 
     for path in paths {
-        let weight = classify_target_weight(path);
-        if weight > max_weight {
-            max_weight = weight;
+        let kind = classify_target(path);
+        if kind > max_kind {
+            max_kind = kind;
             best_target = Some(path);
-            if max_weight == 2 {
+            if max_kind == TargetKind::YouTube {
                 break; // found yt, stop scanning
             }
         }
@@ -202,16 +199,30 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
 
 // helpers
 
-// 0 = Local File
-// 1 = Generic Network URL
-// 2 = YouTube (Requires yt-dlp setup)
-fn classify_target_weight(s: &str) -> u8 {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TargetKind {
+    LocalFile = 0,
+    GenericUrl = 1,
+    YouTube = 2,
+}
+
+impl TargetKind {
+    pub fn is_network(&self) -> bool {
+        *self >= TargetKind::GenericUrl
+    }
+
+    pub fn is_youtube(&self) -> bool {
+        *self == TargetKind::YouTube
+    }
+}
+
+pub fn classify_target(s: &str) -> TargetKind {
     if s.contains("youtube.com") || s.contains("youtu.be") {
-        2
+        TargetKind::YouTube
     } else if s.starts_with("http") || s.starts_with("ftp") {
-        1
+        TargetKind::GenericUrl
     } else {
-        0
+        TargetKind::LocalFile
     }
 }
 
@@ -225,17 +236,17 @@ fn inspect_playlist_content(path_str: &str, config: &Config) -> Option<String> {
     }
 
     let mut best_match: Option<String> = None;
-    let mut max_weight = 0;
+    let mut max_kind = TargetKind::LocalFile;
 
     if let Ok(content) = std::fs::read_to_string(path) {
         for line in content.lines() {
             let trim = line.trim();
-            let weight = classify_target_weight(trim);
+            let kind = classify_target(trim);
 
-            if weight > max_weight {
-                max_weight = weight;
+            if kind > max_kind {
+                max_kind = kind;
                 best_match = Some(trim.to_string());
-                if max_weight == 2 {
+                if max_kind == TargetKind::YouTube {
                     break; // found yt, stop reading file
                 }
             }
@@ -245,9 +256,9 @@ fn inspect_playlist_content(path_str: &str, config: &Config) -> Option<String> {
 }
 
 fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
-    let weight = classify_target_weight(target);
-    let is_youtube = weight == 2;
-    let is_url = weight >= 1;
+    let kind = classify_target(target);
+    let is_youtube = kind.is_youtube();
+    let is_url = kind.is_network();
 
     if is_url {
         log::debug!("Applying network stream optimizations");
@@ -415,22 +426,19 @@ fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[String]) 
     }
 
     log::debug!("Setting loop mode: {}", config.loop_mode);
-    match config.loop_mode.as_str() {
-        "playlist" | "inf" => {
+    match config.loop_mode {
+        LoopMode::Inf => {
             cmd.arg("--loop-playlist=inf");
         }
-        "track" | "file" => {
+        LoopMode::Track => {
             cmd.arg("--loop-file=inf");
         }
-        "no" | "off" | "false" => {
+        LoopMode::No => {
             cmd.arg("--loop-playlist=no");
             cmd.arg("--loop-file=no");
         }
-        n if n.chars().all(char::is_numeric) => {
+        LoopMode::Count(n) => {
             cmd.arg(format!("--loop-playlist={}", n));
-        }
-        _ => {
-            log::debug!("Unrecognized loop mode, skipping loop arguments");
         }
     }
 
@@ -586,38 +594,59 @@ mod tests {
     #[test]
     fn test_classify_youtube() {
         assert_eq!(
-            classify_target_weight("https://youtube.com/watch?v=test"),
-            2
+            classify_target("https://youtube.com/watch?v=test"),
+            TargetKind::YouTube
         );
-        assert_eq!(classify_target_weight("https://youtu.be/test123"), 2);
-        assert_eq!(classify_target_weight("http://youtube.com/playlist"), 2);
+        assert_eq!(
+            classify_target("https://youtu.be/test123"),
+            TargetKind::YouTube
+        );
+        assert_eq!(
+            classify_target("http://youtube.com/playlist"),
+            TargetKind::YouTube
+        );
     }
 
     #[test]
     fn test_classify_generic_url() {
-        assert_eq!(classify_target_weight("https://example.com/song.mp3"), 1);
-        assert_eq!(classify_target_weight("http://radio.com/stream"), 1);
-        assert_eq!(classify_target_weight("ftp://server.com/file"), 1);
+        assert_eq!(
+            classify_target("https://example.com/song.mp3"),
+            TargetKind::GenericUrl
+        );
+        assert_eq!(
+            classify_target("http://radio.com/stream"),
+            TargetKind::GenericUrl
+        );
+        assert_eq!(
+            classify_target("ftp://server.com/file"),
+            TargetKind::GenericUrl
+        );
     }
 
     #[test]
     fn test_classify_local_file() {
-        assert_eq!(classify_target_weight("/home/user/music.mp3"), 0);
-        assert_eq!(classify_target_weight("./local/file.flac"), 0);
-        assert_eq!(classify_target_weight("C:\\Music\\song.mp3"), 0);
+        assert_eq!(
+            classify_target("/home/user/music.mp3"),
+            TargetKind::LocalFile
+        );
+        assert_eq!(classify_target("./local/file.flac"), TargetKind::LocalFile);
+        assert_eq!(
+            classify_target("C:\\Music\\song.mp3"),
+            TargetKind::LocalFile
+        );
     }
 
     #[test]
     fn test_classify_empty() {
-        assert_eq!(classify_target_weight(""), 0);
+        assert_eq!(classify_target(""), TargetKind::LocalFile);
     }
 
     #[test]
     fn test_classify_priority_order() {
-        // YouTube (2) > HTTP (1) > Local (0)
-        let youtube = classify_target_weight("https://youtube.com/test");
-        let http = classify_target_weight("https://example.com/test");
-        let local = classify_target_weight("/path/to/file");
+        // YouTube > GenericUrl > LocalFile
+        let youtube = classify_target("https://youtube.com/test");
+        let http = classify_target("https://example.com/test");
+        let local = classify_target("/path/to/file");
 
         assert!(youtube > http);
         assert!(http > local);

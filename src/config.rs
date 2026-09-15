@@ -101,11 +101,121 @@ where
     deserializer.deserialize_any(NerdFontVisitor)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LoopMode {
+    Inf,
+    Track,
+    No,
+    Count(u32),
+}
+
+impl Default for LoopMode {
+    fn default() -> Self {
+        Self::Inf
+    }
+}
+
+impl std::fmt::Display for LoopMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Inf => write!(f, "inf"),
+            Self::Track => write!(f, "track"),
+            Self::No => write!(f, "no"),
+            Self::Count(n) => write!(f, "{}", n),
+        }
+    }
+}
+
+impl std::str::FromStr for LoopMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let s_lower = s.trim().to_lowercase();
+        match s_lower.as_str() {
+            "inf" | "playlist" => Ok(Self::Inf),
+            "track" | "file" => Ok(Self::Track),
+            "no" | "off" | "false" => Ok(Self::No),
+            other => {
+                if let Ok(n) = other.parse::<u32>() {
+                    Ok(Self::Count(n))
+                } else {
+                    Err(format!(
+                        "Invalid loop_mode '{}'. Valid options: 'inf', 'track', 'no', or a number.",
+                        other
+                    ))
+                }
+            }
+        }
+    }
+}
+
+impl serde::Serialize for LoopMode {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+pub fn deserialize_loop_mode<'de, D>(deserializer: D) -> std::result::Result<LoopMode, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct LoopModeVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for LoopModeVisitor {
+        type Value = LoopMode;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a loop mode string ('inf', 'track', 'no') or a count")
+        }
+
+        fn visit_str<E>(self, value: &str) -> std::result::Result<LoopMode, E>
+        where
+            E: serde::de::Error,
+        {
+            match value.parse::<LoopMode>() {
+                Ok(mode) => Ok(mode),
+                Err(_) => {
+                    log::warn!("Invalid loop_mode '{}'. Defaulting to 'inf'.", value);
+                    eprintln!(
+                        "\x1b[33;1m[Warning]\x1b[0m Config: Invalid loop_mode '{}'. Defaulting to 'inf'.",
+                        value
+                    );
+                    Ok(LoopMode::Inf)
+                }
+            }
+        }
+
+        fn visit_i64<E>(self, value: i64) -> std::result::Result<LoopMode, E>
+        where
+            E: serde::de::Error,
+        {
+            if value >= 0 {
+                Ok(LoopMode::Count(value as u32))
+            } else {
+                Ok(LoopMode::Inf)
+            }
+        }
+
+        fn visit_u64<E>(self, value: u64) -> std::result::Result<LoopMode, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(LoopMode::Count(value as u32))
+        }
+    }
+
+    deserializer.deserialize_any(LoopModeVisitor)
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct Config {
     pub shuffle: bool,
-    pub loop_mode: String, // "playlist", "track", "no", "inf", "5"
+    #[serde(default, deserialize_with = "deserialize_loop_mode")]
+    pub loop_mode: LoopMode,
     pub volume: u8,
 
     pub music_dirs: Vec<PathBuf>,
@@ -161,7 +271,7 @@ impl Default for Config {
 
         Self {
             shuffle: true,
-            loop_mode: "inf".to_string(),
+            loop_mode: LoopMode::Inf,
             volume: 100,
             music_dirs,
             video_ok: false,
@@ -326,18 +436,6 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
         needs_save = true;
     }
 
-    let valid_loop_modes = ["inf", "playlist", "no", "off", "false", "track", "file"];
-    let is_numeric = cfg.loop_mode.chars().all(|c| c.is_numeric());
-
-    if !valid_loop_modes.contains(&cfg.loop_mode.as_str()) && !is_numeric {
-        warnings.push(format!(
-            "Invalid loop_mode '{}'. Defaulting to 'inf'.",
-            cfg.loop_mode
-        ));
-        cfg.loop_mode = "inf".to_string();
-        needs_save = true;
-    }
-
     if cfg.music_dirs.is_empty() {
         warnings.push(
             "No music directories configured. Run 'mpv-music --manage-dirs' to add folders."
@@ -386,7 +484,7 @@ mod tests {
     fn test_default_config_values() {
         let cfg = Config::default();
         assert_eq!(cfg.volume, 100);
-        assert_eq!(cfg.loop_mode, "inf");
+        assert_eq!(cfg.loop_mode, LoopMode::Inf);
         assert!(cfg.shuffle);
         assert!(!cfg.video_ok);
         assert!(!cfg.watch);
@@ -449,37 +547,51 @@ mod tests {
 
     #[test]
     fn test_loop_mode_validation_valid() {
-        let valid_modes = ["inf", "playlist", "no", "off", "false", "track", "file"];
-
-        assert!(valid_modes.contains(&"inf"));
-        assert!(valid_modes.contains(&"track"));
-        assert!(valid_modes.contains(&"no"));
+        assert!("inf".parse::<LoopMode>().is_ok());
+        assert!("playlist".parse::<LoopMode>().is_ok());
+        assert!("track".parse::<LoopMode>().is_ok());
+        assert!("file".parse::<LoopMode>().is_ok());
+        assert!("no".parse::<LoopMode>().is_ok());
+        assert!("off".parse::<LoopMode>().is_ok());
+        assert!("false".parse::<LoopMode>().is_ok());
     }
 
     #[test]
     fn test_loop_mode_validation_invalid() {
-        let loop_mode = "potato";
-        let valid_modes = ["inf", "playlist", "no", "off", "false", "track", "file"];
-        let is_numeric = loop_mode.chars().all(|c| c.is_numeric());
-
-        assert!(!valid_modes.contains(&loop_mode));
-        assert!(!is_numeric);
+        assert!("potato".parse::<LoopMode>().is_err());
+        assert!("".parse::<LoopMode>().is_err());
+        assert!("random_mode".parse::<LoopMode>().is_err());
     }
 
     #[test]
     fn test_loop_mode_validation_numeric() {
-        let loop_mode = "5";
-        let is_numeric = loop_mode.chars().all(|c| c.is_numeric());
-
-        assert!(is_numeric);
+        assert_eq!("5".parse::<LoopMode>().unwrap(), LoopMode::Count(5));
     }
 
     #[test]
     fn test_loop_mode_validation_numeric_multiple_digits() {
-        let loop_mode = "999";
-        let is_numeric = loop_mode.chars().all(|c| c.is_numeric());
+        assert_eq!("999".parse::<LoopMode>().unwrap(), LoopMode::Count(999));
+    }
 
-        assert!(is_numeric);
+    #[test]
+    fn test_loop_mode_parsing() {
+        assert_eq!("inf".parse::<LoopMode>().unwrap(), LoopMode::Inf);
+        assert_eq!("playlist".parse::<LoopMode>().unwrap(), LoopMode::Inf);
+        assert_eq!("track".parse::<LoopMode>().unwrap(), LoopMode::Track);
+        assert_eq!("file".parse::<LoopMode>().unwrap(), LoopMode::Track);
+        assert_eq!("no".parse::<LoopMode>().unwrap(), LoopMode::No);
+        assert_eq!("off".parse::<LoopMode>().unwrap(), LoopMode::No);
+        assert_eq!("false".parse::<LoopMode>().unwrap(), LoopMode::No);
+        assert_eq!("5".parse::<LoopMode>().unwrap(), LoopMode::Count(5));
+        assert_eq!("42".parse::<LoopMode>().unwrap(), LoopMode::Count(42));
+    }
+
+    #[test]
+    fn test_loop_mode_display() {
+        assert_eq!(LoopMode::Inf.to_string(), "inf");
+        assert_eq!(LoopMode::Track.to_string(), "track");
+        assert_eq!(LoopMode::No.to_string(), "no");
+        assert_eq!(LoopMode::Count(7).to_string(), "7");
     }
 
     #[test]

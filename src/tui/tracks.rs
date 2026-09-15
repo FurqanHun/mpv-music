@@ -17,11 +17,11 @@ where
         .iter()
         .filter_map(|item| {
             let track = item.borrow();
-            if track.media_type == "playlist" {
+            if track.is_playlist() {
                 return None;
             }
             let display = format!("{} - {}", track.artist, track.title);
-            let icon = if track.media_type == "video" {
+            let icon = if track.is_video() {
                 icons.video()
             } else {
                 icons.track()
@@ -154,7 +154,7 @@ pub fn run_playlist_mode(
     let skim_items: Vec<PlaylistItem> = tracks
         .iter()
         .filter_map(|t| {
-            if t.media_type == "playlist" {
+            if t.is_playlist() {
                 let (count, lines) = if let Ok(content) = std::fs::read_to_string(&t.path) {
                     let playlist_dir = std::path::Path::new(&t.path)
                         .parent()

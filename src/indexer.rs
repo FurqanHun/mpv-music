@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use indicatif::{ProgressBar, ProgressStyle};
+use lofty::config::ParseOptions;
 use lofty::prelude::*;
 use lofty::probe::Probe;
 use rayon::prelude::*;
@@ -13,6 +14,39 @@ use walkdir::WalkDir;
 
 use crate::config::Config;
 
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum MediaType {
+    #[default]
+    Audio,
+    Video,
+    Playlist,
+}
+
+impl MediaType {
+    pub fn is_video(&self) -> bool {
+        matches!(self, Self::Video)
+    }
+
+    pub fn is_playlist(&self) -> bool {
+        matches!(self, Self::Playlist)
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Audio => "audio",
+            Self::Video => "video",
+            Self::Playlist => "playlist",
+        }
+    }
+}
+
+impl std::fmt::Display for MediaType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Track {
     pub path: String,
@@ -22,7 +56,17 @@ pub struct Track {
     pub genre: String,
     pub mtime: u64,
     pub size: u64,
-    pub media_type: String,
+    pub media_type: MediaType,
+}
+
+impl Track {
+    pub fn is_playlist(&self) -> bool {
+        self.media_type.is_playlist()
+    }
+
+    pub fn is_video(&self) -> bool {
+        self.media_type.is_video()
+    }
 }
 
 // split "mp3, flac" -> Set
@@ -125,11 +169,11 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
             let ext = path.extension()?.to_str()?.to_lowercase();
 
             let media_type = if audio_exts.contains(&ext) {
-                "audio"
+                MediaType::Audio
             } else if playlist_exts.contains(&ext) {
-                "playlist"
+                MediaType::Playlist
             } else if config.video_ok && video_exts.contains(&ext) {
-                "video"
+                MediaType::Video
             } else {
                 // log::trace!("Skipping non-media extension: .{}", ext);
                 return None;
@@ -169,7 +213,7 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
 
             let (mut title, mut artist, mut album, mut genre);
 
-            if media_type == "playlist" {
+            if media_type == MediaType::Playlist {
                 title = path
                     .file_stem()
                     .unwrap_or_default()
@@ -184,8 +228,17 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
                 album = String::new();
                 genre = String::new();
 
-                match Probe::open(path).and_then(|p| p.read()) {
-                    Ok(tagged_file) => {
+                let parse_opts = ParseOptions::new()
+                    .read_properties(false)
+                    .read_cover_art(false);
+                let probe_res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    Probe::open(path)
+                        .map(|p| p.options(parse_opts))
+                        .and_then(|p| p.read())
+                }));
+
+                match probe_res {
+                    Ok(Ok(tagged_file)) => {
                         if let Some(tag) = tagged_file
                             .primary_tag()
                             .or_else(|| tagged_file.first_tag())
@@ -196,8 +249,11 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
                             genre = tag.genre().map(|s| s.to_string()).unwrap_or_default();
                         }
                     }
-                    Err(e) => {
+                    Ok(Err(e)) => {
                         log::warn!("Metadata probe failed for '{}': {}", path_str, e);
+                    }
+                    Err(_) => {
+                        log::warn!("Metadata probe panicked on audio file '{}'", path_str);
                     }
                 }
             }
@@ -230,7 +286,7 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
                 genre,
                 mtime,
                 size,
-                media_type: media_type.to_string(),
+                media_type,
             })
         })
         .collect();
@@ -393,12 +449,12 @@ mod tests {
             genre: "Test Genre".to_string(),
             mtime: 1234567890,
             size: 1024,
-            media_type: "audio".to_string(),
+            media_type: MediaType::Audio,
         };
 
         assert_eq!(track.artist, "Test Artist");
         assert_eq!(track.title, "Test Song");
-        assert_eq!(track.media_type, "audio");
+        assert_eq!(track.media_type, MediaType::Audio);
         assert_eq!(track.size, 1024);
     }
 
@@ -412,7 +468,7 @@ mod tests {
             genre: "Genre".to_string(),
             mtime: 12345,
             size: 1000,
-            media_type: "audio".to_string(),
+            media_type: MediaType::Audio,
         };
 
         // Should be able to serialize to JSON
@@ -439,6 +495,7 @@ mod tests {
         let track = track.unwrap();
         assert_eq!(track.artist, "Artist");
         assert_eq!(track.genre, "Rock");
+        assert_eq!(track.media_type, MediaType::Audio);
     }
 
     #[test]
