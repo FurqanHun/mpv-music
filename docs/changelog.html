@@ -162,8 +162,32 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.29.0-dev.1" target="_blank" class="tag">v0.29.0-dev.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">September 15, 2026</span>
+            </div>
+            <div class="body">
+                <ul>
+<li>Massive codebase modularization across <code>src/tui/</code>, <code>src/app/</code>, and <code>src/player/</code> into clean, single-responsibility submodules</li>
+<li>Replaced string-based arguments with typed enums (<code>LoopMode</code>, <code>MediaType</code>, <code>TargetKind</code>, <code>TagField</code>) across <code>src/</code> while maintaining 100% backward compatibility with existing configs and index files</li>
+<li>Introduced <code>MpvCommandBuilder</code> for deterministic player command assembly and isolated unit testing</li>
+<li>Optimized indexer probing by disabling cover art and audio properties decoding in <code>lofty</code>, fixing an upstream integer overflow panic on Opus files (<code>lofty#716</code>) and significantly speeding up library scans</li>
+<li>Added <code>player</code> and <code>ytdlp</code> configuration options (and <code>--player</code>, <code>--ytdlp</code> CLI flags) to support custom media player binaries and yt-dlp forks</li>
+<li>Hardcoded base player defaults and simplified custom configuration down to <code>mpv_args</code></li>
+<li>Config auto-population: automatically populates missing configuration keys with defaults upon load</li>
+<li>Added Nerd Font support to the player banner and dynamic status line with <code>\u{2500}\u{2500}</code> horizontal rules</li>
+<li>Interactive skim input prompts for "Add Directory" and "Stream Search"</li>
+<li>Unified styling for CLI errors, warnings, and suggestions</li>
+<li>Added interactive menu navigation tips to <code>--help</code> output</li>
+<li>Updated <code>Cargo.lock</code></li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.28.1" target="_blank" class="tag">v0.28.1</a>
-                <span class="latest-badge">Latest</span>
+                
                 <span style="margin-left: auto;">September 13, 2026</span>
             </div>
             <div class="body">

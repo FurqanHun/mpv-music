@@ -2,6 +2,23 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.29.0-dev.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.29.0-dev.1) - 2026-09-15 (Pre-release)
+
+- Massive codebase modularization across `src/tui/`, `src/app/`, and `src/player/` into clean, single-responsibility submodules
+- Replaced string-based arguments with typed enums (`LoopMode`, `MediaType`, `TargetKind`, `TagField`) across `src/` while maintaining 100% backward compatibility with existing configs and index files
+- Introduced `MpvCommandBuilder` for deterministic player command assembly and isolated unit testing
+- Optimized indexer probing by disabling cover art and audio properties decoding in `lofty`, fixing an upstream integer overflow panic on Opus files (`lofty#716`) and significantly speeding up library scans
+- Added `player` and `ytdlp` configuration options (and `--player`, `--ytdlp` CLI flags) to support custom media player binaries and yt-dlp forks
+- Hardcoded base player defaults and simplified custom configuration down to `mpv_args`
+- Config auto-population: automatically populates missing configuration keys with defaults upon load
+- Added Nerd Font support to the player banner and dynamic status line with `\u{2500}\u{2500}` horizontal rules
+- Interactive skim input prompts for "Add Directory" and "Stream Search"
+- Unified styling for CLI errors, warnings, and suggestions
+- Added interactive menu navigation tips to `--help` output
+- Updated `Cargo.lock`
+
+---
+
 ## [v0.28.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.28.1) - 2026-09-13
 
 This patch release introduces optional Nerd Font icons for a cleaner, theme-matching terminal aesthetic, alongside dependency bumps and installer improvements.
