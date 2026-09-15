@@ -552,7 +552,8 @@ fn handle_radio_sync(cmd: &mut Command, target: &str, config: &Config) -> Option
     let icons = Icons::new(config.nerd_fonts);
     cmd.arg(format!(
         "--term-status-msg= {} ${{media-title}} • ${{time-pos}} • [ {} ]",
-        icons.play(), station_name
+        icons.play(),
+        station_name
     ));
 
     if is_listen_moe {
