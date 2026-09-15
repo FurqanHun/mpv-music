@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::tui::Icons;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use std::io::Write;
@@ -56,7 +57,7 @@ pub fn play(target: &str, config: &Config, extra_args: &[String]) -> Result<()> 
 
     apply_url_optimizations(&mut cmd, &optimization_target, config);
 
-    let socket_to_clean = handle_radio_sync(&mut cmd, target);
+    let socket_to_clean = handle_radio_sync(&mut cmd, target, config);
 
     let _ipc_guard = IpcCleaner {
         path: socket_to_clean.clone(),
@@ -129,7 +130,7 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
     let socket_to_clean = if let Some(target) = best_target {
         log::debug!("Configuring mpv based on representative track: {}", target);
         apply_url_optimizations(&mut cmd, target, config);
-        handle_radio_sync(&mut cmd, target) // No semicolon here!
+        handle_radio_sync(&mut cmd, target, config) // No semicolon here!
     } else {
         None
     };
@@ -322,8 +323,23 @@ fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
     }
 }
 
-pub const DEFAULT_BANNER_TEXT: &str = "╔══  MPV-MUSIC  ══╗";
-pub const DEFAULT_STATUS_MSG: &str = "▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${media-title}} • ${time-pos} / ${duration} • (${percent-pos}%)";
+pub const DEFAULT_BANNER_TEXT: &str = " ╔══  MPV-MUSIC  ══╗";
+
+pub fn default_banner_text(nerd_fonts: crate::config::NerdFontMode) -> String {
+    let icons = Icons::new(nerd_fonts);
+    match nerd_fonts {
+        crate::config::NerdFontMode::None => DEFAULT_BANNER_TEXT.to_string(),
+        _ => format!(" ── {} MPV-MUSIC ──", icons.track()),
+    }
+}
+
+pub fn default_status_msg(nerd_fonts: crate::config::NerdFontMode) -> String {
+    let icons = Icons::new(nerd_fonts);
+    format!(
+        " {} ${{?metadata/artist:${{metadata/artist}} - }}${{?metadata/title:${{metadata/title}}}}${{!metadata/title:${{media-title}}}} • ${{time-pos}} / ${{duration}} • (${{percent-pos}}%)",
+        icons.play()
+    )
+}
 
 fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[String]) {
     log::debug!("Applying common MPV arguments from config");
@@ -344,18 +360,22 @@ fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[String]) 
     cmd.arg("--display-tags=");
     cmd.arg("--no-term-osd-bar");
 
+    let banner = default_banner_text(config.nerd_fonts);
     let is_debug = log::max_level() >= log::LevelFilter::Debug;
     if is_debug {
         log::debug!("Skipping screen clear to preserve logs");
-        cmd.arg(format!("--term-playing-msg=\n{}\n", DEFAULT_BANNER_TEXT));
+        cmd.arg(format!("--term-playing-msg=\n{}\n", banner));
     } else {
         log::debug!("Injecting ANSI clear codes into banner");
         cmd.arg(format!(
             "--term-playing-msg=\x1b[H\x1b[2J\x1b[3J\n{}\n",
-            DEFAULT_BANNER_TEXT
+            banner
         ));
     }
-    cmd.arg(format!("--term-status-msg={}", DEFAULT_STATUS_MSG));
+    cmd.arg(format!(
+        "--term-status-msg={}",
+        default_status_msg(config.nerd_fonts)
+    ));
 
     // User-configured extra args from config.toml (overrides base defaults if repeated)
     for arg in &config.mpv_args {
@@ -502,7 +522,7 @@ pub fn play_radio(name: &str, url: &str, config: &Config, extra_args: &[String])
     play(url, config, extra_args)
 }
 
-fn handle_radio_sync(cmd: &mut Command, target: &str) -> Option<String> {
+fn handle_radio_sync(cmd: &mut Command, target: &str, config: &Config) -> Option<String> {
     let is_radio = crate::radio::RADIO_STATIONS
         .iter()
         .any(|(_, url, _)| *url == target);
@@ -529,9 +549,10 @@ fn handle_radio_sync(cmd: &mut Command, target: &str) -> Option<String> {
         })
         .unwrap_or_else(|| ("RADIO".to_string(), false));
 
+    let icons = Icons::new(config.nerd_fonts);
     cmd.arg(format!(
-        "--term-status-msg=▶ ${{media-title}} • ${{time-pos}} • [ {} ]",
-        station_name
+        "--term-status-msg= {} ${{media-title}} • ${{time-pos}} • [ {} ]",
+        icons.play(), station_name
     ));
 
     if is_listen_moe {
@@ -679,5 +700,46 @@ mod tests {
             .map(|a| a.to_string_lossy().to_string())
             .collect();
         assert!(args.iter().any(|a| a == "--gapless-audio=yes"));
+    }
+
+    #[test]
+    fn test_apply_common_args_nerd_fonts() {
+        let mut config_none = Config::default();
+        config_none.nerd_fonts = crate::config::NerdFontMode::None;
+        let mut cmd_none = Command::new("mpv");
+        apply_common_args(&mut cmd_none, &config_none, &[]);
+        let args_none: Vec<String> = cmd_none
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        let status_none = args_none
+            .iter()
+            .find(|a| a.starts_with("--term-status-msg="))
+            .unwrap();
+        assert!(status_none.contains("▶"));
+        let banner_none = args_none
+            .iter()
+            .find(|a| a.starts_with("--term-playing-msg="))
+            .unwrap();
+        assert!(banner_none.contains("╔══  MPV-MUSIC  ══╗"));
+
+        let mut config_mono = Config::default();
+        config_mono.nerd_fonts = crate::config::NerdFontMode::Mono;
+        let mut cmd_mono = Command::new("mpv");
+        apply_common_args(&mut cmd_mono, &config_mono, &[]);
+        let args_mono: Vec<String> = cmd_mono
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        let status_mono = args_mono
+            .iter()
+            .find(|a| a.starts_with("--term-status-msg="))
+            .unwrap();
+        assert!(status_mono.contains("\u{f04b}"));
+        let banner_mono = args_mono
+            .iter()
+            .find(|a| a.starts_with("--term-playing-msg="))
+            .unwrap();
+        assert!(banner_mono.contains("── \u{f001} MPV-MUSIC ──"));
     }
 }

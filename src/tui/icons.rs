@@ -132,4 +132,11 @@ impl Icons {
             _ => "\u{f1be}",
         }
     }
+
+    pub fn play(&self) -> &'static str {
+        match self.mode {
+            NerdFontMode::None => "▶",
+            _ => "\u{f04b}",
+        }
+    }
 }
