@@ -6,6 +6,7 @@ use clap::Parser;
     author,
     version,
     about = "mpv-music - A TUI-based music player wrapper for MPV",
+    after_help = "In interactive menus: use arrow keys/typing to filter, ENTER to select, ESC to go back.",
     rename_all = "kebab-case"
 )]
 pub struct Cli {
