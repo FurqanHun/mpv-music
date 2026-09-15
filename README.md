@@ -182,6 +182,10 @@ mpv-music [FILTER_FLAGS] [--play-all]
 * **File or URL:** Plays it instantly.
 * **Folder path:** Runs interactive search using just that folder.
 
+> [!TIP]
+> **Menu Navigation:**  
+> Use arrow keys or type to fuzzy-filter items, and `ENTER` to select. Press `ESC` anywhere to instantly go back / cancel (or select the `q) Back` option with `ENTER`).
+
 ### Options:
 
 | Option | Description |
@@ -218,6 +222,8 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `-s`, `--shuffle` | Shuffle. |
 | `--no-shuffle` | No Shuffle. |
 | `--serial` | Force serial (single-threaded) processing. |
+| `--player <BIN>` | Specify media player binary or compatible fork (defaults to 'mpv'). |
+| `--ytdlp <BIN>` | Specify the yt-dlp binary or compatible fork (defaults to 'yt-dlp'). |
 | `--search [<SEARCH>]` | Search YouTube directly (aliases: `--yt`). |
 | `-h`, `--help` | Print help. |
 | `-V`, `--version` | Print version. |
@@ -282,7 +288,7 @@ Searching the filesystem with find every time is slow, especially if you have a 
 
 ## Configuration
 
-If a config file does not exist, mpv-music will create one at startup. To customize the behavior:
+If a config file does not exist, mpv-music will create one at startup. If an existing config file is missing newer options, they are automatically populated with their defaults. To customize the behavior:
 
 ```
 mpv-music --config
@@ -291,6 +297,7 @@ mpv-music --config
 
 ```toml
 # --- General Playback ---
+player = "mpv"            # Media player binary or compatible fork (e.g. "mpv", "mpvnet")
 shuffle = true
 loop_mode = "inf"  # Options: "playlist" (same as inf), "track", "no", "inf", "5" (number of loops)
 volume = 100
@@ -309,6 +316,7 @@ serial_mode = false      # Set to true to force single-threaded scanning (better
 scan_hidden_dirs = false # Set to true to allow indexing of hidden directories (e.g. .music)
 
 # --- YT-DLP / Networking ---
+ytdlp = "yt-dlp"           # yt-dlp binary, fork, or path (e.g. "yt-dlp", "yt-dlp-idk")
 # Set to true if you installed yt-dlp via package manager (apt/pacman). 
 # Keep false if you downloaded the binary directly from GitHub.
 ytdlp_ejs_remote_github = false 
@@ -355,17 +363,16 @@ playlist_exts = [
 ]
 
 # --- MPV Arguments ---
-# These flags are passed directly to the mpv process.
-mpv_default_args = [
-    "--no-video", # Automatically ignored if --watch is used
-    "--audio-display=no", # Automatically ignored if --watch is used
-    "--msg-level=cplayer=warn",
-    "--display-tags=",
-    "--no-term-osd-bar",
-    # Custom Now Playing UI
-    "--term-playing-msg=╔══  MPV-MUSIC  ══╗",
-    "--term-status-msg=▶ ${?metadata/artist:${metadata/artist} - }${?metadata/title:${metadata/title}}${!metadata/title:${media-title}} • ${time-pos} / ${duration} • (${percent-pos}%)",
-]
+# Additional flags to pass to the player (e.g. ["--gapless-audio=yes", "--af=scaletempo2"]).
+# Any flag specified here will override built-in defaults.
+# Built-in defaults applied automatically:
+#   --no-video, --audio-display=no (automatically ignored if --watch is used)
+#   --msg-level=cplayer=warn
+#   --display-tags=
+#   --no-term-osd-bar
+#   --term-playing-msg (shows " ──  MPV-MUSIC ──" or " ╔══  MPV-MUSIC  ══╗" based on nerd_fonts)
+#   --term-status-msg (shows "  ..." or " ▶ ..." based on nerd_fonts)
+mpv_args = []
 
 ```
 
@@ -444,15 +451,33 @@ For unsupported formats, the indexer falls back to filename parsing. I may imple
 ## Development
 
 - **Source Code:** Located in `src/`.
-  * **`main.rs`**: Entry point. Initializes configuration, logging, and dependencies before passing control to the TUI.
+  * **`main.rs`**: Entry point. Minimal bootstrap delegating to `app::run`.
+  - **`app/`**: Application lifecycle and execution engine.
+    * **`mod.rs`**: Top-level coordinator and mode dispatch.
+    * **`flags.rs`**: Utility flag handling (`--log`, `--config`), runtime CLI overrides, and directory operations.
+    * **`logging.rs`**: Logger initialization (`flexi_logger`), file logging, and stderr formatting.
+    * **`library.rs`**: Track loading, session directory scanning, and index syncing.
+    * **`filter.rs`**: Multi-stage CLI track filtering, comma tag matching, and interactive disambiguation.
   * **`cli.rs`**: Defines the command-line interface arguments and flags (using `clap`).
   - **`tui/`**: The Terminal User Interface module.
-    * **`mod.rs`**: Core orchestration, menu loops, and user interaction logic.
-    * **`items.rs`**: Data structures for list items (Tracks, Directories, Playlists).
+    * **`mod.rs`**: Core orchestration, main & settings menus, and public API facade.
+    * **`runner.rs`**: Skim runner primitives (fuzzy single selection, multi-selection, and text prompt).
+    * **`tracks.rs`**: Library exploration modes (Track, Directory, and Playlist views).
+    * **`dirs.rs`**: Interactive music directory manager (add, remove, and path validation loops).
+    * **`tags.rs`**: Interactive tag filtering (Genre, Artist, Album) and post-filter actions.
+    * **`search.rs`**: Interactive YouTube search and URL streaming flow.
+    * **`radio.rs`**: Interactive internet radio station picker and filtering.
+    * **`filter.rs`**: CLI track filtering helper (exact and partial disambiguation).
+    * **`items.rs`**: Data structures and Skim preview adapters (Tracks, Directories, Playlists, Tags, Search results).
     * **`icons.rs`**: Universal emoji and Symbols Nerd Font (Mono/Normal) abstractions.
   * **`config.rs`**: Manages configuration loading, validation, and defaults (Toml).
   * **`indexer.rs`**: The core library scanner. Uses `walkdir`, `rayon` (parallelism), and `lofty` for metadata.
-  * **`player.rs`**: Wraps the `mpv` process, handling playback control, queue generation, and temporary file cleanup.
+  - **`player/`**: Wraps the media player process, handling command construction, playback control, queue generation, and temporary file cleanup.
+    * **`mod.rs`**: Public playback entrypoints (`play`, `play_files`, `play_radio`), process execution, signal handling, and drop guards.
+    * **`builder.rs`**: `MpvCommandBuilder` for deterministic command generation, flag assembly, and terminal banner/status formatting.
+    * **`target.rs`**: `TargetKind` enum, target classification, priority scanning, and playlist inspection.
+    * **`ytdlp.rs`**: JS runtime probing (Deno/Node/Bun) and yt-dlp health checking.
+    * **`radio.rs`**: Radio IPC socket setup and Listen.moe WebSocket synchronization.
   * **`search.rs`**: **YouTube Backend.** Wraps `yt-dlp` to fetch search results and stream URLs.
   * **`dep_check.rs`**: Validates runtime dependencies (mpv, yt-dlp versions) and environment health.
   * **`update.rs`**: Handles version comparison (SemVer) and checks GitHub for releases.

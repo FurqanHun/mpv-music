@@ -14,7 +14,10 @@ pub fn default_banner_text(nerd_fonts: NerdFontMode) -> String {
     let icons = Icons::new(nerd_fonts);
     match nerd_fonts {
         NerdFontMode::None => DEFAULT_BANNER_TEXT.to_string(),
-        _ => format!(" \u{2500}\u{2500} {} MPV-MUSIC \u{2500}\u{2500}", icons.track()),
+        _ => format!(
+            " \u{2500}\u{2500} {} MPV-MUSIC \u{2500}\u{2500}",
+            icons.track()
+        ),
     }
 }
 
