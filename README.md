@@ -71,10 +71,11 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 
 #### Required:
 - **mpv** - https://mpv.io
+  * Compatible forks (such as `mpv.net`) and custom binary paths can also be used. You can configure this via the `player` option in `config.toml`.
 
 #### Optional (but recommended):
-- **yt-dlp** - for playing URLs.
-  https://github.com/yt-dlp/yt-dlp
+- **yt-dlp** - for playing URLs. https://github.com/yt-dlp/yt-dlp
+  * Compatible forks and custom binary paths can also be used. You can configure this via the `ytdlp` option in `config.toml`.
 - **JS Runtime** - for YouTube playback (Deno, Node.js, QuickJS, or Bun). Deno is recommended.
 
 > [!NOTE]
