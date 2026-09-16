@@ -2,6 +2,18 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.29.0-dev.2](https://github.com/FurqanHun/mpv-music/releases/tag/v0.29.0-dev.2) - 2026-09-16 (Pre-release)
+
+- refactor(ui): standardize console messaging, logging, and playback feedback
+- feat(logging): preserve recent session logs with configurable retention and isolated viewer
+- chore: resolve clippy warnings across codebase
+- docs: update README documentation, FAQs, and configuration reference
+- feat(config): bump default yt-dlp Firefox user agent to 156.0
+- test: add comprehensive feature and user flow test suite
+- chore: bump version to v0.29.0-dev.2
+
+---
+
 ## [v0.29.0-dev.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.29.0-dev.1) - 2026-09-15 (Pre-release)
 
 - Massive codebase modularization across `src/tui/`, `src/app/`, and `src/player/` into clean, single-responsibility submodules
