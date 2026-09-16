@@ -16,7 +16,6 @@ pub fn run_tag_mode(
     force_key: Option<&str>,
     extra_args: &[String],
 ) -> Result<()> {
-    // if a key is forced (like from cli -g), we don't loop/menu, just run once
     if let Some(k) = force_key {
         let _ = run_tag_picker(tracks, cfg, k, extra_args)?;
         return Ok(());
@@ -37,15 +36,12 @@ pub fn run_tag_mode(
             _ => continue,
         };
 
-        // true = selection was made and processed -> Exit to Main Menu.
-        // false = user pressed ESC inside the list -> Loop back.
         if run_tag_picker(tracks, cfg, key, extra_args)? {
             return Ok(());
         }
     }
 }
 
-// helper to keep the logic clean, returns true if action taken, false if aborted (ESC).
 pub fn run_tag_picker(
     tracks: &[indexer::Track],
     cfg: &config::Config,
@@ -124,7 +120,6 @@ pub fn run_tag_picker(
         return Ok(false);
     }
 
-    // TagItem.text() returns "Name (Count)" and we need just "Name".
     let mut selected_names = HashSet::new();
     for item in selected_items {
         let text = item.text();
@@ -132,7 +127,6 @@ pub fn run_tag_picker(
         selected_names.insert(name.to_string());
     }
 
-    // Reference approach: just collect references, no cloning here.
     let filtered: Vec<&indexer::Track> = tracks
         .iter()
         .filter(|t| {

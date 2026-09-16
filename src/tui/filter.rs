@@ -6,7 +6,6 @@ pub fn apply_cli_filters(
     args: &Cli,
     exact: bool,
 ) -> Vec<indexer::Track> {
-    // prepare search terms ONCE before iterating
     let prepare_terms = |arg: &Option<Option<String>>| -> Option<Vec<String>> {
         arg.as_ref().and_then(|opt| opt.as_ref()).map(|val| {
             val.to_lowercase()
@@ -30,8 +29,6 @@ pub fn apply_cli_filters(
                     let field_lower = field.to_lowercase();
 
                     if exact {
-                        // check if ANY search term matches ANY track tag exactly
-                        // iterators to avoid allocating a new Vec for every track
                         search_vals.iter().any(|term| {
                             field_lower
                                 .split([';', ','])
@@ -39,7 +36,6 @@ pub fn apply_cli_filters(
                                 .any(|tag| tag == term)
                         })
                     } else {
-                        // partial match
                         search_vals.iter().any(|term| field_lower.contains(term))
                     }
                 } else {

@@ -59,6 +59,7 @@ flexi_logger = "0.31"
 ctrlc = "3.5"
 dunce = "1.0"
 futures-util = "0.3"
+chrono = "0.4"
 
 [profile.release]
 strip = true

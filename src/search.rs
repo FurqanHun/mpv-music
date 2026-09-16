@@ -17,14 +17,12 @@ pub struct SearchResult {
     pub is_playlist: bool,
 }
 
-// Helper: Format seconds into MM:SS
 fn format_duration(seconds: f64) -> String {
     let m = (seconds / 60.0).floor();
     let s = (seconds % 60.0).floor();
     format!("{:02}:{:02}", m, s)
 }
 
-// Helper: Format view count (e.g. 1.2M, 5.4K)
 fn format_views(count: u64) -> String {
     if count >= 1_000_000 {
         format!("{:.1}M", count as f64 / 1_000_000.0)
@@ -96,7 +94,6 @@ fn save_cache(cache: &HashMap<String, CacheEntry>) {
     }
 }
 
-/// Returns a list of parsed search results, ignoring channels, mixes, and shorts.
 pub fn search_youtube(query: &str, limit: usize, ytdlp_bin: &str) -> Result<Vec<SearchResult>> {
     log::info!(
         "Starting YouTube search for: '{}' (Limit: {}, Binary: '{}')",
@@ -125,7 +122,7 @@ pub fn search_youtube(query: &str, limit: usize, ytdlp_bin: &str) -> Result<Vec<
         "--flat-playlist",
         "--dump-json",
         &format!("--playlist-end={}", limit),
-        "--ignore-errors", // dont crash on restricted videos
+        "--ignore-errors",
         &search_url,
     ];
     log::debug!("Exec: {} {:?}", ytdlp_bin, args);
@@ -147,7 +144,6 @@ pub fn search_youtube(query: &str, limit: usize, ytdlp_bin: &str) -> Result<Vec<
     let stdout = String::from_utf8_lossy(&output.stdout);
     let mut results = Vec::new();
 
-    // this for log
     let mut stats_channels = 0;
     let mut stats_bad_url = 0;
     let mut stats_mixes = 0;
@@ -157,7 +153,6 @@ pub fn search_youtube(query: &str, limit: usize, ytdlp_bin: &str) -> Result<Vec<
         if let Ok(v) = serde_json::from_str::<Value>(line) {
             let title = v["title"].as_str().unwrap_or("Unknown").to_string();
 
-            // no channels
             if v["_type"].as_str() == Some("channel") {
                 log::debug!("Ignored (Type=Channel): {}", title);
                 stats_channels += 1;
@@ -166,7 +161,6 @@ pub fn search_youtube(query: &str, limit: usize, ytdlp_bin: &str) -> Result<Vec<
 
             let title = v["title"].as_str().unwrap_or("Unknown Title").to_string();
 
-            // url extraction
             let url = v["url"]
                 .as_str()
                 .or_else(|| v["webpage_url"].as_str())
@@ -196,21 +190,18 @@ pub fn search_youtube(query: &str, limit: usize, ytdlp_bin: &str) -> Result<Vec<
                 continue;
             }
 
-            // Uploader / Channel Name
             let uploader = v["uploader"]
                 .as_str()
                 .or_else(|| v["channel"].as_str())
                 .unwrap_or("Unknown Channel")
                 .to_string();
 
-            // Duration: Seconds -> MM:SS
             let duration = if let Some(seconds) = v["duration"].as_f64() {
                 format_duration(seconds)
             } else {
                 "LIVE/???".to_string()
             };
 
-            // Views: 1200000 -> 1.2M
             let views = if let Some(count) = v["view_count"].as_u64() {
                 format_views(count)
             } else {
@@ -314,14 +305,14 @@ mod tests {
 
     #[test]
     fn test_duration_formatting() {
-        let seconds: f64 = 225.0; // 3:45
+        let seconds: f64 = 225.0;
         let formatted = format_duration(seconds);
         assert_eq!(formatted, "03:45");
     }
 
     #[test]
     fn test_duration_formatting_hours() {
-        let seconds: f64 = 3665.0; // 1:01:05
+        let seconds: f64 = 3665.0;
         let formatted = format_duration(seconds);
         assert_eq!(formatted, "61:05");
     }

@@ -19,7 +19,6 @@ use std::path::PathBuf;
 pub fn run(args: Cli) -> Result<()> {
     let extra_mpv_args = args.mpv_args.as_deref().unwrap_or(&[]);
 
-    // deterministic paths
     let dirs = ProjectDirs::from("com", "furqanhun", "mpv-music")
         .context("Could not determine system paths")?;
     let log_dir = dirs.data_dir();
@@ -39,7 +38,6 @@ pub fn run(args: Cli) -> Result<()> {
 
     let mut cfg = config::load(config_path_override.clone())?;
 
-    // init logger
     let _logger_handle = logging::init(&args, &cfg, log_dir)?;
 
     log::info!("Starting MPV-Music...");
@@ -75,7 +73,6 @@ pub fn run(args: Cli) -> Result<()> {
         None => return Ok(()),
     };
 
-    // entry point shortcuts
     if let Some(None) = args.genre {
         log::info!("Empty genre flag. Opening Genre Picker.");
         tui::run_tag_mode(&tracks, &cfg, Some("genre"), extra_mpv_args)?;
@@ -111,13 +108,11 @@ pub fn run(args: Cli) -> Result<()> {
         return Ok(());
     }
 
-    // main search and filter logic
     if filter::has_filter_flags(&args) {
         filter::handle_cli_filters(&tracks, &cfg, &args, extra_mpv_args)?;
         return Ok(());
     }
 
-    // default modes
     if args.play_all {
         let paths: Vec<String> = tracks.iter().map(|t| t.path.clone()).collect();
         player::play_files(&paths, &cfg, extra_mpv_args)?;

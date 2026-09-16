@@ -160,7 +160,6 @@ pub fn run_playlist_mode(
                         .parent()
                         .unwrap_or_else(|| std::path::Path::new("."));
 
-                    // validate and canonicalize paths
                     let all_valid_lines: Vec<String> = content
                         .lines()
                         .filter(|l| !l.starts_with('#') && !l.trim().is_empty())

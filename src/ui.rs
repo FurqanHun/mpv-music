@@ -1,5 +1,3 @@
-//! Standardized console feedback badges and UI output formatting.
-
 pub const GREEN_BOLD: &str = "\x1b[32;1m";
 pub const YELLOW_BOLD: &str = "\x1b[33;1m";
 pub const RED_BOLD: &str = "\x1b[31;1m";

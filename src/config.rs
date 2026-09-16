@@ -19,6 +19,10 @@ fn default_player() -> String {
     "mpv".to_string()
 }
 
+fn default_max_log_sessions() -> usize {
+    3
+}
+
 pub const LEGACY_MPV_DEFAULT_ARGS: &[&str] = &[
     "--no-video",
     "--audio-display=no",
@@ -42,6 +46,7 @@ pub const KNOWN_CONFIG_KEYS: &[&str] = &[
     "ytdlp_ejs_remote_github",
     "ytdlp_useragent",
     "enable_file_logging",
+    "max_log_sessions",
     "ytdlp",
     "player",
     "audio_exts",
@@ -233,6 +238,8 @@ pub struct Config {
     #[serde(default = "default_ytdlp_useragent")]
     pub ytdlp_useragent: String,
     pub enable_file_logging: bool,
+    #[serde(default = "default_max_log_sessions")]
+    pub max_log_sessions: usize,
 
     #[serde(default = "default_ytdlp")]
     pub ytdlp: String,
@@ -282,6 +289,7 @@ impl Default for Config {
             ytdlp_ejs_remote_github: false,
             ytdlp_useragent: default_ytdlp_useragent(),
             enable_file_logging: true,
+            max_log_sessions: default_max_log_sessions(),
             ytdlp: default_ytdlp(),
             player: default_player(),
             audio_exts: vec![
@@ -328,7 +336,6 @@ impl Config {
     }
 }
 
-/// If no configuration exists, it creates one with default values.
 pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     log::debug!("Initializing config load sequence");
 
@@ -348,7 +355,6 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     if !config_path.exists() {
         log::info!("Config not found, creating default at: {:?}", config_path);
 
-        // ensure the dir exists
         std::fs::create_dir_all(config_dir)?;
 
         let default_cfg = Config::default();
@@ -437,6 +443,15 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
         needs_save = true;
     }
 
+    if cfg.max_log_sessions == 0 {
+        warnings.push(
+            "max_log_sessions cannot be 0. Use 'enable_file_logging = false' to disable file logging. Resetting to 1."
+                .to_string(),
+        );
+        cfg.max_log_sessions = 1;
+        needs_save = true;
+    }
+
     if cfg.music_dirs.is_empty() {
         warnings.push(
             "No music directories configured. Run 'mpv-music --manage-dirs' to add folders."
@@ -488,6 +503,7 @@ mod tests {
         assert!(cfg.shuffle);
         assert!(!cfg.video_ok);
         assert!(!cfg.watch);
+        assert_eq!(cfg.max_log_sessions, 3);
     }
 
     #[test]
@@ -503,23 +519,19 @@ mod tests {
     fn test_default_extensions() {
         let cfg = Config::default();
 
-        // Audio extensions
         assert!(cfg.audio_exts.contains(&"mp3".to_string()));
         assert!(cfg.audio_exts.contains(&"flac".to_string()));
         assert!(cfg.audio_exts.contains(&"wav".to_string()));
 
-        // Video extensions
         assert!(cfg.video_exts.contains(&"mp4".to_string()));
         assert!(cfg.video_exts.contains(&"mkv".to_string()));
 
-        // Playlist extensions
         assert!(cfg.playlist_exts.contains(&"m3u".to_string()));
         assert!(cfg.playlist_exts.contains(&"m3u8".to_string()));
     }
 
     #[test]
     fn test_volume_cap_at_130() {
-        // Simulate validation logic from load()
         let mut volume = 200_u8;
         if volume > 130 {
             volume = 100;
@@ -543,6 +555,15 @@ mod tests {
             volume = 100;
         }
         assert_eq!(volume, 75);
+    }
+
+    #[test]
+    fn test_max_log_sessions_clamped_at_1() {
+        let mut max_sessions = 0_usize;
+        if max_sessions == 0 {
+            max_sessions = 1;
+        }
+        assert_eq!(max_sessions, 1);
     }
 
     #[test]

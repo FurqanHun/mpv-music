@@ -102,7 +102,6 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
         let settings_prompt = icons.prompt(icons.settings(), "Settings");
         let selection = run_skim_simple(options, &settings_prompt);
         match selection.as_deref() {
-            // dirs
             Some(s) if s.contains("Manage Directories") => {
                 if run_manage_dirs_mode(cfg)? {
                     config::save(cfg)?;
@@ -115,7 +114,6 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
                 }
             }
 
-            // conf management
             Some(s) if s.contains("Edit Config") => {
                 let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
                     if cfg!(windows) {
@@ -133,10 +131,8 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
                     .arg(&config_path)
                     .status()?;
 
-                // reload to apply changes immediately
                 *cfg = config::load(None)?;
                 ui::success("Configuration reloaded from disk.");
-                // pause so user sees the message
                 std::thread::sleep(std::time::Duration::from_millis(900));
             }
             Some(s) if s.contains("Delete Config") => {
@@ -147,7 +143,6 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
                 if config_path.exists() {
                     std::fs::remove_file(&config_path)?;
                     ui::warning("Configuration deleted. Resetting to defaults...");
-                    // reload = generate the defualt
                     *cfg = config::load(None)?;
                     ui::success("Default configuration loaded.");
                 } else {
@@ -156,41 +151,124 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
                 std::thread::sleep(std::time::Duration::from_secs(1));
             }
 
-            // log management
             Some(s) if s.contains("View Log") => {
-                let log_path = ProjectDirs::from("com", "furqanhun", "mpv-music")
+                let data_dir = ProjectDirs::from("com", "furqanhun", "mpv-music")
                     .unwrap()
                     .data_dir()
-                    .join("mpv-music.log");
+                    .to_path_buf();
+                let logs = crate::app::logging::list_log_files(&data_dir);
+
+                if logs.is_empty() {
+                    ui::warning("Log file does not exist.");
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                    continue;
+                }
+
                 let viewer = std::env::var("PAGER").unwrap_or_else(|_| {
                     if cfg!(windows) {
-                        "more".to_string()
+                        "notepad.exe".to_string()
                     } else {
                         "less".to_string()
                     }
                 });
-                if log_path.exists() {
-                    std::process::Command::new(viewer).arg(log_path).status()?;
+
+                let target_file = if logs.len() == 1 {
+                    logs[0].clone()
                 } else {
-                    ui::warning("Log file does not exist.");
-                    std::thread::sleep(std::time::Duration::from_secs(1));
-                }
+                    let items: Vec<String> = logs
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, path)| crate::app::logging::format_log_display(path, idx == 0))
+                        .collect();
+
+                    let prompt = "Select Log Session > ";
+                    let options: Vec<&str> = items.iter().map(|s| s.as_str()).collect();
+                    if let Some(selected) = runner::run_skim_simple(options, prompt) {
+                        if let Some(idx) = items.iter().position(|item| item == &selected) {
+                            logs[idx].clone()
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    }
+                };
+
+                let _ = std::process::Command::new(viewer).arg(target_file).status();
             }
             Some(s) if s.contains("Delete Log") => {
-                let log_path = ProjectDirs::from("com", "furqanhun", "mpv-music")
+                let data_dir = ProjectDirs::from("com", "furqanhun", "mpv-music")
                     .unwrap()
                     .data_dir()
-                    .join("mpv-music.log");
-                if log_path.exists() {
-                    std::fs::remove_file(log_path)?;
-                    ui::success("Log file deleted.");
-                } else {
+                    .to_path_buf();
+                let logs = crate::app::logging::list_log_files(&data_dir);
+
+                if logs.is_empty() {
                     ui::warning("No log file found to delete.");
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                    continue;
                 }
-                std::thread::sleep(std::time::Duration::from_secs(1));
+
+                if logs.len() == 1 {
+                    if std::fs::remove_file(&logs[0]).is_ok() {
+                        ui::success("Log file deleted.");
+                    } else {
+                        ui::error("Failed to delete log file.");
+                    }
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                    continue;
+                }
+
+                let opts = [
+                    format!("1) Delete all {} log files", logs.len()),
+                    "2) Select individual log files".to_string(),
+                ];
+                let pick = runner::run_skim_simple(
+                    opts.iter().map(|s| s.as_str()).collect(),
+                    &icons.prompt(icons.trash(), "Delete Logs"),
+                );
+
+                match pick.as_deref() {
+                    Some(s) if s.starts_with("1)") => {
+                        let mut count = 0;
+                        for file in &logs {
+                            if std::fs::remove_file(file).is_ok() {
+                                count += 1;
+                            }
+                        }
+                        ui::success(format!("Deleted all {} log file(s).", count));
+                        std::thread::sleep(std::time::Duration::from_secs(1));
+                    }
+                    Some(s) if s.starts_with("2)") => {
+                        let items: Vec<String> = logs
+                            .iter()
+                            .enumerate()
+                            .map(|(idx, path)| {
+                                crate::app::logging::format_log_display(path, idx == 0)
+                            })
+                            .collect();
+
+                        let prompt = "Delete Logs (TAB to select, ENTER to delete) > ";
+                        if let Some(selected) =
+                            runner::run_skim_multi_selection(items.clone(), prompt)
+                            && !selected.is_empty()
+                        {
+                            let mut count = 0;
+                            for sel in selected {
+                                if let Some(idx) = items.iter().position(|item| item == &sel)
+                                    && std::fs::remove_file(&logs[idx]).is_ok()
+                                {
+                                    count += 1;
+                                }
+                            }
+                            ui::success(format!("Deleted {} log file(s).", count));
+                            std::thread::sleep(std::time::Duration::from_secs(1));
+                        }
+                    }
+                    _ => {}
+                }
             }
 
-            // maintain index
             Some(s) if s.contains("Refresh Index") => {
                 ui::info("Refreshing library index (Fast)...");
                 *tracks = indexer::scan(cfg, false)?;

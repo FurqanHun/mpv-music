@@ -147,7 +147,6 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
     let p_handler = queue_path.clone();
     let ipc_handler = socket_to_clean.clone();
 
-    // Register signal handler
     ctrlc::set_handler(move || {
         if r_handler.swap(false, Ordering::SeqCst) && p_handler.exists() {
             let _ = std::fs::remove_file(&p_handler);
@@ -178,7 +177,6 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
     log::info!("Launching player '{}' for playlist playback...", cmd_name);
     log::debug!("Exec: {:?}", cmd);
 
-    // blocks until mpv closes
     cmd.status()
         .with_context(|| format!("Failed to launch player '{}' for playlist", cmd_name))?;
 

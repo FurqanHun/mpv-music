@@ -62,7 +62,7 @@ impl SkimItem for TagItem {
         for (i, song) in self.samples.iter().enumerate() {
             if i >= 10 {
                 break;
-            } // limit to 10
+            }
             sample_text.push_str(&format!("  {}. {}\n", i + 1, song));
         }
 
@@ -152,11 +152,9 @@ pub struct SearchItem {
 
 impl SkimItem for SearchItem {
     fn text(&self) -> Cow<'_, str> {
-        // list, just lil bit
         Cow::Borrowed(&self.result.title)
     }
     fn output(&self) -> Cow<'_, str> {
-        // url for the player
         Cow::Borrowed(&self.result.url)
     }
 

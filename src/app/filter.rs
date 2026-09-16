@@ -74,14 +74,12 @@ pub fn handle_cli_filters(
 ) -> Result<()> {
     let is_multi = is_multi_value_search(args);
 
-    // stage 1: exact match
     let mut filtered = if !is_multi {
         tui::apply_cli_filters(tracks, args, true)
     } else {
         Vec::new()
     };
 
-    // stage 2: partial match / ambiguity handling
     if filtered.is_empty() {
         log::debug!("Exact match skipped or failed, trying partial...");
         let partials = tui::apply_cli_filters(tracks, args, false);
@@ -91,7 +89,6 @@ pub fn handle_cli_filters(
             return Ok(());
         }
 
-        // identify active tag
         let mut unique_options: HashSet<String> = HashSet::new();
         let field_opt = active_filter_field(args);
 

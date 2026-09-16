@@ -27,7 +27,7 @@ pub fn classify_target(s: &str) -> TargetKind {
     }
 }
 
-// Scans a playlist file to find the "heaviest" URL inside
+// to find the "heaviest" URL
 pub fn inspect_playlist_content(path_str: &str, config: &Config) -> Option<String> {
     let path = std::path::Path::new(path_str);
 
@@ -48,7 +48,7 @@ pub fn inspect_playlist_content(path_str: &str, config: &Config) -> Option<Strin
                 max_kind = kind;
                 best_match = Some(trim.to_string());
                 if max_kind == TargetKind::YouTube {
-                    break; // found yt, stop reading file
+                    break;
                 }
             }
         }

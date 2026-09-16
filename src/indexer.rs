@@ -70,7 +70,6 @@ impl Track {
     }
 }
 
-// split "mp3, flac" -> Set
 fn to_set(exts: &[String]) -> HashSet<String> {
     exts.iter().map(|s| s.trim().to_lowercase()).collect()
 }
@@ -101,7 +100,6 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
     let video_exts = to_set(&config.video_exts);
     let playlist_exts = to_set(&config.playlist_exts);
 
-    // load existing index for caching and smart recovery
     let (old_cache, recovery_map) = if !force {
         if let Ok((old_tracks, _)) = load_index() {
             log::info!("Cache loaded. Found {} existing entries", old_tracks.len());
@@ -110,10 +108,8 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
             let mut attr_map = HashMap::new();
 
             for t in old_tracks {
-                // primary cache: lookup by exact path
                 path_map.insert(t.path.clone(), t.clone());
 
-                // secondary cache: lookup by attributes (size + mtime + filename)
                 if let Some(fname) = std::path::Path::new(&t.path).file_name() {
                     let key = (t.size, t.mtime, fname.to_string_lossy().to_string());
                     attr_map.entry(key).or_insert(t);
@@ -137,7 +133,6 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
     pb.enable_steady_tick(Duration::from_millis(100));
 
     let scan_hidden = config.scan_hidden_dirs;
-    // scan loop
     let tracks: Vec<Track> = config
         .music_dirs
         .iter()
@@ -192,7 +187,6 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
             let size = metadata.len();
             let path_str = path.to_string_lossy().to_string();
 
-            // smort check
             if let Some(old_track) = old_cache
                 .get(&path_str)
                 .filter(|t| t.mtime == mtime && t.size == size)
@@ -305,7 +299,6 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
     Ok(tracks)
 }
 
-/// Serializes a slice of `Track` items into a JSON Lines format file on disk.
 pub fn save(tracks: &[Track]) -> Result<()> {
     let dirs = ProjectDirs::from("com", "furqanhun", "mpv-music")
         .context("Could not determine data directory")?;
@@ -406,7 +399,6 @@ mod tests {
 
     #[test]
     fn test_parse_multiple_dashes() {
-        // Should only split on FIRST " - "
         let (artist, title) = parse_filename_metadata("Arctic Monkeys - Do I Wanna Know? - Live");
         assert_eq!(artist, "Arctic Monkeys");
         assert_eq!(title, "Do I Wanna Know? - Live");
@@ -472,7 +464,6 @@ mod tests {
             media_type: MediaType::Audio,
         };
 
-        // Should be able to serialize to JSON
         let json = serde_json::to_string(&track);
         assert!(json.is_ok());
     }
@@ -515,7 +506,6 @@ mod tests {
         let exts = vec!["MP3".to_string(), "FLAC".to_string()];
         let set = to_set(&exts);
 
-        // to_set converts to lowercase
         assert!(set.contains("mp3"));
         assert!(set.contains("flac"));
     }

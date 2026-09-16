@@ -114,7 +114,6 @@ async fn run_ws_loop(
                         }
                     }
                     Some(Ok(Message::Ping(data))) => {
-                        // respond to server pings
                         let _ = write.send(Message::Pong(data)).await;
                     }
                     Some(Ok(_)) => {
@@ -142,7 +141,6 @@ async fn handle_payload(
 ) {
     match payload.op {
         0 => {
-            // OP 0: Hello — server sends heartbeat interval
             if let Some(raw) = payload.d {
                 match serde_json::from_value::<HelloData>(raw) {
                     Ok(hello) => {
@@ -152,7 +150,7 @@ async fn handle_payload(
                             hello.heartbeat
                         );
                         *interval = time::interval(Duration::from_millis(hello.heartbeat));
-                        interval.tick().await; // consume the immediate tick
+                        interval.tick().await;
                         *hb_active = true;
                     }
                     Err(e) => {
@@ -226,8 +224,6 @@ async fn handle_payload(
     }
 }
 
-/// Establishes and manages a resilient WebSocket connection for live radio metadata syncing.
-/// Features exponential backoff for reconnections on failure.
 pub async fn start_radio_sync(target_url: &str, ipc_socket: String) -> Result<()> {
     let ws_url = if target_url.contains("kpop") {
         "wss://listen.moe/kpop/gateway_v2"
@@ -243,7 +239,7 @@ pub async fn start_radio_sync(target_url: &str, ipc_socket: String) -> Result<()
         match connect_async(ws_url).await {
             Ok((ws_stream, _)) => {
                 log::info!("WS connected.");
-                backoff = Duration::from_secs(2); // reset backoff on success
+                backoff = Duration::from_secs(2);
                 run_ws_loop(ws_stream, &ipc_socket).await;
                 log::warn!("WS loop exited. Reconnecting...");
             }
@@ -253,6 +249,6 @@ pub async fn start_radio_sync(target_url: &str, ipc_socket: String) -> Result<()
         }
 
         time::sleep(backoff).await;
-        backoff = (backoff * 2).min(Duration::from_secs(60)); // exponential backoff, cap 60s
+        backoff = (backoff * 2).min(Duration::from_secs(60));
     }
 }

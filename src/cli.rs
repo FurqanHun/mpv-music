@@ -13,7 +13,6 @@ pub struct Cli {
     #[arg(index = 1, help = "Directly play a file, directory, or URL")]
     pub target: Option<String>,
 
-    // indexing
     #[arg(
         short = 'r',
         long,
@@ -24,7 +23,6 @@ pub struct Cli {
     #[arg(long, help = "Force a full re-scan of the library.")]
     pub reindex: bool,
 
-    // actions
     #[cfg(feature = "update")]
     #[arg(short = 'u', long, help = "Update the application")]
     pub update: bool,
@@ -53,7 +51,6 @@ pub struct Cli {
     #[arg(long, help = "Open the Interactive Directory Manager")]
     pub manage_dirs: bool,
 
-    // conf/log
     #[arg(
         short = 'c',
         long,
@@ -74,10 +71,15 @@ pub struct Cli {
     )]
     pub log: Option<Option<String>>,
 
-    #[arg(long, visible_alias = "rm-log", help = "Delete log file")]
-    pub remove_log: bool,
+    #[arg(
+        long,
+        visible_alias = "rm-log",
+        value_name = "COUNT",
+        num_args = 0..=1,
+        help = "Delete log files (deletes all if no count given, or oldest N logs)"
+    )]
+    pub remove_log: Option<Option<usize>>,
 
-    // playback
     #[arg(short = 'p', long, help = "Play all tracks immediately")]
     pub play_all: bool,
 
@@ -140,7 +142,6 @@ pub struct Cli {
     )]
     pub ext: Option<String>,
 
-    // filters (comma supported)
     #[arg(
         short = 'g',
         long,
@@ -173,7 +174,6 @@ pub struct Cli {
         )]
     pub title: Option<Option<String>>,
 
-    // sys
     #[arg(short = 'v', long, action = clap::ArgAction::Count, help = "Display Verbose Information")]
     pub verbose: u8,
     #[arg(short = 'd', long, help = "Debug mode")]

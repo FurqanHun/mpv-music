@@ -9,7 +9,6 @@ use std::os::windows::process::CommandExt;
 pub fn check(cfg: &mut Config) -> Result<()> {
     log::info!("Checking external dependencies...");
 
-    // Spawn both proc without waiting
     let player_cmd = cfg.player_bin().to_string();
     let mut mpv_command = Command::new(&player_cmd);
     mpv_command
@@ -34,7 +33,6 @@ pub fn check(cfg: &mut Config) -> Result<()> {
 
     let ytdlp_child = ytdlp_command.spawn();
 
-    // player is critical: wait and fail immediately if not present
     let mpv_output = match mpv_child {
         Ok(child) => child.wait_with_output(),
         Err(e) => Err(e),

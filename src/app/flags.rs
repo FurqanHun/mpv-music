@@ -8,19 +8,45 @@ use anyhow::Result;
 use std::path::Path;
 
 pub fn handle_utility_flags(args: &Cli, config_file: &Path, log_dir: &Path) -> Result<bool> {
-    let log_file_path = log_dir.join("mpv-music.log");
+    if let Some(ref remove_arg) = args.remove_log {
+        let logs = crate::app::logging::list_log_files(log_dir);
+        if logs.is_empty() {
+            ui::warning("No log files available to delete.");
+            return Ok(true);
+        }
 
-    if args.remove_log {
-        if log_file_path.exists() {
-            std::fs::remove_file(&log_file_path)?;
-            ui::success("Log file deleted.");
-        } else {
-            ui::warning("No log file available.");
+        match remove_arg {
+            None => {
+                let mut count = 0;
+                for file in &logs {
+                    if std::fs::remove_file(file).is_ok() {
+                        count += 1;
+                    }
+                }
+                ui::success(format!("Deleted all {} log file(s).", count));
+            }
+            Some(n) => {
+                let to_delete = (*n).min(logs.len());
+                let start_idx = logs.len() - to_delete;
+                let mut count = 0;
+                for file in &logs[start_idx..] {
+                    if std::fs::remove_file(file).is_ok() {
+                        count += 1;
+                    }
+                }
+                ui::success(format!("Deleted {} oldest log file(s).", count));
+            }
         }
         return Ok(true);
     }
 
     if let Some(viewer_opt) = &args.log {
+        let logs = crate::app::logging::list_log_files(log_dir);
+        if logs.is_empty() {
+            ui::warning("No log files available.");
+            return Ok(true);
+        }
+
         let viewer = viewer_opt.clone().unwrap_or_else(|| {
             std::env::var("PAGER").unwrap_or_else(|_| {
                 if cfg!(windows) {
@@ -30,12 +56,35 @@ pub fn handle_utility_flags(args: &Cli, config_file: &Path, log_dir: &Path) -> R
                 }
             })
         });
-        if log_file_path.exists() {
-            std::process::Command::new(viewer)
-                .arg(&log_file_path)
-                .status()?;
+
+        let target_file = if logs.len() == 1 {
+            logs[0].clone()
         } else {
-            ui::warning("No log file available.");
+            let items: Vec<String> = logs
+                .iter()
+                .enumerate()
+                .map(|(idx, path)| crate::app::logging::format_log_display(path, idx == 0))
+                .collect();
+
+            let prompt = "Select Log Session > ";
+            let options: Vec<&str> = items.iter().map(|s| s.as_str()).collect();
+            if let Some(selected) = tui::runner::run_skim_simple(options, prompt) {
+                if let Some(idx) = items.iter().position(|item| item == &selected) {
+                    logs[idx].clone()
+                } else {
+                    return Ok(true);
+                }
+            } else {
+                return Ok(true);
+            }
+        };
+
+        let status = std::process::Command::new(&viewer)
+            .arg(&target_file)
+            .status();
+
+        if let Err(e) = status {
+            ui::error(format!("Failed to launch log viewer '{}': {}", viewer, e));
         }
         return Ok(true);
     }

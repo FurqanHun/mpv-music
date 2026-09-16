@@ -125,7 +125,6 @@ pub fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[Strin
         cmd.arg("--audio-display=no");
     }
 
-    // Built-in base defaults (UI & terminal formatting)
     cmd.arg("--msg-level=cplayer=warn");
     cmd.arg("--display-tags=");
     cmd.arg("--no-term-osd-bar");
@@ -147,7 +146,6 @@ pub fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[Strin
         default_status_msg(config.nerd_fonts)
     ));
 
-    // User-configured extra args from config.toml (overrides base defaults if repeated)
     for arg in &config.mpv_args {
         if config.watch
             && (arg == "--no-video" || arg == "--video=no" || arg == "--audio-display=no")

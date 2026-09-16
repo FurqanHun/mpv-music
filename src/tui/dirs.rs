@@ -29,13 +29,11 @@ pub fn run_manage_dirs_mode(cfg: &mut config::Config) -> Result<bool> {
         let sel = run_skim_simple(options, &prompt);
         match sel.as_deref() {
             Some(s) if s.starts_with("1)") => {
-                // true = mark state as dirty
                 if manage_add_loop(cfg)? {
                     any_changes = true;
                 }
             }
             Some(s) if s.starts_with("2)") => {
-                // true = mark state as dirty
                 if manage_remove_menu(cfg)? {
                     any_changes = true;
                 }
@@ -67,7 +65,6 @@ pub fn run_manage_dirs_mode(cfg: &mut config::Config) -> Result<bool> {
             _ => {}
         }
     }
-    // true (only if user actually touched the config)
     Ok(any_changes)
 }
 
@@ -85,12 +82,10 @@ pub fn manage_add_loop(cfg: &mut config::Config) -> Result<bool> {
             _ => break,
         };
 
-        // true if added a new path
         if add_directory(cfg, path_str)? {
             changed = true;
             std::thread::sleep(std::time::Duration::from_millis(1000));
         } else {
-            // failed (typo/duplicate), sleep briefly for UX
             std::thread::sleep(std::time::Duration::from_millis(1500));
         }
     }

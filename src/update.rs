@@ -165,19 +165,15 @@ pub fn update_self(auto_confirm: bool) -> Result<()> {
 
             let is_latest_stable = !latest_ver.contains('-');
 
-            // if update is strictly NEWER
             let update_available = if latest_semver > current_semver {
                 true
             } else if latest_semver == current_semver {
-                // base versions match, we must check suffixes
                 if !is_latest_stable && current_ver_str.contains("dev") {
-                    // extract number after last dot (e.g. "dev.16" -> 16)
                     let get_num = |s: &str| -> u32 {
                         s.rsplit('.').next().unwrap_or("0").parse().unwrap_or(0)
                     };
                     get_num(latest_ver) > get_num(current_ver_str)
                 } else {
-                    // with same base, stable is "newer"
                     is_latest_stable && current_ver_str.contains("dev")
                 }
             } else {
@@ -222,7 +218,6 @@ mod tests {
 
     #[test]
     fn test_parse_version_dev() {
-        // Should parse base version, ignoring -dev suffix
         assert_eq!(parse_version("0.25.0-dev.1"), (0, 25, 0));
         assert_eq!(parse_version("1.0.0-dev"), (1, 0, 0));
     }
@@ -235,7 +230,6 @@ mod tests {
 
     #[test]
     fn test_parse_version_invalid() {
-        // Should handle gracefully with 0s
         assert_eq!(parse_version("abc"), (0, 0, 0));
         assert_eq!(parse_version("1.x.3"), (1, 0, 3));
     }
