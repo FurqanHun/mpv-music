@@ -162,6 +162,52 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.29.0" target="_blank" class="tag">v0.29.0</a>
+                <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">September 16, 2026</span>
+            </div>
+            <div class="body">
+                <p>This minor release brings the largest architectural and stability overhaul since the rewrite. It introduces complete codebase modularization, strongly-typed enums across all subsystems, an automated test suite, an isolated multi-session logging system with retention controls, unified UI console output, and configurable player/yt-dlp backends.</p>
+<blockquote>
+<p>[!NOTE]
+<strong>Early Release Notice:</strong> This release is landing ahead of schedule. In <code>v0.28.1</code>, an upstream bug in the locked <code>lofty</code> dependency caused integer overflow panics on certain Opus files (<a href="https://github.com/Serial-ATA/lofty-rs/issues/716">lofty#716</a>). I found out about it while working on the release and couldn't be bothered for a patch, precisely because it only affected reindexing or new users and it would've been a hassle to change the commit history for it.</p>
+<p><strong>AI Disclosure:</strong> The extensive modular refactoring, enum conversions, and test suite implementation in this release were heavily LLM-assisted.</p>
+</blockquote>
+<h3>Features &amp; Improvements</h3>
+<ul>
+<li><strong>Comprehensive Test Suite:</strong> Added an automated test suite which brings the total to 143 tests (134 in-module unit/edge tests + 9 end-to-end sandbox integration tests in <code>tests/cli_user_flows_test.rs</code>) that directly exercise runtime production code without mocking.</li>
+<li><strong>Pure Binary Architecture:</strong> Retained <code>mpv-music</code> strictly as a 100% executable application binary without introducing an unnecessary <code>lib.rs</code> library crate.</li>
+<li><strong>Codebase Modularization:</strong> Refactored monolithic files across <code>src/tui/</code>, <code>src/app/</code>, and <code>src/player/</code> into clean, single-responsibility submodules (<code>src/app/</code> coordinator, flags, library, logging, filter; <code>src/player/</code> builder, target, ytdlp, radio; <code>src/tui/</code> tracks, dirs, tags, search, radio, items, icons).</li>
+<li><strong>Type Safety &amp; Enums:</strong> Replaced raw string arguments with strongly-typed enums (<code>LoopMode</code>, <code>MediaType</code>, <code>TargetKind</code>, <code>TagField</code>) across <code>src/</code> while maintaining 100% backward compatibility with existing user configs and index cache files.</li>
+<li><strong>MpvCommandBuilder:</strong> Introduced <code>MpvCommandBuilder</code> for deterministic player command construction, video/audio mode validation, and flag assembly.</li>
+<li><strong>Multi-Session Logging:</strong> Switched from a single overwriting log file to isolated timestamped session logs (<code>logs/session_&lt;timestamp&gt;_&lt;pid&gt;.log</code>), preventing concurrent sessions and crash logs from clobbering history.</li>
+<li><strong>Configurable Log Retention:</strong> Added <code>max_log_sessions = 3</code> to <code>config.toml</code> (auto-populates if missing). The engine automatically prunes older session logs beyond the retention limit on startup.</li>
+<li><strong>Interactive Log Viewer &amp; Deletion:</strong> Added an interactive Skim session picker when viewing logs (<code>mpv-music --log [&lt;VIEWER&gt;]</code> or Settings), alongside granular deletion options (<code>--remove-log</code>, <code>--remove-log &lt;N&gt;</code>, <code>--rm-log</code>).</li>
+<li><strong>Unified UI Output:</strong> Standardized 100% of terminal feedback through <code>src/ui.rs</code> (<code>ui::info</code>, <code>ui::success</code>, <code>ui::warning</code>, <code>ui::error</code>, <code>ui::suggestion</code>, <code>ui::confirm</code>), and suppressed UI log target duplication on stderr for clean <code>-v</code> and <code>-d</code> output.</li>
+<li><strong>Configurable Backends:</strong> Added <code>player</code> and <code>ytdlp</code> configuration options (and <code>--player</code>, <code>--ytdlp</code> CLI flags) to support custom media player binaries and yt-dlp forks.</li>
+<li><strong>Config Auto-Population:</strong> Automatically discovers and populates newly introduced configuration keys with default values upon load without overwriting user settings.</li>
+<li><strong>Directory Management UX:</strong> Added visual feedback delays, directory icons (<code>📁</code>), clearer removal prompts, and a new option to browse configured directories directly in the Settings menu.</li>
+<li><strong>yt-dlp Firefox User-Agent:</strong> Bumped the default yt-dlp User-Agent string to modern Firefox 156.0 with automatic migration of legacy strings in existing config files upon load.</li>
+<li><strong>Nerd Font Enhancements:</strong> Added Nerd Font glyph support to the player banner, status line, and interactive Skim input prompts.</li>
+</ul>
+<h3>Bug Fixes</h3>
+<ul>
+<li><strong>Opus Probing Crash (<a href="https://github.com/Serial-ATA/lofty-rs/issues/716">lofty#716</a>):</strong> Disabled cover art and audio properties decoding during library indexing, resolving the integer overflow panic on Opus files present in <code>v0.28.1</code> (though just bumping lofty would've also achieved that) and significantly speeding up scan times.</li>
+<li><strong>Log Sorting Determinism:</strong> Fixed log file sorting when filesystem modification timestamps are identical by tie-breaking on reverse filename timestamps (This is because of GH Actions).</li>
+<li><strong>CLI Navigation Tips:</strong> Added interactive menu navigation tips to <code>--help</code> output.</li>
+</ul>
+<h3>Dependencies &amp; Chores</h3>
+<ul>
+<li>Updated GitHub Actions workflows (<code>dev-release.yml</code>, <code>release.yml</code>) to install <code>mpv</code> dependencies and run the complete test suite (<code>cargo test --all-features</code>) on matrix runners.</li>
+<li>Resolved all Clippy warnings across the codebase.</li>
+<li>Updated <code>README.md</code> with an Automated Tests guide, updated architecture layout, and configuration reference.</li>
+<li>Updated <code>Cargo.lock</code></li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.29.0-dev.2" target="_blank" class="tag">v0.29.0-dev.2</a>
                 <span class="prerelease">Pre-release</span>
                 <span style="margin-left: auto;">September 16, 2026</span>
@@ -170,6 +216,7 @@
                 <ul>
 <li>refactor(ui): standardize console messaging, logging, and playback feedback</li>
 <li>feat(logging): preserve recent session logs with configurable retention and isolated viewer</li>
+<li>fix(logging): tie-break identical file timestamps using filename in list_log_files</li>
 <li>chore: resolve clippy warnings across codebase</li>
 <li>docs: update README documentation, FAQs, and configuration reference</li>
 <li>feat(config): bump default yt-dlp Firefox user agent to 156.0</li>
