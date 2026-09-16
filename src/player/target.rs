@@ -68,7 +68,7 @@ pub fn resolve_target_optimization(target: &str, config: &Config) -> String {
     }
 }
 
-pub fn find_representative_target<'a>(paths: &'a [String]) -> Option<&'a str> {
+pub fn find_representative_target(paths: &[String]) -> Option<&str> {
     let mut best_target = paths.first().map(|s| s.as_str());
     let mut max_kind = TargetKind::LocalFile;
 

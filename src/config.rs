@@ -107,18 +107,13 @@ where
     deserializer.deserialize_any(NerdFontVisitor)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LoopMode {
+    #[default]
     Inf,
     Track,
     No,
     Count(u32),
-}
-
-impl Default for LoopMode {
-    fn default() -> Self {
-        Self::Inf
-    }
 }
 
 impl std::fmt::Display for LoopMode {
@@ -463,10 +458,10 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
         ui::warning(format!("Config: {}", warning));
     }
 
-    if needs_save {
-        if let Err(e) = save_to(&cfg, &config_path) {
-            log::error!("Failed to save auto-corrected config: {}", e);
-        }
+    if needs_save
+        && let Err(e) = save_to(&cfg, &config_path)
+    {
+        log::error!("Failed to save auto-corrected config: {}", e);
     }
 
     log::trace!("Loaded Config State: {:#?}", cfg);
@@ -718,16 +713,22 @@ mod tests {
             assert_eq!(default_cfg.player_bin(), "mpv");
         }
 
-        let mut custom_cfg = Config::default();
-        custom_cfg.player = "mpvnet".to_string();
+        let custom_cfg = Config {
+            player: "mpvnet".to_string(),
+            ..Default::default()
+        };
         assert_eq!(custom_cfg.player_bin(), "mpvnet");
 
-        let mut custom_path = Config::default();
-        custom_path.player = "/usr/local/bin/my-mpv".to_string();
+        let custom_path = Config {
+            player: "/usr/local/bin/my-mpv".to_string(),
+            ..Default::default()
+        };
         assert_eq!(custom_path.player_bin(), "/usr/local/bin/my-mpv");
 
-        let mut custom_exe = Config::default();
-        custom_exe.player = "mpv.exe".to_string();
+        let custom_exe = Config {
+            player: "mpv.exe".to_string(),
+            ..Default::default()
+        };
         assert_eq!(custom_exe.player_bin(), "mpv.exe");
     }
 
@@ -737,12 +738,16 @@ mod tests {
         assert_eq!(default_cfg.ytdlp, "yt-dlp");
         assert_eq!(default_cfg.ytdlp_bin(), "yt-dlp");
 
-        let mut custom_cfg = Config::default();
-        custom_cfg.ytdlp = "yt-dlp-nightly".to_string();
+        let custom_cfg = Config {
+            ytdlp: "yt-dlp-nightly".to_string(),
+            ..Default::default()
+        };
         assert_eq!(custom_cfg.ytdlp_bin(), "yt-dlp-nightly");
 
-        let mut custom_path = Config::default();
-        custom_path.ytdlp = "/usr/local/bin/yt-dlp".to_string();
+        let custom_path = Config {
+            ytdlp: "/usr/local/bin/yt-dlp".to_string(),
+            ..Default::default()
+        };
         assert_eq!(custom_path.ytdlp_bin(), "/usr/local/bin/yt-dlp");
     }
 

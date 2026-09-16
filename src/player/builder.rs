@@ -72,10 +72,10 @@ impl<'a> MpvCommandBuilder<'a> {
     }
 
     pub fn with_radio_sync(mut self) -> Self {
-        if let Some(target) = self.target {
-            if is_radio_station(target) {
-                self.ipc_socket = Some(generate_ipc_socket());
-            }
+        if let Some(target) = self.target
+            && is_radio_station(target)
+        {
+            self.ipc_socket = Some(generate_ipc_socket());
         }
         self
     }
@@ -292,8 +292,10 @@ mod tests {
 
     #[test]
     fn test_apply_url_optimizations_custom_ytdlp() {
-        let mut config = Config::default();
-        config.ytdlp = "custom-dlp".to_string();
+        let config = Config {
+            ytdlp: "custom-dlp".to_string(),
+            ..Default::default()
+        };
         let mut cmd = Command::new("mpv");
         apply_url_optimizations(&mut cmd, "https://youtube.com/watch?v=123", &config);
         let args: Vec<String> = cmd
@@ -320,9 +322,11 @@ mod tests {
 
     #[test]
     fn test_apply_url_optimizations_custom_ytdlp_skips_remote_ejs() {
-        let mut config = Config::default();
-        config.ytdlp = "custom-fork".to_string();
-        config.ytdlp_ejs_remote_github = true;
+        let config = Config {
+            ytdlp: "custom-fork".to_string(),
+            ytdlp_ejs_remote_github: true,
+            ..Default::default()
+        };
         let mut cmd = Command::new("mpv");
         apply_url_optimizations(&mut cmd, "https://youtube.com/watch?v=123", &config);
         let args: Vec<String> = cmd
@@ -353,8 +357,10 @@ mod tests {
 
     #[test]
     fn test_apply_common_args_custom_mpv_args() {
-        let mut config = Config::default();
-        config.mpv_args = vec!["--gapless-audio=yes".to_string()];
+        let config = Config {
+            mpv_args: vec!["--gapless-audio=yes".to_string()],
+            ..Default::default()
+        };
         let mut cmd = Command::new("mpv");
         apply_common_args(&mut cmd, &config, &[]);
         let args: Vec<String> = cmd
@@ -366,8 +372,10 @@ mod tests {
 
     #[test]
     fn test_apply_common_args_nerd_fonts() {
-        let mut config_none = Config::default();
-        config_none.nerd_fonts = NerdFontMode::None;
+        let config_none = Config {
+            nerd_fonts: NerdFontMode::None,
+            ..Default::default()
+        };
         let mut cmd_none = Command::new("mpv");
         apply_common_args(&mut cmd_none, &config_none, &[]);
         let args_none: Vec<String> = cmd_none
@@ -385,8 +393,10 @@ mod tests {
             .unwrap();
         assert!(banner_none.contains("╔══  MPV-MUSIC  ══╗"));
 
-        let mut config_mono = Config::default();
-        config_mono.nerd_fonts = NerdFontMode::Mono;
+        let config_mono = Config {
+            nerd_fonts: NerdFontMode::Mono,
+            ..Default::default()
+        };
         let mut cmd_mono = Command::new("mpv");
         apply_common_args(&mut cmd_mono, &config_mono, &[]);
         let args_mono: Vec<String> = cmd_mono

@@ -17,13 +17,11 @@ pub fn list_log_files(data_dir: &Path) -> Vec<PathBuf> {
         files.push(legacy);
     }
 
-    if dir.exists() && dir.is_dir() {
-        if let Ok(entries) = std::fs::read_dir(&dir) {
-            for entry in entries.flatten() {
-                let p = entry.path();
-                if p.is_file() && p.extension().is_some_and(|e| e == "log") {
-                    files.push(p);
-                }
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_file() && p.extension().is_some_and(|e| e == "log") {
+                files.push(p);
             }
         }
     }
