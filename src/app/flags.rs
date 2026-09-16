@@ -311,6 +311,7 @@ mod tests {
         let l1 = logs_dir.join("session_20260101_100000_1.log");
         let l2 = logs_dir.join("session_20260101_110000_2.log");
         fs::write(&l1, "oldest").unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(15));
         fs::write(&l2, "newest").unwrap();
 
         let mut args = Cli::parse_from(["mpv-music"]);

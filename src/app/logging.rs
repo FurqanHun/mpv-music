@@ -30,7 +30,7 @@ pub fn list_log_files(data_dir: &Path) -> Vec<PathBuf> {
         let time_a = a.metadata().and_then(|m| m.modified()).ok();
         let time_b = b.metadata().and_then(|m| m.modified()).ok();
         match (time_a, time_b) {
-            (Some(ta), Some(tb)) => tb.cmp(&ta),
+            (Some(ta), Some(tb)) => tb.cmp(&ta).then_with(|| b.file_name().cmp(&a.file_name())),
             _ => b.file_name().cmp(&a.file_name()),
         }
     });
