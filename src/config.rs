@@ -458,9 +458,7 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
         ui::warning(format!("Config: {}", warning));
     }
 
-    if needs_save
-        && let Err(e) = save_to(&cfg, &config_path)
-    {
+    if needs_save && let Err(e) = save_to(&cfg, &config_path) {
         log::error!("Failed to save auto-corrected config: {}", e);
     }
 
@@ -778,5 +776,199 @@ mod tests {
         assert!(on_disk.contains("mpv_args = []"));
 
         let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_malformed_toml_syntax_error() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_file = temp.path().join("broken_config.toml");
+        std::fs::write(&config_file, "volume = [this is completely invalid toml").unwrap();
+
+        let result = load(Some(config_file));
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Failed to parse config.toml"));
+    }
+
+    #[test]
+    fn test_config_save_and_reload_roundtrip() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_file = temp.path().join("roundtrip.toml");
+
+        let custom = Config {
+            shuffle: false,
+            loop_mode: LoopMode::Count(7),
+            volume: 125,
+            music_dirs: vec![PathBuf::from("/test/music1"), PathBuf::from("/test/music2")],
+            video_ok: true,
+            watch: true,
+            scan_hidden_dirs: true,
+            serial_mode: true,
+            nerd_fonts: NerdFontMode::Mono,
+            ytdlp_ejs_remote_github: true,
+            ytdlp_useragent: "CustomAgent/1.0".to_string(),
+            enable_file_logging: false,
+            max_log_sessions: 5,
+            ytdlp: "yt-dlp-custom".to_string(),
+            player: "mpvnet".to_string(),
+            audio_exts: vec!["mp3".to_string(), "flac".to_string()],
+            video_exts: vec!["mkv".to_string()],
+            playlist_exts: vec!["m3u8".to_string()],
+            mpv_args: vec!["--fs".to_string(), "--keep-open=yes".to_string()],
+            ytdlp_available: false,
+            ytdlp_is_nightly: false,
+        };
+
+        save_to(&custom, &config_file).unwrap();
+
+        let loaded = load(Some(config_file)).unwrap();
+        assert!(!loaded.shuffle);
+        assert_eq!(loaded.loop_mode, LoopMode::Count(7));
+        assert_eq!(loaded.volume, 125);
+        assert_eq!(
+            loaded.music_dirs,
+            vec![PathBuf::from("/test/music1"), PathBuf::from("/test/music2")]
+        );
+        assert!(loaded.video_ok);
+        assert!(loaded.watch);
+        assert!(loaded.scan_hidden_dirs);
+        assert!(loaded.serial_mode);
+        assert_eq!(loaded.nerd_fonts, NerdFontMode::Mono);
+        assert!(loaded.ytdlp_ejs_remote_github);
+        assert_eq!(loaded.ytdlp_useragent, "CustomAgent/1.0");
+        assert!(!loaded.enable_file_logging);
+        assert_eq!(loaded.max_log_sessions, 5);
+        assert_eq!(loaded.player_bin(), "mpvnet");
+        assert_eq!(loaded.ytdlp_bin(), "yt-dlp-custom");
+        assert_eq!(loaded.audio_exts, vec!["mp3", "flac"]);
+        assert_eq!(loaded.video_exts, vec!["mkv"]);
+        assert_eq!(loaded.playlist_exts, vec!["m3u8"]);
+        assert_eq!(loaded.mpv_args, vec!["--fs", "--keep-open=yes"]);
+    }
+
+    #[test]
+    fn test_loop_mode_deserialization_from_toml() {
+        #[derive(Deserialize)]
+        struct TestLoop {
+            #[serde(deserialize_with = "deserialize_loop_mode")]
+            loop_mode: LoopMode,
+        }
+
+        let cases: &[(&str, LoopMode)] = &[
+            ("loop_mode = \"inf\"", LoopMode::Inf),
+            ("loop_mode = \"playlist\"", LoopMode::Inf),
+            ("loop_mode = \"track\"", LoopMode::Track),
+            ("loop_mode = \"file\"", LoopMode::Track),
+            ("loop_mode = \"no\"", LoopMode::No),
+            ("loop_mode = \"off\"", LoopMode::No),
+            ("loop_mode = \"false\"", LoopMode::No),
+            ("loop_mode = 5", LoopMode::Count(5)),
+            ("loop_mode = 0", LoopMode::Count(0)),
+            ("loop_mode = -1", LoopMode::Inf),
+        ];
+
+        for (toml_str, expected) in cases {
+            let parsed: TestLoop = toml::from_str(toml_str).unwrap();
+            assert_eq!(parsed.loop_mode, *expected, "Failed for {}", toml_str);
+        }
+
+        let fallback: TestLoop = toml::from_str("loop_mode = \"garbage_mode\"").unwrap();
+        assert_eq!(fallback.loop_mode, LoopMode::Inf);
+        assert!(toml::from_str::<TestLoop>("loop_mode = [1, 2, 3]").is_err());
+    }
+
+    #[test]
+    fn test_nerd_fonts_deserialization_from_toml() {
+        #[derive(Deserialize)]
+        struct TestNerd {
+            #[serde(deserialize_with = "deserialize_nerd_fonts")]
+            nerd_fonts: NerdFontMode,
+        }
+
+        let cases: &[(&str, NerdFontMode)] = &[
+            ("nerd_fonts = \"none\"", NerdFontMode::None),
+            ("nerd_fonts = \"mono\"", NerdFontMode::Mono),
+            ("nerd_fonts = \"normal\"", NerdFontMode::Normal),
+            ("nerd_fonts = true", NerdFontMode::Mono),
+            ("nerd_fonts = false", NerdFontMode::None),
+        ];
+
+        for (toml_str, expected) in cases {
+            let parsed: TestNerd = toml::from_str(toml_str).unwrap();
+            assert_eq!(parsed.nerd_fonts, *expected, "Failed for {}", toml_str);
+        }
+
+        assert!(toml::from_str::<TestNerd>("nerd_fonts = \"invalid_unknown\"").is_err());
+    }
+
+    #[test]
+    fn test_volume_clamping_on_load() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_file = temp.path().join("volume_overflow.toml");
+        std::fs::write(&config_file, "volume = 250\n").unwrap();
+
+        let loaded = load(Some(config_file)).unwrap();
+        assert_eq!(loaded.volume, 100);
+    }
+
+    #[test]
+    fn test_max_log_sessions_clamping_on_load() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_file = temp.path().join("zero_logs.toml");
+        std::fs::write(&config_file, "max_log_sessions = 0\n").unwrap();
+
+        let loaded = load(Some(config_file)).unwrap();
+        assert_eq!(loaded.max_log_sessions, 1);
+    }
+
+    #[test]
+    fn test_legacy_ua_migration_and_resave() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_file = temp.path().join("legacy_ua.toml");
+        let legacy_ua =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0";
+        std::fs::write(
+            &config_file,
+            format!("ytdlp_useragent = \"{}\"\n", legacy_ua),
+        )
+        .unwrap();
+
+        let loaded = load(Some(config_file.clone())).unwrap();
+        assert_eq!(loaded.ytdlp_useragent, "default");
+
+        let on_disk = std::fs::read_to_string(&config_file).unwrap();
+        assert!(on_disk.contains("ytdlp_useragent = \"default\""));
+    }
+
+    #[test]
+    fn test_binary_resolution_edges() {
+        let mut cfg = Config {
+            player: "   ".to_string(),
+            ..Default::default()
+        };
+        if cfg!(windows) {
+            assert_eq!(cfg.player_bin(), "mpv.com");
+        } else {
+            assert_eq!(cfg.player_bin(), "mpv");
+        }
+
+        cfg.player = "DEFAULT".to_string();
+        if cfg!(windows) {
+            assert_eq!(cfg.player_bin(), "mpv.com");
+        } else {
+            assert_eq!(cfg.player_bin(), "mpv");
+        }
+
+        cfg.player = "  /custom/bin/mpv  ".to_string();
+        assert_eq!(cfg.player_bin(), "/custom/bin/mpv");
+
+        cfg.ytdlp = "  \t ".to_string();
+        assert_eq!(cfg.ytdlp_bin(), "yt-dlp");
+
+        cfg.ytdlp = "Default".to_string();
+        assert_eq!(cfg.ytdlp_bin(), "yt-dlp");
+
+        cfg.ytdlp = "  yt-dlp-nightly  ".to_string();
+        assert_eq!(cfg.ytdlp_bin(), "yt-dlp-nightly");
     }
 }

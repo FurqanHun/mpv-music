@@ -343,4 +343,22 @@ mod tests {
         let err_msg = format!("{:#}", res.unwrap_err());
         assert!(err_msg.contains("non_existent_ytdlp_bin_99999"));
     }
+
+    #[test]
+    fn test_duration_formatting_rounding_and_zero() {
+        assert_eq!(format_duration(0.0), "00:00");
+        assert_eq!(format_duration(5.4), "00:05");
+        assert_eq!(format_duration(59.6), "00:59");
+        assert_eq!(format_duration(60.0), "01:00");
+        assert_eq!(format_duration(120.0), "02:00");
+    }
+
+    #[test]
+    fn test_view_count_exact_boundaries() {
+        assert_eq!(format_views(0), "0");
+        assert_eq!(format_views(999), "999");
+        assert_eq!(format_views(1000), "1.0K");
+        assert_eq!(format_views(999_999), "1000.0K");
+        assert_eq!(format_views(1_000_000), "1.0M");
+    }
 }

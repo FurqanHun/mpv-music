@@ -467,4 +467,86 @@ mod tests {
         assert!(args.iter().any(|a| a == "--ytdl-format=bestaudio/best"));
         assert_eq!(args.last().unwrap(), "https://youtube.com/watch?v=123");
     }
+
+    #[test]
+    fn test_builder_watch_video_mode() {
+        let config = Config {
+            watch: true,
+            ..Default::default()
+        };
+        let cmd = MpvCommandBuilder::new(&config)
+            .target("/video/sample.mkv")
+            .build();
+
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+
+        assert!(!args.iter().any(|a| a == "--video=no"));
+        assert!(!args.iter().any(|a| a == "--vo=null"));
+    }
+
+    #[test]
+    fn test_builder_loop_mode_variants() {
+        let track_cfg = Config {
+            loop_mode: LoopMode::Track,
+            ..Default::default()
+        };
+        let cmd_track = MpvCommandBuilder::new(&track_cfg).build();
+        let args_track: Vec<String> = cmd_track
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args_track.iter().any(|a| a == "--loop-file=inf"));
+        assert!(!args_track.iter().any(|a| a.starts_with("--loop-playlist=")));
+
+        let count_cfg = Config {
+            loop_mode: LoopMode::Count(4),
+            ..Default::default()
+        };
+        let cmd_count = MpvCommandBuilder::new(&count_cfg).build();
+        let args_count: Vec<String> = cmd_count
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args_count.iter().any(|a| a == "--loop-playlist=4"));
+
+        let no_cfg = Config {
+            loop_mode: LoopMode::No,
+            ..Default::default()
+        };
+        let cmd_no = MpvCommandBuilder::new(&no_cfg).build();
+        let args_no: Vec<String> = cmd_no
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args_no.iter().any(|a| a == "--loop-playlist=no"));
+    }
+
+    #[test]
+    fn test_builder_volume_argument() {
+        let cfg = Config {
+            volume: 85,
+            ..Default::default()
+        };
+        let cmd = MpvCommandBuilder::new(&cfg).build();
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args.iter().any(|a| a == "--volume=85"));
+    }
+
+    #[test]
+    fn test_builder_radio_ipc_sync() {
+        let cfg = Config::default();
+        let builder = MpvCommandBuilder::new(&cfg)
+            .target("https://listen.moe/stream")
+            .with_radio_sync();
+
+        assert!(builder.ipc_socket().is_some());
+        let socket = builder.ipc_socket().unwrap();
+        assert!(socket.contains("mpv-music-ipc-"));
+    }
 }

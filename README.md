@@ -516,6 +516,14 @@ For unsupported formats, the indexer falls back to filename parsing. I may imple
     * **`mod.rs`**: Defines the list of available internet radio stations and their stream URLs.
     * **`listen_moe.rs`**: Manages WebSocket connections to LISTEN.moe and synchronizes live metadata via IPC.
 
+- **Automated Tests:**
+  The codebase features an automated test suite spanning in-module unit tests and end-to-end user flow integration tests:
+  ```bash
+  cargo test --all-features
+  ```
+  * **In-Module Unit & Edge-Case Tests (`src/`):** White-box tests verifying config serialization, boundary clamping, auto-healing missing keys, legacy migrations, multi-session retention pruning, filename heuristics, JSONL corruption recovery, command construction, and WebSocket metadata parsing.
+  * **End-to-End User Flow Tests (`tests/`):** Black-box integration tests executing the compiled binary in isolated sandboxes to verify real CLI workflows (`--add-dir`, `--rm-dir`, `--remove-log`, `--rm-conf`, `--play-all`, and filter flags).
+
 ---
 
 ## License

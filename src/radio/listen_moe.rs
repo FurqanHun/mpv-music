@@ -252,3 +252,114 @@ pub async fn start_radio_sync(target_url: &str, ipc_socket: String) -> Result<()
         backoff = (backoff * 2).min(Duration::from_secs(60));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_op0_hello_payload() {
+        let json_str = r#"{
+            "op": 0,
+            "d": {
+                "message": "Connected to LISTEN.moe gateway",
+                "heartbeat": 45000
+            }
+        }"#;
+
+        let payload: MoePayload = serde_json::from_str(json_str).expect("Failed to parse OP 0");
+        assert_eq!(payload.op, 0);
+        let hello: HelloData =
+            serde_json::from_value(payload.d.unwrap()).expect("Failed to parse HelloData");
+        assert_eq!(hello.heartbeat, 45000);
+        assert_eq!(
+            hello.message.as_deref(),
+            Some("Connected to LISTEN.moe gateway")
+        );
+    }
+
+    #[test]
+    fn test_parse_op1_track_update_multiple_artists() {
+        let json_str = r#"{
+            "op": 1,
+            "t": "TRACK_UPDATE",
+            "d": {
+                "song": {
+                    "title": "Renai Circulation",
+                    "artists": [
+                        {"name": "Kana Hanazawa"},
+                        {"name": "Bakemonogatari"}
+                    ]
+                },
+                "listeners": 150
+            }
+        }"#;
+
+        let payload: MoePayload = serde_json::from_str(json_str).expect("Failed to parse OP 1");
+        assert_eq!(payload.op, 1);
+        assert_eq!(payload.t.as_deref(), Some("TRACK_UPDATE"));
+
+        let data: TrackData =
+            serde_json::from_value(payload.d.unwrap()).expect("Failed to parse TrackData");
+        assert_eq!(data.listeners, Some(150));
+        let song = data.song.unwrap();
+        assert_eq!(song.title, "Renai Circulation");
+        assert_eq!(song.artists.len(), 2);
+
+        let artists = song
+            .artists
+            .iter()
+            .map(|a| a.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let formatted = format!("{} - {}", artists, song.title);
+        assert_eq!(
+            formatted,
+            "Kana Hanazawa, Bakemonogatari - Renai Circulation"
+        );
+    }
+
+    #[test]
+    fn test_parse_op1_track_update_no_artist() {
+        let json_str = r#"{
+            "op": 1,
+            "t": "TRACK_UPDATE",
+            "d": {
+                "song": {
+                    "title": "BGM Track 01",
+                    "artists": []
+                }
+            }
+        }"#;
+
+        let payload: MoePayload = serde_json::from_str(json_str).unwrap();
+        let data: TrackData = serde_json::from_value(payload.d.unwrap()).unwrap();
+        let song = data.song.unwrap();
+        let title = if song.artists.is_empty() {
+            song.title.clone()
+        } else {
+            format!("{} - {}", song.artists[0].name, song.title)
+        };
+        assert_eq!(title, "BGM Track 01");
+    }
+
+    #[test]
+    fn test_gateway_url_selection() {
+        let jpop_url = "https://listen.moe/stream";
+        let kpop_url = "https://listen.moe/kpop/stream";
+
+        let ws_jpop = if jpop_url.contains("kpop") {
+            "wss://listen.moe/kpop/gateway_v2"
+        } else {
+            "wss://listen.moe/gateway_v2"
+        };
+        assert_eq!(ws_jpop, "wss://listen.moe/gateway_v2");
+
+        let ws_kpop = if kpop_url.contains("kpop") {
+            "wss://listen.moe/kpop/gateway_v2"
+        } else {
+            "wss://listen.moe/gateway_v2"
+        };
+        assert_eq!(ws_kpop, "wss://listen.moe/kpop/gateway_v2");
+    }
+}

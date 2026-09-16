@@ -207,4 +207,120 @@ mod tests {
 
         let _ = std::fs::remove_file(&temp_file);
     }
+
+    #[test]
+    fn test_list_log_files_ignores_foreign_files() {
+        let temp = tempfile::tempdir().unwrap();
+        let logs = logs_dir(temp.path());
+        std::fs::create_dir_all(&logs).unwrap();
+
+        std::fs::write(logs.join("session_1.log"), "log1").unwrap();
+        std::fs::write(logs.join("notes.txt"), "text").unwrap();
+        std::fs::write(logs.join("temp.tmp"), "tmp").unwrap();
+        std::fs::create_dir_all(logs.join("nested_folder")).unwrap();
+
+        let listed = list_log_files(temp.path());
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0], logs.join("session_1.log"));
+    }
+
+    #[test]
+    fn test_list_log_files_includes_legacy_log() {
+        let temp = tempfile::tempdir().unwrap();
+        let legacy = temp.path().join("mpv-music.log");
+        std::fs::write(&legacy, "legacy content").unwrap();
+
+        let logs = logs_dir(temp.path());
+        std::fs::create_dir_all(&logs).unwrap();
+        let session = logs.join("session_2026.log");
+        std::fs::write(&session, "session content").unwrap();
+
+        let listed = list_log_files(temp.path());
+        assert_eq!(listed.len(), 2);
+        assert!(listed.contains(&legacy));
+        assert!(listed.contains(&session));
+    }
+
+    #[test]
+    fn test_prune_old_logs_exact_boundary() {
+        let temp = tempfile::tempdir().unwrap();
+        let logs = logs_dir(temp.path());
+        std::fs::create_dir_all(&logs).unwrap();
+
+        for i in 0..3 {
+            std::fs::write(
+                logs.join(format!("session_{}.log", i)),
+                format!("content {}", i),
+            )
+            .unwrap();
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+
+        let pruned = prune_old_logs(temp.path(), 3).unwrap();
+        assert_eq!(pruned, 0);
+        assert_eq!(list_log_files(temp.path()).len(), 3);
+    }
+
+    #[test]
+    fn test_remove_oldest_logs_partial_via_prune() {
+        let temp = tempfile::tempdir().unwrap();
+        let logs = logs_dir(temp.path());
+        std::fs::create_dir_all(&logs).unwrap();
+
+        let mut files = Vec::new();
+        for i in 0..4 {
+            let f = logs.join(format!("session_{}.log", i));
+            std::fs::write(&f, format!("content {}", i)).unwrap();
+            files.push(f);
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+
+        // Keeping 2 newest means deleting the 2 oldest
+        let removed = prune_old_logs(temp.path(), 2).unwrap();
+        assert_eq!(removed, 2);
+
+        let remaining = list_log_files(temp.path());
+        assert_eq!(remaining.len(), 2);
+        assert_eq!(remaining[0], files[3]);
+        assert_eq!(remaining[1], files[2]);
+        assert!(!files[0].exists());
+        assert!(!files[1].exists());
+    }
+
+    #[test]
+    fn test_prune_all_logs_to_zero() {
+        let temp = tempfile::tempdir().unwrap();
+        let legacy = temp.path().join("mpv-music.log");
+        std::fs::write(&legacy, "legacy").unwrap();
+
+        let logs = logs_dir(temp.path());
+        std::fs::create_dir_all(&logs).unwrap();
+        std::fs::write(logs.join("session_1.log"), "session 1").unwrap();
+        std::fs::write(logs.join("session_2.log"), "session 2").unwrap();
+
+        let removed = prune_old_logs(temp.path(), 0).unwrap();
+        assert_eq!(removed, 3);
+        assert!(!legacy.exists());
+        assert!(list_log_files(temp.path()).is_empty());
+    }
+
+    #[test]
+    fn test_format_log_display_legacy_and_session() {
+        let temp = tempfile::tempdir().unwrap();
+        let logs = logs_dir(temp.path());
+        std::fs::create_dir_all(&logs).unwrap();
+
+        let session_file = logs.join("session_20260916_123045_99999.log");
+        std::fs::write(&session_file, "some logs").unwrap();
+
+        let display = format_log_display(&session_file, false);
+        assert!(display.contains("9 B"));
+        assert!(!display.contains("(Latest)"));
+
+        let legacy_file = temp.path().join("mpv-music.log");
+        std::fs::write(&legacy_file, "legacy data 123").unwrap();
+        let legacy_display = format_log_display(&legacy_file, true);
+        assert!(legacy_display.contains("15 B"));
+        assert!(legacy_display.contains("(Latest)"));
+    }
 }

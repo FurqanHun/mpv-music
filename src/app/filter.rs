@@ -175,4 +175,61 @@ mod tests {
         let args_none = Cli::parse_from(["mpv-music"]);
         assert_eq!(active_filter_field(&args_none), None);
     }
+
+    #[test]
+    fn test_has_filter_flags() {
+        let none = Cli::parse_from(["mpv-music"]);
+        assert!(!has_filter_flags(&none));
+
+        let with_artist = Cli::parse_from(["mpv-music", "-a", "queen"]);
+        assert!(has_filter_flags(&with_artist));
+
+        let with_genre = Cli::parse_from(["mpv-music", "-g", "rock"]);
+        assert!(has_filter_flags(&with_genre));
+
+        let with_album = Cli::parse_from(["mpv-music", "-b", "album"]);
+        assert!(has_filter_flags(&with_album));
+
+        let with_title = Cli::parse_from(["mpv-music", "-t", "song"]);
+        assert!(has_filter_flags(&with_title));
+    }
+
+    #[test]
+    fn test_tag_field_extraction_and_as_str() {
+        let track = Track {
+            path: "/path/track.flac".to_string(),
+            title: "Bohemian Rhapsody".to_string(),
+            artist: "Queen".to_string(),
+            album: "A Night at the Opera".to_string(),
+            genre: "Classic Rock".to_string(),
+            mtime: 1000,
+            size: 5000,
+            media_type: crate::indexer::MediaType::Audio,
+        };
+
+        assert_eq!(TagField::Artist.as_str(), "artist");
+        assert_eq!(TagField::Genre.as_str(), "genre");
+        assert_eq!(TagField::Album.as_str(), "album");
+        assert_eq!(TagField::Title.as_str(), "title");
+
+        assert_eq!(TagField::Artist.extract(&track), "Queen");
+        assert_eq!(TagField::Genre.extract(&track), "Classic Rock");
+        assert_eq!(TagField::Album.extract(&track), "A Night at the Opera");
+        assert_eq!(TagField::Title.extract(&track), "Bohemian Rhapsody");
+    }
+
+    #[test]
+    fn test_is_multi_value_search_edge_cases() {
+        let empty_comma = Cli::parse_from(["mpv-music", "-g", ","]);
+        assert!(is_multi_value_search(&empty_comma));
+
+        let trailing_comma = Cli::parse_from(["mpv-music", "-a", "Ado,"]);
+        assert!(is_multi_value_search(&trailing_comma));
+
+        let multi_genre = Cli::parse_from(["mpv-music", "-g", "Rock,Pop,Jazz"]);
+        assert!(is_multi_value_search(&multi_genre));
+
+        let no_flag_val = Cli::parse_from(["mpv-music", "-g"]);
+        assert!(!is_multi_value_search(&no_flag_val));
+    }
 }

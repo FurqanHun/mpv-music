@@ -173,4 +173,38 @@ mod tests {
         let empty: Vec<String> = Vec::new();
         assert_eq!(find_representative_target(&empty), None);
     }
+
+    #[test]
+    fn test_classify_youtube_variants() {
+        assert_eq!(
+            classify_target("https://youtu.be/dQw4w9WgXcQ"),
+            TargetKind::YouTube
+        );
+        assert_eq!(
+            classify_target("https://www.youtube.com/shorts/abcd1234efg"),
+            TargetKind::YouTube
+        );
+        assert_eq!(
+            classify_target("https://music.youtube.com/watch?v=123"),
+            TargetKind::YouTube
+        );
+        assert_eq!(
+            classify_target("https://m.youtube.com/watch?v=123"),
+            TargetKind::YouTube
+        );
+    }
+
+    #[test]
+    fn test_resolve_target_optimization() {
+        let cfg = Config::default();
+        let temp = tempfile::tempdir().unwrap();
+        let playlist_path = temp.path().join("test_queue.m3u");
+        std::fs::write(&playlist_path, "https://www.youtube.com/watch?v=123\n").unwrap();
+
+        let resolved = resolve_target_optimization(playlist_path.to_str().unwrap(), &cfg);
+        assert_eq!(resolved, "https://www.youtube.com/watch?v=123");
+
+        let local = resolve_target_optimization("/home/user/song.mp3", &cfg);
+        assert_eq!(local, "/home/user/song.mp3");
+    }
 }

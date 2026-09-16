@@ -11,12 +11,14 @@ env:
 
 jobs:
   test:
-    name: Run Unit Tests
+    name: Run Test Suite
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
-      - name: Run Unit Tests
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y mpv
+      - name: Run Test Suite
         run: cargo test --all-features
 
   build-and-upload:

@@ -244,3 +244,83 @@ pub fn handle_dir_flags(cfg: &mut config::Config, args: &Cli) -> Result<bool> {
     }
     Ok(false)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+    use std::fs;
+
+    #[test]
+    fn test_utility_flags_no_flags_returns_false() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_file = temp.path().join("config.toml");
+        let log_dir = temp.path().join("logs");
+        let args = Cli::parse_from(["mpv-music"]);
+
+        let res = handle_utility_flags(&args, &config_file, &log_dir).unwrap();
+        assert!(!res);
+    }
+
+    #[test]
+    fn test_utility_flags_remove_config() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_file = temp.path().join("config.toml");
+        let log_dir = temp.path().join("logs");
+        fs::write(&config_file, "volume = 100\n").unwrap();
+        assert!(config_file.exists());
+
+        let mut args = Cli::parse_from(["mpv-music"]);
+        args.remove_config = true;
+
+        let res = handle_utility_flags(&args, &config_file, &log_dir).unwrap();
+        assert!(res);
+        assert!(!config_file.exists());
+    }
+
+    #[test]
+    fn test_utility_flags_remove_log_all() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_file = temp.path().join("config.toml");
+        let data_dir = temp.path().join("data");
+        let logs_dir = data_dir.join("logs");
+        fs::create_dir_all(&logs_dir).unwrap();
+
+        let l1 = logs_dir.join("session_20260101_100000_1.log");
+        let l2 = logs_dir.join("session_20260101_110000_2.log");
+        fs::write(&l1, "log 1").unwrap();
+        fs::write(&l2, "log 2").unwrap();
+
+        let mut args = Cli::parse_from(["mpv-music"]);
+        args.remove_log = Some(None);
+
+        let res = handle_utility_flags(&args, &config_file, &data_dir).unwrap();
+        assert!(res);
+        assert!(!l1.exists());
+        assert!(!l2.exists());
+    }
+
+    #[test]
+    fn test_utility_flags_remove_log_partial() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_file = temp.path().join("config.toml");
+        let data_dir = temp.path().join("data");
+        let logs_dir = data_dir.join("logs");
+        fs::create_dir_all(&logs_dir).unwrap();
+
+        let l1 = logs_dir.join("session_20260101_100000_1.log");
+        let l2 = logs_dir.join("session_20260101_110000_2.log");
+        fs::write(&l1, "oldest").unwrap();
+        fs::write(&l2, "newest").unwrap();
+
+        let mut args = Cli::parse_from(["mpv-music"]);
+        args.remove_log = Some(Some(1)); // delete 1 oldest log
+
+        let res = handle_utility_flags(&args, &config_file, &data_dir).unwrap();
+        assert!(res);
+        // list_log_files sorts descending (newest first, oldest last).
+        // start_idx = 2 - 1 = 1, so logs[1] (oldest) gets removed, logs[0] (newest) remains.
+        assert!(!l1.exists());
+        assert!(l2.exists());
+    }
+}

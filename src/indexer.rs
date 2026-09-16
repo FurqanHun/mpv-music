@@ -517,4 +517,66 @@ mod tests {
 
         assert!(set.is_empty());
     }
+
+    #[test]
+    fn test_parse_filename_brackets_and_tags() {
+        let (artist, title) =
+            parse_filename_metadata("[1080p] Radiohead - Creep (Acoustic Version)");
+        assert_eq!(artist, "[1080p] Radiohead");
+        assert_eq!(title, "Creep (Acoustic Version)");
+    }
+
+    #[test]
+    fn test_parse_filename_emojis_and_cjk() {
+        let (artist, title) = parse_filename_metadata("米津玄師 - Lemon 🍋");
+        assert_eq!(artist, "米津玄師");
+        assert_eq!(title, "Lemon 🍋");
+    }
+
+    #[test]
+    fn test_parse_filename_only_spaces() {
+        let (artist, title) = parse_filename_metadata("    ");
+        assert_eq!(artist, "");
+        assert_eq!(title, "    ");
+    }
+
+    #[test]
+    fn test_media_type_serialization() {
+        let audio_track = Track {
+            path: "/path/song.mp3".to_string(),
+            title: "Song".to_string(),
+            artist: "Artist".to_string(),
+            album: "Album".to_string(),
+            genre: "Genre".to_string(),
+            mtime: 100,
+            size: 200,
+            media_type: MediaType::Audio,
+        };
+        let audio_json = serde_json::to_string(&audio_track).unwrap();
+        assert!(audio_json.contains("\"media_type\":\"audio\""));
+
+        let video_track = Track {
+            path: "/path/video.mp4".to_string(),
+            title: "Video".to_string(),
+            artist: "Artist".to_string(),
+            album: "Album".to_string(),
+            genre: "Genre".to_string(),
+            mtime: 100,
+            size: 200,
+            media_type: MediaType::Video,
+        };
+        let video_json = serde_json::to_string(&video_track).unwrap();
+        assert!(video_json.contains("\"media_type\":\"video\""));
+    }
+
+    #[test]
+    fn test_jsonl_corruption_line_recovery() {
+        let valid_json = r#"{"path":"/a.mp3","title":"A","artist":"B","album":"C","genre":"D","mtime":1,"size":2,"media_type":"audio"}"#;
+        let corrupted_json = r#"{"path":"/broken.mp3","title": [invalid json syntax"#;
+        let empty_line = "   ";
+
+        assert!(serde_json::from_str::<Track>(valid_json).is_ok());
+        assert!(serde_json::from_str::<Track>(corrupted_json).is_err());
+        assert!(serde_json::from_str::<Track>(empty_line).is_err());
+    }
 }

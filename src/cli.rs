@@ -202,3 +202,101 @@ pub struct Cli {
     #[arg(long, allow_hyphen_values = true, num_args = 1.., help = "Pass arguments to mpv")]
     pub mpv_args: Option<Vec<String>>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cli_flags_defaults() {
+        let args = Cli::parse_from(["mpv-music"]);
+        assert!(args.target.is_none());
+        assert!(!args.play_all);
+        assert!(!args.debug);
+        assert_eq!(args.verbose, 0);
+        assert!(!args.serial);
+        assert!(!args.video_ok);
+        assert!(!args.watch);
+        assert!(args.remove_log.is_none());
+        assert!(args.log.is_none());
+    }
+
+    #[test]
+    fn test_cli_positional_target() {
+        let args = Cli::parse_from(["mpv-music", "https://youtube.com/watch?v=123"]);
+        assert_eq!(
+            args.target.as_deref(),
+            Some("https://youtube.com/watch?v=123")
+        );
+
+        let file_args = Cli::parse_from(["mpv-music", "/path/to/song.flac"]);
+        assert_eq!(file_args.target.as_deref(), Some("/path/to/song.flac"));
+    }
+
+    #[test]
+    fn test_cli_aliases() {
+        let rm_log = Cli::parse_from(["mpv-music", "--rm-log"]);
+        assert!(rm_log.remove_log.is_some());
+
+        let rm_dir = Cli::parse_from(["mpv-music", "--rm-dir", "/path"]);
+        assert_eq!(rm_dir.remove_dir, Some(vec!["/path".to_string()]));
+
+        let rm_conf = Cli::parse_from(["mpv-music", "--rm-conf"]);
+        assert!(rm_conf.remove_config);
+
+        let yt_search = Cli::parse_from(["mpv-music", "--yt", "lofi"]);
+        assert_eq!(yt_search.search, Some(Some("lofi".to_string())));
+    }
+
+    #[test]
+    fn test_cli_remove_log_options() {
+        let rm_all = Cli::parse_from(["mpv-music", "--remove-log"]);
+        assert_eq!(rm_all.remove_log, Some(None));
+
+        let rm_count = Cli::parse_from(["mpv-music", "--remove-log", "5"]);
+        assert_eq!(rm_count.remove_log, Some(Some(5)));
+    }
+
+    #[test]
+    fn test_cli_filter_args_with_and_without_value() {
+        let g_empty = Cli::parse_from(["mpv-music", "-g"]);
+        assert_eq!(g_empty.genre, Some(None));
+
+        let g_val = Cli::parse_from(["mpv-music", "-g", "Rock,Pop"]);
+        assert_eq!(g_val.genre, Some(Some("Rock,Pop".to_string())));
+
+        let a_val = Cli::parse_from(["mpv-music", "-a", "Queen"]);
+        assert_eq!(a_val.artist, Some(Some("Queen".to_string())));
+
+        let b_val = Cli::parse_from(["mpv-music", "-b", "Greatest Hits"]);
+        assert_eq!(b_val.album, Some(Some("Greatest Hits".to_string())));
+
+        let t_val = Cli::parse_from(["mpv-music", "-t", "Bohemian"]);
+        assert_eq!(t_val.title, Some(Some("Bohemian".to_string())));
+    }
+
+    #[test]
+    fn test_cli_flags_toggles() {
+        let args = Cli::parse_from([
+            "mpv-music",
+            "-p",
+            "-s",
+            "-w",
+            "--video-ok",
+            "--serial",
+            "-vv",
+            "--volume",
+            "90",
+            "--repeat",
+        ]);
+
+        assert!(args.play_all);
+        assert!(args.shuffle);
+        assert!(args.watch);
+        assert!(args.video_ok);
+        assert!(args.serial);
+        assert_eq!(args.verbose, 2);
+        assert_eq!(args.volume, Some(90));
+        assert!(args.repeat);
+    }
+}

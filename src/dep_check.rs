@@ -151,4 +151,29 @@ mod tests {
 
         assert!(!is_nightly);
     }
+
+    #[test]
+    fn test_version_parsing_nightly_with_keyword() {
+        let version = "2024.12.01-nightly-build";
+        let is_nightly = version.split('.').count() >= 4 || version.contains("nightly");
+        assert!(is_nightly);
+
+        let empty = "";
+        let is_empty_nightly = empty.split('.').count() >= 4 || empty.contains("nightly");
+        assert!(!is_empty_nightly);
+    }
+
+    #[test]
+    fn test_mpv_output_line_extraction() {
+        let sample_output = "mpv 0.38.0 Copyright © 2000-2024 mpv/MPlayer/mplayer2 projects\n ffmpeg version: n7.1 Copyright (c) 2000-2024 the FFmpeg developers\n built on UNKNOWN\n";
+        let player_line = sample_output.lines().next().unwrap_or("Unknown Version");
+        assert!(player_line.starts_with("mpv 0.38.0"));
+
+        let ffmpeg_line = sample_output
+            .lines()
+            .find(|l| l.contains("ffmpeg version") || l.contains("FFmpeg version"))
+            .map(|s| s.trim())
+            .unwrap_or("FFmpeg version: Unknown");
+        assert!(ffmpeg_line.contains("ffmpeg version: n7.1"));
+    }
 }
