@@ -20,6 +20,7 @@ pub use tracks::{run_dir_mode, run_playlist_mode, run_track_mode};
 use crate::config;
 use crate::indexer;
 use crate::player;
+use crate::ui;
 use anyhow::Result;
 use directories::ProjectDirs;
 
@@ -105,9 +106,12 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
             Some(s) if s.contains("Manage Directories") => {
                 if run_manage_dirs_mode(cfg)? {
                     config::save(cfg)?;
-                    println!("Configuration saved. Syncing changes...");
+                    ui::success("Configuration saved.");
+                    ui::info("Syncing library index with updated directories...");
                     *tracks = indexer::scan(cfg, false)?;
                     indexer::save(tracks)?;
+                    ui::success(format!("Library synced ({} tracks).", tracks.len()));
+                    std::thread::sleep(std::time::Duration::from_millis(1000));
                 }
             }
 
@@ -131,9 +135,9 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
 
                 // reload to apply changes immediately
                 *cfg = config::load(None)?;
-                println!("Config reloaded from disk.");
+                ui::success("Configuration reloaded from disk.");
                 // pause so user sees the message
-                std::thread::sleep(std::time::Duration::from_millis(800));
+                std::thread::sleep(std::time::Duration::from_millis(900));
             }
             Some(s) if s.contains("Delete Config") => {
                 let config_path = ProjectDirs::from("com", "furqanhun", "mpv-music")
@@ -142,11 +146,12 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
                     .join("config.toml");
                 if config_path.exists() {
                     std::fs::remove_file(&config_path)?;
-                    println!("Config deleted. Loading defaults...");
+                    ui::warning("Configuration deleted. Resetting to defaults...");
                     // reload = generate the defualt
                     *cfg = config::load(None)?;
+                    ui::success("Default configuration loaded.");
                 } else {
-                    println!("No config file found.");
+                    ui::warning("No configuration file found.");
                 }
                 std::thread::sleep(std::time::Duration::from_secs(1));
             }
@@ -167,7 +172,7 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
                 if log_path.exists() {
                     std::process::Command::new(viewer).arg(log_path).status()?;
                 } else {
-                    println!("Log file does not exist.");
+                    ui::warning("Log file does not exist.");
                     std::thread::sleep(std::time::Duration::from_secs(1));
                 }
             }
@@ -178,24 +183,26 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
                     .join("mpv-music.log");
                 if log_path.exists() {
                     std::fs::remove_file(log_path)?;
-                    println!("Log file nuked.");
+                    ui::success("Log file deleted.");
                 } else {
-                    println!("No log file to delete.");
+                    ui::warning("No log file found to delete.");
                 }
                 std::thread::sleep(std::time::Duration::from_secs(1));
             }
 
             // maintain index
             Some(s) if s.contains("Refresh Index") => {
-                println!("Refreshing index...");
+                ui::info("Refreshing library index (Fast)...");
                 *tracks = indexer::scan(cfg, false)?;
                 indexer::save(tracks)?;
+                ui::success(format!("Index refreshed ({} tracks).", tracks.len()));
                 std::thread::sleep(std::time::Duration::from_secs(1));
             }
             Some(s) if s.contains("Rebuild Index") => {
-                println!("Rebuilding index...");
+                ui::info("Rebuilding library index from scratch (Full)...");
                 *tracks = indexer::scan(cfg, true)?;
                 indexer::save(tracks)?;
+                ui::success(format!("Index rebuilt ({} tracks).", tracks.len()));
                 std::thread::sleep(std::time::Duration::from_secs(1));
             }
 

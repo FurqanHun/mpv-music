@@ -4,6 +4,7 @@ use super::runner::run_skim_input_prompt;
 use crate::config;
 use crate::player;
 use crate::search;
+use crate::ui;
 use anyhow::Result;
 use skim::prelude::*;
 
@@ -14,19 +15,15 @@ pub fn run_search_mode(
 ) -> Result<()> {
     if !cfg.ytdlp_available {
         let ytdlp_cmd = cfg.ytdlp_bin();
-        eprintln!(
-            "\n\x1b[33;1m[Warning]\x1b[0m Feature unavailable: '{}' not found.",
-            ytdlp_cmd
-        );
-        eprintln!(
-            "mpv-music requires '{}' to use Search and Streaming.",
-            ytdlp_cmd
-        );
-        if ytdlp_cmd != "yt-dlp" {
-            eprintln!("Check your 'ytdlp' setting in config.toml or the --ytdlp CLI option.");
+        let hint = if ytdlp_cmd != "yt-dlp" {
+            "Check your 'ytdlp' setting in config.toml or the --ytdlp CLI option."
         } else {
-            eprintln!("Please install 'yt-dlp' to use Search and Streaming.");
-        }
+            "Please install 'yt-dlp' to use Search and Streaming."
+        };
+        ui::warning(format!(
+            "Feature unavailable: '{}' not found.\n  mpv-music requires '{}' to use Search and Streaming.\n  {}",
+            ytdlp_cmd, ytdlp_cmd, hint
+        ));
         return Ok(());
     }
 
@@ -47,16 +44,19 @@ pub fn run_search_mode(
     }
 
     if query.starts_with("http") {
-        log::info!("Direct URL detected, playing...");
+        ui::info(format!(
+            "Loading stream from '{}' and launching player...",
+            query
+        ));
         player::play(&query, cfg, extra_args)?;
         return Ok(());
     }
 
-    println!("Fetching results for '{}'...", query);
+    ui::info(format!("Fetching results for '{}'...", query));
     let results = search::search_youtube(&query, 25, cfg.ytdlp_bin())?;
 
     if results.is_empty() {
-        println!("No results found.");
+        ui::warning("No results found.");
         return Ok(());
     }
 
@@ -94,9 +94,14 @@ pub fn run_search_mode(
 
         if !selected_urls.is_empty() {
             if selected_urls.len() == 1 {
+                let title = output.selected_items[0].text();
+                ui::info(format!("Loading '{}' and launching player...", title));
                 player::play(&selected_urls[0], cfg, extra_args)?;
             } else {
-                log::info!("Playing queue of {} tracks", selected_urls.len());
+                ui::info(format!(
+                    "Loading {} tracks and launching player...",
+                    selected_urls.len()
+                ));
                 player::play_files(&selected_urls, cfg, extra_args)?;
             }
         }

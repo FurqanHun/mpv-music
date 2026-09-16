@@ -2,6 +2,7 @@ use super::icons::Icons;
 use super::items::MenuItem;
 use super::runner::{run_skim_input_prompt, run_skim_simple};
 use crate::config;
+use crate::ui;
 use anyhow::{Context, Result};
 use skim::prelude::*;
 use std::path::PathBuf;
@@ -18,7 +19,12 @@ pub fn run_manage_dirs_mode(cfg: &mut config::Config) -> Result<bool> {
             count
         );
 
-        let options = vec!["1) Add Directory", "2) Remove Directory", "q) Back"];
+        let options = vec![
+            "1) Add Directory",
+            "2) Remove Directory",
+            "3) List Configured Directories",
+            "q) Back",
+        ];
 
         let sel = run_skim_simple(options, &prompt);
         match sel.as_deref() {
@@ -32,6 +38,28 @@ pub fn run_manage_dirs_mode(cfg: &mut config::Config) -> Result<bool> {
                 // true = mark state as dirty
                 if manage_remove_menu(cfg)? {
                     any_changes = true;
+                }
+            }
+            Some(s) if s.starts_with("3)") => {
+                if cfg.music_dirs.is_empty() {
+                    ui::warning("No music directories configured.");
+                    std::thread::sleep(std::time::Duration::from_millis(1200));
+                } else {
+                    let dir_items: Vec<String> = cfg
+                        .music_dirs
+                        .iter()
+                        .enumerate()
+                        .map(|(i, d)| format!("{}. {} {}", i + 1, icons.folder(), d.display()))
+                        .collect();
+                    let list_prompt = format!(
+                        "{}Directories ({}) > ",
+                        icons.pad(icons.folder()),
+                        cfg.music_dirs.len()
+                    );
+                    let _ = run_skim_simple(
+                        dir_items.iter().map(|s| s.as_str()).collect(),
+                        &list_prompt,
+                    );
                 }
             }
             Some(s) if s.starts_with("q)") => break,
@@ -60,6 +88,7 @@ pub fn manage_add_loop(cfg: &mut config::Config) -> Result<bool> {
         // true if added a new path
         if add_directory(cfg, path_str)? {
             changed = true;
+            std::thread::sleep(std::time::Duration::from_millis(1000));
         } else {
             // failed (typo/duplicate), sleep briefly for UX
             std::thread::sleep(std::time::Duration::from_millis(1500));
@@ -70,29 +99,29 @@ pub fn manage_add_loop(cfg: &mut config::Config) -> Result<bool> {
 
 pub fn manage_remove_menu(cfg: &mut config::Config) -> Result<bool> {
     if cfg.music_dirs.is_empty() {
-        println!("No directories to remove.");
+        ui::warning("No directories to remove.");
         std::thread::sleep(std::time::Duration::from_secs(1));
         return Ok(false);
     }
 
+    let icons = Icons::new(cfg.nerd_fonts);
     let items: Vec<MenuItem> = cfg
         .music_dirs
         .iter()
         .map(|dir| {
-            let dir_str = dir.to_string_lossy().to_string();
+            let dir_str = dir.display().to_string();
             MenuItem {
-                text: dir_str.clone(),
+                text: format!("{} {}", icons.folder(), dir_str),
                 id: dir_str,
             }
         })
         .collect();
 
-    let icons = Icons::new(cfg.nerd_fonts);
     let remove_prompt = format!("{}Remove >    ", icons.pad(icons.trash()));
     let opts = SkimOptionsBuilder::default()
         .multi(true)
         .prompt(&remove_prompt)
-        .header("   Select directories to remove (TAB to select)")
+        .header("   Select directories to remove (TAB to select, ENTER to confirm)")
         .reverse(true)
         //.typos(2)
         .inline_info(true)
@@ -111,7 +140,7 @@ pub fn manage_remove_menu(cfg: &mut config::Config) -> Result<bool> {
     }
 
     let mut changed = false;
-    println!("\nProcessing removals...");
+    ui::info("Processing removals...");
     for item in selected_items {
         let path_str = item.output().to_string();
         if remove_directory(cfg, path_str)? {
@@ -120,7 +149,7 @@ pub fn manage_remove_menu(cfg: &mut config::Config) -> Result<bool> {
     }
 
     if changed {
-        std::thread::sleep(std::time::Duration::from_secs(1));
+        std::thread::sleep(std::time::Duration::from_millis(1000));
     }
 
     Ok(changed)
@@ -130,17 +159,17 @@ pub fn add_directory(cfg: &mut config::Config, dir: String) -> Result<bool> {
     let path_buf = PathBuf::from(&dir);
 
     if !path_buf.exists() {
-        println!("Path does not exist: \"{}\"", dir);
+        ui::error(format!("Path does not exist: \"{}\"", dir));
         return Ok(false);
     }
 
     if !path_buf.is_dir() {
-        println!("Path is not a directory: \"{}\"", dir);
+        ui::error(format!("Path is not a directory: \"{}\"", dir));
         return Ok(false);
     }
 
     if let Err(e) = std::fs::read_dir(&path_buf) {
-        println!("Permission denied: Cannot access \"{}\"", dir);
+        ui::error(format!("Permission denied: Cannot access \"{}\"", dir));
         log::warn!("Access check failed for {:?}: {}", path_buf, e);
         return Ok(false);
     }
@@ -148,17 +177,17 @@ pub fn add_directory(cfg: &mut config::Config, dir: String) -> Result<bool> {
     let path = match dunce::canonicalize(&path_buf) {
         Ok(p) => p,
         Err(e) => {
-            println!("Failed to resolve absolute path: {}", e);
+            ui::error(format!("Failed to resolve absolute path: {}", e));
             return Ok(false);
         }
     };
 
     if !cfg.music_dirs.contains(&path) {
         cfg.music_dirs.push(path.clone());
-        println!("Added: {:?}", path);
+        ui::success(format!("Added: {}", path.display()));
         Ok(true)
     } else {
-        println!("Already exists: {:?}", path);
+        ui::warning(format!("Already exists: {}", path.display()));
         Ok(false)
     }
 }
@@ -170,10 +199,10 @@ pub fn remove_directory(cfg: &mut config::Config, dir: String) -> Result<bool> {
     cfg.music_dirs.retain(|d| d != &path);
 
     if cfg.music_dirs.len() < start_len {
-        println!("Removed: {:?}", path);
+        ui::success(format!("Removed: {}", path.display()));
         Ok(true)
     } else {
-        println!("Not found in config: {:?}", path);
+        ui::warning(format!("Not found in config: {}", path.display()));
         Ok(false)
     }
 }

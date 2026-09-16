@@ -1,3 +1,4 @@
+use crate::ui;
 use anyhow::{Context, Result};
 use directories::{ProjectDirs, UserDirs};
 use serde::{Deserialize, Serialize};
@@ -178,11 +179,10 @@ where
             match value.parse::<LoopMode>() {
                 Ok(mode) => Ok(mode),
                 Err(_) => {
-                    log::warn!("Invalid loop_mode '{}'. Defaulting to 'inf'.", value);
-                    eprintln!(
-                        "\x1b[33;1m[Warning]\x1b[0m Config: Invalid loop_mode '{}'. Defaulting to 'inf'.",
+                    ui::warning(format!(
+                        "Config: Invalid loop_mode '{}'. Defaulting to 'inf'.",
                         value
-                    );
+                    ));
                     Ok(LoopMode::Inf)
                 }
             }
@@ -413,13 +413,14 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
                 a == "-v" || a == "--verbose" || a.starts_with("-v") || a == "-d" || a == "--debug"
             });
             let missing_str = missing_keys.join(", ");
-            log::info!(
-                "Config file missing keys: [{}]; auto-populating with defaults",
-                missing_str
-            );
             if is_verbose_or_debug {
-                eprintln!(
-                    "[Info] Config: Auto-populated missing options with defaults: {}",
+                ui::info(format!(
+                    "Config: Auto-populated missing options with defaults: {}",
+                    missing_str
+                ));
+            } else {
+                log::info!(
+                    "Config file missing keys: [{}]; auto-populating with defaults",
                     missing_str
                 );
             }
@@ -444,8 +445,7 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     }
 
     for warning in warnings {
-        log::warn!("Config validation: {}", warning);
-        eprintln!("\x1b[33;1m[Warning]\x1b[0m Config: {}", warning);
+        ui::warning(format!("Config: {}", warning));
     }
 
     if needs_save {

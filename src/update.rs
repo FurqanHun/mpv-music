@@ -1,4 +1,6 @@
 #[cfg(feature = "update")]
+use crate::ui;
+#[cfg(feature = "update")]
 use anyhow::{Context, Result};
 #[cfg(feature = "update")]
 use std::env;
@@ -51,20 +53,13 @@ fn prompt_and_update(is_dev: bool, latest_tag: &str, auto_confirm: bool) {
     let mut confirmed = auto_confirm;
 
     if !confirmed {
-        print!("\nDo you want to update now? [Y/n]: ");
-        use std::io::Write;
-        let _ = std::io::stdout().flush();
-        let mut input = String::new();
-        let _ = std::io::stdin().read_line(&mut input);
-        if input.trim().eq_ignore_ascii_case("y") {
-            confirmed = true;
-        }
+        confirmed = ui::confirm("\nDo you want to update now? [Y/n]: ");
     }
 
     if confirmed {
         #[cfg(any(target_os = "linux", target_os = "macos"))]
         {
-            println!("Starting update...");
+            ui::info("Starting update...");
             let script_args = if is_dev {
                 format!("--dev --update --tag {}", latest_tag)
             } else {
@@ -86,7 +81,7 @@ fn prompt_and_update(is_dev: bool, latest_tag: &str, auto_confirm: bool) {
         }
         #[cfg(target_os = "windows")]
         {
-            println!("Starting update...");
+            ui::info("Starting update...");
 
             let mut ps_args = vec!["-Update".to_string(), format!("-Tag '{}'", latest_tag)];
             if is_dev {
@@ -115,12 +110,12 @@ fn prompt_and_update(is_dev: bool, latest_tag: &str, auto_confirm: bool) {
         }
         #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
         {
-            println!(
-                "Please download the update manually from: https://github.com/FurqanHun/mpv-music"
+            ui::warning(
+                "Please download the update manually from: https://github.com/FurqanHun/mpv-music",
             );
         }
     } else {
-        println!("Update aborted. You can run the update later.");
+        ui::warning("Update aborted. You can run the update later.");
     }
 }
 
@@ -129,7 +124,7 @@ pub fn update_self(auto_confirm: bool) -> Result<()> {
     let current_ver_str = env!("CARGO_PKG_VERSION");
     let is_dev = current_ver_str.contains("dev");
 
-    println!("Checking for updates...");
+    ui::info("Checking for updates...");
 
     let json = fetch_json_from_url("https://furqanhun.github.io/mpv-music/latest.json")?;
 
@@ -137,7 +132,11 @@ pub fn update_self(auto_confirm: bool) -> Result<()> {
         .as_str()
         .context("Release missing stable tag_name")?;
     let remote_ver_str = remote_tag.trim_start_matches('v');
-    log::debug!("Parsed stable version: v{}", remote_ver_str);
+    log::info!(
+        "Version check: current=v{}, remote=v{}",
+        current_ver_str,
+        remote_ver_str
+    );
 
     println!("\n--- Version Info ---");
     println!("Current Version:  v{}", current_ver_str);
@@ -148,10 +147,10 @@ pub fn update_self(auto_confirm: bool) -> Result<()> {
         let remote_semver = parse_version(remote_ver_str);
 
         if remote_semver > current_semver {
-            println!("Update Available: \x1b[32mYES\x1b[0m");
+            println!("Update Available: \x1b[32;1mYES\x1b[0m");
             prompt_and_update(false, remote_tag, auto_confirm);
         } else {
-            println!("Update Status:    \x1b[32mUp to date\x1b[0m");
+            println!("Update Status:    \x1b[32;1mUp to date\x1b[0m");
         }
     } else {
         if let Some(latest_obj) = json.get("dev") {
@@ -191,10 +190,10 @@ pub fn update_self(auto_confirm: bool) -> Result<()> {
                 } else {
                     "Development Build"
                 };
-                println!("Update Status:    \x1b[32mYES\x1b[0m ({})", build_type);
+                println!("Update Status:    \x1b[32;1mYES\x1b[0m ({})", build_type);
                 prompt_and_update(!is_latest_stable, latest_tag, auto_confirm);
             } else {
-                println!("Update Status:    \x1b[33mUp to date\x1b[0m (Development Build)");
+                println!("Update Status:    \x1b[33;1mUp to date\x1b[0m (Development Build)");
             }
         }
     }

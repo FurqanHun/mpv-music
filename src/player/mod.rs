@@ -186,6 +186,6 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
 }
 
 pub fn play_radio(name: &str, url: &str, config: &Config, extra_args: &[String]) -> Result<()> {
-    log::info!("Entering Radio Mode: {}", name);
+    crate::ui::info(format!("Connecting to station '{}'...", name));
     play(url, config, extra_args)
 }

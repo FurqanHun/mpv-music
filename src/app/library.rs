@@ -2,6 +2,7 @@ use crate::cli::Cli;
 use crate::config::Config;
 use crate::indexer::{self, Track};
 use crate::player;
+use crate::ui;
 use anyhow::Result;
 use std::path::PathBuf;
 
@@ -25,8 +26,7 @@ pub fn load_or_scan_tracks(
         let path = PathBuf::from(&target);
 
         if path.is_dir() {
-            log::info!("Session started for directory: {:?}", path);
-            let target_canonical = dunce::canonicalize(&path).unwrap_or(path.clone());
+            let target_canonical = dunce::canonicalize(&path).unwrap_or(path);
             let target_str = target_canonical.to_string_lossy();
 
             let mut temp_cfg = cfg.clone();
@@ -35,14 +35,17 @@ pub fn load_or_scan_tracks(
             let session_tracks = indexer::scan(&temp_cfg, true)?;
 
             if session_tracks.is_empty() {
-                eprintln!(
-                    "\x1b[33;1m[Warning]\x1b[0m No music files found in: {}",
-                    target_str
-                );
+                ui::warning(format!("No music files found in: {}", target_str));
                 return Ok(None);
             }
             tracks = session_tracks;
         } else {
+            if target.starts_with("http://") || target.starts_with("https://") {
+                ui::info(format!(
+                    "Loading stream from '{}' and launching player...",
+                    target
+                ));
+            }
             player::play(&target, cfg, extra_mpv_args)?;
             return Ok(None);
         }
@@ -71,13 +74,11 @@ pub fn load_or_scan_tracks(
     }
 
     if tracks.is_empty() && is_local_cli_mode_requested(args) {
-        eprintln!(
-            "\x1b[33;1m[Warning]\x1b[0m No music found in local library. Run with --manage-dirs or add dirs to config."
+        ui::warning(
+            "No music found in local library. Run with --manage-dirs or add dirs to config.",
         );
-        if cfg!(windows) {
-            eprintln!("\nPress Enter to exit...");
-            let _ = std::io::stdin().read_line(&mut String::new());
-        }
+        #[cfg(windows)]
+        ui::prompt_exit();
         return Ok(None);
     }
 

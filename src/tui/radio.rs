@@ -3,6 +3,7 @@ use crate::player;
 use crate::radio::RADIO_STATIONS;
 use crate::tui::Icons;
 use crate::tui::runner::run_skim_simple;
+use crate::ui;
 use anyhow::Result;
 
 pub fn run_radio_mode(
@@ -28,10 +29,8 @@ pub fn run_radio_mode(
     };
 
     if options.is_empty() {
-        log::error!("No radio stations found matching filter: {:?}", filter);
-        eprintln!(
-            "\x1b[33;1m[Warning]\x1b[0m Radio station not found. Please use the interactive menu."
-        );
+        log::debug!("No radio stations found matching filter: {:?}", filter);
+        ui::warning("Radio station not found. Please use the interactive menu.");
         return Ok(());
     }
 

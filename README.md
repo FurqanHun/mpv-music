@@ -205,7 +205,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `-p`, `--play-all` | Play all tracks immediately. |
 | `-l`, `--playlist [<VAL>]` | Open Playlist Mode. Opens picker if no value given. |
 | `--video-ok` | Allow video files. |
-| `no-video` | Negates `--video-ok`, and overrides it in config. |
+| `--no-video` | Negates `--video-ok`, and overrides it in config. |
 | `--watch (-w)` | Play with video window enabled (forces visual mode). |
 | `--no-watch` | Disable video window (forces audio mode, which is the default). |
 | `--loop [<LOOP_ARG>]` | Enable looping (`inf`, `no`, `track`, or a NUMBER). |
@@ -373,8 +373,30 @@ playlist_exts = [
 #   --term-playing-msg (shows " ──  MPV-MUSIC ──" or " ╔══  MPV-MUSIC  ══╗" based on nerd_fonts)
 #   --term-status-msg (shows "  ..." or " ▶ ..." based on nerd_fonts)
 mpv_args = []
-
 ```
+
+### Configuration Reference:
+
+| Key | Type | Default | CLI Equivalent | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `player` | String | `"mpv"` | `--player <BIN>` | Media player binary, fork, or path (e.g. `"mpv"`, `"mpvnet"`). |
+| `shuffle` | Boolean | `true` | `-s`, `--shuffle` / `--no-shuffle` | Enable or disable random shuffle by default. |
+| `loop_mode` | String / Integer | `"inf"` | `--loop`, `--no-loop`, `--repeat` | Looping mode: `"inf"` (or `"playlist"`), `"track"` (or `"file"`), `"no"` (or `"off"`), or loop count (e.g. `5`). |
+| `volume` | Integer | `100` | `--volume <0-130>` | Playback volume percentage (`0` to `130`). Capped at 130 max. |
+| `nerd_fonts` | String / Boolean | `"none"` | — | Icon set: `"none"` (emojis), `"mono"` (monospace Nerd Fonts), `"normal"` (proportional/symbols), or `true`/`false`. |
+| `music_dirs` | Array of Strings | `["$HOME/Music"]` | `--manage-dirs`, `--add-dir`, `--remove-dir` | List of folder paths to index and search. |
+| `video_ok` | Boolean | `false` | `--video-ok` / `--no-video` | Scan and index video files alongside audio tracks. |
+| `watch` | Boolean | `false` | `-w`, `--watch` / `--no-watch` | Open MPV's video window during playback (shows video or album art). |
+| `serial_mode` | Boolean | `false` | `--serial` | Force single-threaded indexing. Recommended for mechanical HDDs to prevent thrashing. |
+| `scan_hidden_dirs` | Boolean | `false` | — | Allow indexing inside hidden directories (e.g. `.music`). |
+| `ytdlp` | String | `"yt-dlp"` | `--ytdlp <BIN>` | Custom `yt-dlp` binary, fork, or path (e.g. `"yt-dlp-nightly"`). |
+| `ytdlp_ejs_remote_github` | Boolean | `false` | — | Enables remote PhantomJS/EJS solver fallback for package manager builds of `yt-dlp`. |
+| `ytdlp_useragent` | String | `"default"` | — | Custom User-Agent header for `yt-dlp` requests (`"default"` uses modern Firefox UA). |
+| `enable_file_logging` | Boolean | `true` | `--log`, `--debug` | Write logs to `~/.local/share/mpv-music/mpv-music.log`. Overwritten per run. |
+| `audio_exts` | Array of Strings | `["mp3", "flac", ...]` | `-e`, `--ext <LIST>` | List of recognized audio extensions. |
+| `video_exts` | Array of Strings | `["mp4", "mkv", ...]` | — | List of recognized video extensions (active when `video_ok = true`). |
+| `playlist_exts` | Array of Strings | `["m3u", "m3u8", "pls"]` | — | List of recognized playlist extensions. |
+| `mpv_args` | Array of Strings | `[]` | `--mpv-args <ARGS>` | Custom raw arguments passed to mpv. Overrides built-in defaults. (Aliases legacy `mpv_default_args`). |
 
 ---
 

@@ -7,6 +7,7 @@ mod player;
 mod radio;
 mod search;
 mod tui;
+pub mod ui;
 mod update;
 
 use anyhow::Result;

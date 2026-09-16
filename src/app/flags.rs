@@ -3,6 +3,7 @@ use crate::config;
 use crate::dep_check;
 use crate::indexer;
 use crate::tui;
+use crate::ui;
 use anyhow::Result;
 use std::path::Path;
 
@@ -12,9 +13,9 @@ pub fn handle_utility_flags(args: &Cli, config_file: &Path, log_dir: &Path) -> R
     if args.remove_log {
         if log_file_path.exists() {
             std::fs::remove_file(&log_file_path)?;
-            println!("Log file nuked.");
+            ui::success("Log file deleted.");
         } else {
-            println!("No log file available.");
+            ui::warning("No log file available.");
         }
         return Ok(true);
     }
@@ -34,7 +35,7 @@ pub fn handle_utility_flags(args: &Cli, config_file: &Path, log_dir: &Path) -> R
                 .arg(&log_file_path)
                 .status()?;
         } else {
-            println!("No log file available.");
+            ui::warning("No log file available.");
         }
         return Ok(true);
     }
@@ -42,9 +43,9 @@ pub fn handle_utility_flags(args: &Cli, config_file: &Path, log_dir: &Path) -> R
     if args.remove_config {
         if config_file.exists() {
             std::fs::remove_file(config_file)?;
-            println!("Config removed.");
+            ui::success("Configuration removed.");
         } else {
-            println!("No config file found.");
+            ui::warning("No config file found.");
         }
         return Ok(true);
     }
@@ -75,10 +76,10 @@ pub fn handle_utility_flags(args: &Cli, config_file: &Path, log_dir: &Path) -> R
             .status();
 
         if let Err(e) = status {
-            eprintln!(
-                "\x1b[31;1m[Error]\x1b[0m Failed to launch editor. Is '{}' installed? ({})",
+            ui::error(format!(
+                "Failed to launch editor. Is '{}' installed? ({})",
                 editor, e
-            );
+            ));
         }
         return Ok(true);
     }
@@ -174,18 +175,21 @@ pub fn handle_dir_flags(cfg: &mut config::Config, args: &Cli) -> Result<bool> {
     }
     if config_changed {
         config::save(cfg)?;
-        println!("Configuration saved. Syncing index...");
+        ui::success("Configuration saved.");
+        ui::info("Syncing index...");
         let tracks = indexer::scan(cfg, false)?;
         indexer::save(&tracks)?;
+        ui::success(format!("Index updated ({} tracks).", tracks.len()));
         return Ok(true);
     }
     if args.manage_dirs {
         if tui::run_manage_dirs_mode(cfg)? {
             config::save(cfg)?;
-            println!("Configuration saved.");
-            println!("Syncing index with new directories...");
+            ui::success("Configuration saved.");
+            ui::info("Syncing index with new directories...");
             let tracks = indexer::scan(cfg, false)?;
             indexer::save(&tracks)?;
+            ui::success(format!("Index updated ({} tracks).", tracks.len()));
         }
         return Ok(true);
     }

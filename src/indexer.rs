@@ -13,6 +13,7 @@ use std::time::{Duration, SystemTime};
 use walkdir::WalkDir;
 
 use crate::config::Config;
+use crate::ui;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
@@ -87,10 +88,10 @@ pub(crate) fn parse_filename_metadata(filename: &str) -> (String, String) {
 
 pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
     if config.music_dirs.is_empty() {
-        log::warn!("Scan aborted: No music directories configured.");
-        eprintln!("\x1b[33;1m[Warning]\x1b[0m No music directories configured.");
-        eprintln!("   Run 'mpv-music --add-dir <PATH>' to add your music folder.");
-        eprintln!("   Or use 'mpv-music --manage-dirs' for the menu.");
+        ui::warning("No music directories configured.");
+        ui::suggestion(
+            "Run 'mpv-music --add-dir <PATH>' or 'mpv-music --manage-dirs' to add your music folders.",
+        );
         return Ok(Vec::new());
     }
 
@@ -298,7 +299,7 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
     );
 
     if !config.music_dirs.is_empty() {
-        println!();
+        ui::newline();
     }
 
     Ok(tracks)

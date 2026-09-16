@@ -3,6 +3,7 @@ use crate::config::Config;
 use crate::indexer::Track;
 use crate::player;
 use crate::tui;
+use crate::ui;
 use anyhow::Result;
 use std::collections::HashSet;
 
@@ -86,7 +87,7 @@ pub fn handle_cli_filters(
         let partials = tui::apply_cli_filters(tracks, args, false);
 
         if partials.is_empty() {
-            eprintln!("\x1b[33;1m[Warning]\x1b[0m No match.");
+            ui::warning("No match.");
             return Ok(());
         }
 
@@ -125,7 +126,7 @@ pub fn handle_cli_filters(
     }
 
     if filtered.is_empty() {
-        eprintln!("\x1b[33;1m[Warning]\x1b[0m No match.");
+        ui::warning("No match.");
         return Ok(());
     }
 
@@ -135,7 +136,7 @@ pub fn handle_cli_filters(
         return Ok(());
     }
 
-    println!("Found {} matching tracks.", filtered.len());
+    ui::info(format!("Found {} matching tracks.", filtered.len()));
     if args.play_all || args.title.is_some() {
         let paths: Vec<String> = filtered.iter().map(|t| t.path.clone()).collect();
         player::play_files(&paths, cfg, extra_mpv_args)?;

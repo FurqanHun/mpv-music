@@ -21,6 +21,9 @@ pub fn init(args: &Cli, cfg: &Config, log_dir: &Path) -> Result<LoggerHandle> {
 
     std::fs::create_dir_all(log_dir)?;
     let mut logger = Logger::try_with_str(log_filter)?.format_for_stderr(|w, _now, record| {
+        if record.target() == "mpv_music::ui" {
+            return Ok(());
+        }
         let level = record.level();
         write!(
             w,

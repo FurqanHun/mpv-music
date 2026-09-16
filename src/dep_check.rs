@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::ui;
 use anyhow::Result;
 use std::process::{Command, Stdio, exit};
 
@@ -13,9 +14,8 @@ pub fn check(cfg: &mut Config) -> Result<()> {
     let mut mpv_command = Command::new(&player_cmd);
     mpv_command
         .arg("--version")
-        .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        .stderr(Stdio::null());
 
     #[cfg(windows)]
     mpv_command.creation_flags(0x08000000); // CREATE_NO_WINDOW
@@ -26,21 +26,18 @@ pub fn check(cfg: &mut Config) -> Result<()> {
     let mut ytdlp_command = Command::new(&ytdlp_cmd);
     ytdlp_command
         .arg("--version")
-        .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        .stderr(Stdio::null());
 
     #[cfg(windows)]
     ytdlp_command.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
     let ytdlp_child = ytdlp_command.spawn();
 
+    // player is critical: wait and fail immediately if not present
     let mpv_output = match mpv_child {
         Ok(child) => child.wait_with_output(),
-        Err(_) => Err(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            format!("player '{}' not found", player_cmd),
-        )),
+        Err(e) => Err(e),
     };
 
     match mpv_output {
@@ -58,28 +55,19 @@ pub fn check(cfg: &mut Config) -> Result<()> {
             log::info!(" └─ {}", ffmpeg_line);
         }
         Err(_) => {
-            eprintln!(
-                "\n\x1b[31;1m[Critical Error]\x1b[0m '{}' not found!",
-                player_cmd
-            );
-            eprintln!(
-                "mpv-music requires '{}' to be installed and in your PATH.",
-                player_cmd
-            );
-            if player_cmd != "mpv" && player_cmd != "mpv.com" {
-                eprintln!("Check your 'player' setting in config.toml or the --player CLI option.");
+            let hint = if player_cmd != "mpv" && player_cmd != "mpv.com" {
+                "Check your 'player' setting in config.toml or the --player CLI option."
             } else {
-                eprintln!(
-                    "Please install it via your package manager (e.g. sudo dnf install mpv)."
-                );
-            }
+                "Please install it via your package manager (e.g. sudo dnf install mpv)."
+            };
+            ui::error(format!(
+                "Critical: '{}' not found!\nmpv-music requires '{}' to be installed and in your PATH.\n{}",
+                player_cmd, player_cmd, hint
+            ));
 
-            log::error!("Critical dependency missing: {}. Exiting.", player_cmd);
+            #[cfg(windows)]
+            ui::prompt_exit();
 
-            if cfg!(windows) {
-                eprintln!("\nPress Enter to exit...");
-                let _ = std::io::stdin().read_line(&mut String::new());
-            }
             exit(1);
         }
     }
@@ -119,11 +107,8 @@ pub fn check(cfg: &mut Config) -> Result<()> {
                         version
                     );
                     if ytdlp_cmd == "yt-dlp" {
-                        println!(
-                            "\x1b[33;1m[Suggestion]\x1b[0m yt-dlp nightly is recommended for best performance."
-                        );
-                        println!(
-                            "             Get it here: https://github.com/yt-dlp/yt-dlp-nightly-builds/releases"
+                        ui::suggestion(
+                            "yt-dlp nightly is recommended for best performance (https://github.com/yt-dlp/yt-dlp-nightly-builds/releases)",
                         );
                     }
                     cfg.ytdlp_is_nightly = false;
