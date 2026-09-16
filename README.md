@@ -63,7 +63,7 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 * **Video Toggle:** `--video-ok` lets you include videos in your library scans.
 * **Visual Playback:** `--watch (-w)` forces the MPV window to open, allowing you to watch videos or see cover art/visualizations during playback.
 * **YouTube Auto-Config:** Automatically detects JS runtimes (Deno, Node, QuickJS, Bun) for yt-dlp YouTube playback.
-* **Enhanced Logging:** Verbose/debug modes with log rotation and configurable log file size.
+* **Clean Logging:** Verbose (`-v`) and debug (`-d`) modes, multi-session logging (`logs/session_<timestamp>_<pid>.log`) with configurable retention, and built-in interactive log viewer (`--log`).
 
 ---
 
@@ -92,8 +92,8 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 
 * **Linux:** Native. The app is built and tested primarily for Linux.
 * **WSL (Windows Subsystem for Linux):** Fully Supported.
-* **macOS / BSD:** It should work fine on macOS and BSD systems (haven't tested it, please do... any feedback is appreciated).
-* **Windows (Native/Git Bash):** Fully Supported. Check [FAQ](#windows-support).
+* **macOS / BSD:** Should work fine on macOS and BSD systems. Check [FAQ](#platform-support).
+* **Windows (Native/Git Bash):** Fully Supported. Check [FAQ](#platform-support).
 
 ### From crates.io (Recommended)
 
@@ -154,7 +154,7 @@ That creates:
 
 - Index: `~/.local/share/mpv-music/music_index.jsonl`
 
-- Logs: `~/.local/share/mpv-music/mpv-music.log`
+- Logs: `~/.local/share/mpv-music/logs/` (e.g. `session_<timestamp>_<pid>.log`)
 
 The project respects XDG standards and uses the `directories` crate to automatically support proper config/data paths across Linux, Windows, and macOS.
 
@@ -200,8 +200,8 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `--manage-dirs` | Open the Interactive Directory Manager. |
 | `-c`, `--config [<EDITOR>]` | Edit config file. |
 | `--remove-config` | Delete config file (Reset) (aliases: `--rm-conf`). |
-| `--log [<PAGER>]` | View logs. |
-| `--remove-log` | Delete log file (aliases: `--rm-log`). |
+| `--log [<PAGER>]` | View session logs (opens interactive selector if multiple logs exist). |
+| `--remove-log [<COUNT>]` | Delete all session logs, or the oldest N logs (aliases: `--rm-log`). |
 | `-p`, `--play-all` | Play all tracks immediately. |
 | `-l`, `--playlist [<VAL>]` | Open Playlist Mode. Opens picker if no value given. |
 | `--video-ok` | Allow video files. |
@@ -232,7 +232,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 
 Any mpv flag also works: `--no-video`, `--volume=50`, `--shuffle`, etc.
 
-Logs are overwritten each time the program is run. You can disable file logging by setting `enable_file_logging = false` in your config.
+Session logs are saved to `~/.local/share/mpv-music/logs/` (`session_<timestamp>_<pid>.log`). By default, the most recent 3 sessions are preserved (configurable via `max_log_sessions`). You can disable file logging by setting `enable_file_logging = false` in your config.
 
 ### Examples:
 
@@ -241,11 +241,15 @@ mpv-music                              # full interactive menu
 mpv-music /path/to/music               # interactive in a specific folder
 mpv-music ~/Music/track.flac           # plays file instantly
 mpv-music "https://youtube.com/watch..." # plays URL instantly
+mpv-music --yt "lofi"          # search YouTube directly from CLI (alias: --search)
+mpv-music --radio jpop                 # play a radio station directly (or --radio for picker)
 mpv-music /path/to/folder -a           # pick artist from that folder only
 mpv-music --genre="Rock" --play-all    # play all rock tracks
+mpv-music -g "Rock,Pop" --play-all     # multi-genre comma filtering
 mpv-music --artist="Ado"               # fuzzy search by artist
 mpv-music -p -a ado                     # play all tracks by Ado
 mpv-music -g -a "Daft Punk" -p         # pick genre, then play all Daft Punk
+mpv-music -w ~/Music/video.mp4         # play with video window enabled (watch mode)
 mpv-music --volume=50 --shuffle        # custom mpv flags
 mpv-music --reindex                    # rebuild the index from scratch
 mpv-music --debug                      # run with full logging enabled
@@ -253,6 +257,8 @@ mpv-music --verbose                    # prints verbose messages
 mpv-music --add-dir /path/to/music /path/to/music2 # Add multiple directories
 mpv-music --remove-dir /path/to/music /path/to/music2 # Remove multiple directories
 mpv-music --manage-dirs                  # Manage directories
+mpv-music --log                          # View recent session logs
+mpv-music --remove-log                   # Delete all session logs (or --remove-log 1 for oldest)
 ```
 
 ---
@@ -261,7 +267,7 @@ mpv-music --manage-dirs                  # Manage directories
 
 Your music library is indexed to:
 
-- Where ever our system has defined program data should go, for modern linux systems it should be at `~/.local/share/mpv-music/music_index.jsonl`
+- Wherever your system defines program data should go; on modern Linux systems, this defaults to `~/.local/share/mpv-music/music_index.jsonl`
 
 ### Why?
 
@@ -280,7 +286,7 @@ Searching the filesystem with find every time is slow, especially if you have a 
 > [!TIP]
 > **Indexing vs. Watching:**
 > * Use `--video-ok` (or set `video_ok = true`) to **scan** and include video files in your library.
-> * Use `--watch` ((or set `watch = true`)) when playing to actually **show** the video window. 
+> * Use `--watch` (or set `watch = true`) when playing to actually **show** the video window. 
 >
 > Example: `mpv-music --video-ok --reindex` to scan, then `mpv-music -w` to watch.
 
@@ -297,7 +303,6 @@ mpv-music --config
 
 ```toml
 # --- General Playback ---
-player = "mpv"            # Media player binary or compatible fork (e.g. "mpv", "mpvnet")
 shuffle = true
 loop_mode = "inf"  # Options: "playlist" (same as inf), "track", "no", "inf", "5" (number of loops)
 volume = 100
@@ -315,8 +320,9 @@ watch = false            # Set to true to actually show the video window when pl
 serial_mode = false      # Set to true to force single-threaded scanning (better for HDDs)
 scan_hidden_dirs = false # Set to true to allow indexing of hidden directories (e.g. .music)
 
-# --- YT-DLP / Networking ---
-ytdlp = "yt-dlp"           # yt-dlp binary, fork, or path (e.g. "yt-dlp", "yt-dlp-idk")
+# --- Media Player & External Binaries ---
+player = "mpv"            # Media player binary, fork, or path (e.g. "mpv", "mpvnet", "/usr/bin/mpv")
+ytdlp = "yt-dlp"           # yt-dlp binary, fork, or path (e.g. "yt-dlp", "yt-dlp-nightly")
 # Set to true if you installed yt-dlp via package manager (apt/pacman). 
 # Keep false if you downloaded the binary directly from GitHub.
 ytdlp_ejs_remote_github = false 
@@ -326,6 +332,7 @@ ytdlp_useragent = "default"
 # If true, INFO/WARN logs are saved to file. 
 # If false, logs are only shown on screen when running with --verbose or --debug.
 enable_file_logging = true
+max_log_sessions = 3     # Number of recent session logs to preserve in logs/ directory
 
 # --- File Extensions ---
 audio_exts = [
@@ -392,7 +399,8 @@ mpv_args = []
 | `ytdlp` | String | `"yt-dlp"` | `--ytdlp <BIN>` | Custom `yt-dlp` binary, fork, or path (e.g. `"yt-dlp-nightly"`). |
 | `ytdlp_ejs_remote_github` | Boolean | `false` | — | Enables remote PhantomJS/EJS solver fallback for package manager builds of `yt-dlp`. |
 | `ytdlp_useragent` | String | `"default"` | — | Custom User-Agent header for `yt-dlp` requests (`"default"` uses modern Firefox UA). |
-| `enable_file_logging` | Boolean | `true` | `--log`, `--debug` | Write logs to `~/.local/share/mpv-music/mpv-music.log`. Overwritten per run. |
+| `enable_file_logging` | Boolean | `true` | `--log`, `--debug` | Save logs to `~/.local/share/mpv-music/logs/`. When false, logs only output to stderr if `--verbose` or `--debug` is used. |
+| `max_log_sessions` | Integer | `3` | `--remove-log` | Maximum number of recent session logs to preserve in `logs/` (minimum: 1). Older sessions are pruned on startup. |
 | `audio_exts` | Array of Strings | `["mp3", "flac", ...]` | `-e`, `--ext <LIST>` | List of recognized audio extensions. |
 | `video_exts` | Array of Strings | `["mp4", "mkv", ...]` | — | List of recognized video extensions (active when `video_ok = true`). |
 | `playlist_exts` | Array of Strings | `["m3u", "m3u8", "pls"]` | — | List of recognized playlist extensions. |
@@ -403,9 +411,9 @@ mpv_args = []
 ## FAQ
 
 <details>
-<summary><strong>Q. Why rewrite it in Rust? The Bash version worked fine.</strong></summary>
+<summary><strong>Q. Why Rust?</strong></summary>
 
-The Bash version was a hack that grew too big. Spawning subshells to parse metadata is slow. Managing `fzf` integration through pipes is fragile (kinda, it's not really a problem, but for the smooth experience it is). And it was a parsing hell ngl.
+The Bash version was a hack that grew too big. It was parsing hell, ngl. That being said, the reason for Rust is simple: I first thought about Zig, C, or Rust, but having read a couple of Rust chapters few months or years ago, reading Rust code felt way more natural. Plus, with the compiler keeping things in check, I could make sure LLM suggestions wouldn't fuh me up in places I wasn't even aware of.
 
 </details>
 
@@ -420,13 +428,14 @@ Because you don't need it. Your music library is likely under 100,000 tracks. A 
 
 </details>
 
-<a name="windows-support"></a>
+<a name="platform-support"></a>
 <details>
-<summary><strong>Q. Why a Windows FAQ?</strong></summary>
+<summary><strong>Q. How well supported are Windows, macOS, and BSD?</strong></summary>
 
-Well, despite me testing it a bit on a vm on ma potato laptop, I cannot gurantee no bugs on it, as I didn't really test more than it just launching mpv correctly and reading just one song and spawning the mpv, and radio mode. So edge cases may appear. It’s in beta, let's say that. Windows is still Windows.
+- **Windows:** Well, despite me testing it a bit on a vm on ma potato laptop, I cannot guarantee no bugs on it, as I test it like I am touching acid. I didn't test it extensively, more than launching mpv correctly and reading just one song/updating and spawning the mpv, and radio mode. It's no longer in beta, but in my head it will always be, let's say that. Windows is still Windows.
+- **macOS / BSD:** It compiles and follows Unix standards, XDG paths, and standard CLI conventions, so it should work fine on macOS and BSD systems. But since I don't daily-drive a Mac or BSD machine, I haven't tested it extensively either.
 
-> I really need someone to test it on windows tho, fr.
+> I really need someone to test it on Windows (and Mac/BSD) tho, fr. Any feedback or bug reports are super appreciated!
 
 </details>
 
@@ -437,7 +446,7 @@ That is likely not a bug in `mpv-music`. YouTube is constantly fighting `yt-dlp`
 
 1. Update `yt-dlp` (`yt-dlp -U`).
 2. Make sure you have a JS runtime (Node, Deno, Bun) installed. YouTube now requires executing JavaScript to decipher video signatures. `mpv-music` tries to auto-detect this, but it can't perform miracles.
-3. If you installed `yt-dlp`, from other sources than official binaries then consider enabling `ytdlp_ejs_remote_github = true` in `config.toml`.
+3. If you installed `yt-dlp` via package managers (apt, dnf, pacman) instead of official GitHub binaries, consider enabling `ytdlp_ejs_remote_github = true` in `config.toml`.
 4. Or you can try changing the `ytdlp_useragent` in config.
 
 </details>
@@ -445,7 +454,7 @@ That is likely not a bug in `mpv-music`. YouTube is constantly fighting `yt-dlp`
 <details>
 <summary><strong>Q. mpv-music isn't picking up metadata for video files or some other audio formats?</strong></summary>
 
-The original `mpv-music` utilized `ffprobe` to parse metadata from everything. The Rust version uses `lofty` (native Rust library) for metadata parsing, which is infinitely faster (in some sense) but supports fewer formats (mostly Audio).
+The original `mpv-music` utilized `ffprobe` to parse metadata from everything. The Rust version uses `lofty` (native Rust library) for metadata parsing, which is infinitely faster (in some sense) but supports fewer formats (mostly Audio). However, they should be enough for 99% of people.
 
 Currently supported formats by `lofty`:
 
@@ -464,8 +473,7 @@ Currently supported formats by `lofty`:
 | WAV         | `ID3v2`, `RIFF INFO`         |
 | WavPack     | `APE`, `ID3v1`               |
 
-For unsupported formats, the indexer falls back to filename parsing. I may implement an opt-in `ffprobe` fallback in the future if there is demand, but right now there's me and one other person I know of that actually uses this and we don't need it.
-
+For unsupported formats, the indexer falls back to filename parsing. I may implement an opt-in `ffprobe` fallback in the future if there is demand, but right now there's me and one other person I know of that actually uses this and we don't need it. Actually, there are now an estimated 30–50+ users, but no one has complained so far since the vast majority just use Opus, FLAC, WAV, or MP3 these days.
 </details>
 
 ---
@@ -474,10 +482,11 @@ For unsupported formats, the indexer falls back to filename parsing. I may imple
 
 - **Source Code:** Located in `src/`.
   * **`main.rs`**: Entry point. Minimal bootstrap delegating to `app::run`.
+  * **`ui.rs`**: Centralized terminal UI badges (`[Info]`, `[Success]`, `[Warning]`, `[Error]`), user prompts, and logging forwarding.
   - **`app/`**: Application lifecycle and execution engine.
     * **`mod.rs`**: Top-level coordinator and mode dispatch.
     * **`flags.rs`**: Utility flag handling (`--log`, `--config`), runtime CLI overrides, and directory operations.
-    * **`logging.rs`**: Logger initialization (`flexi_logger`), file logging, and stderr formatting.
+    * **`logging.rs`**: Multi-session file logging (`flexi_logger`), retention pruning, and stderr formatting.
     * **`library.rs`**: Track loading, session directory scanning, and index syncing.
     * **`filter.rs`**: Multi-stage CLI track filtering, comma tag matching, and interactive disambiguation.
   * **`cli.rs`**: Defines the command-line interface arguments and flags (using `clap`).
