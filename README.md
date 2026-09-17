@@ -12,6 +12,18 @@
 
 It indexes your music collection into a lightning-fast library, providing fuzzy searching (via `skim`), metadata-rich previews, and deep integration with `mpv` for high-quality playback.
 
+### Direct CLI Experience
+
+<p align="center">
+  <img src="docs/assets/cli_demo.gif" alt="Terminal recording showing playback of an artist's tracks using -a ado -p, skipping to the next song with Enter, and title searching with -t viva" width="100%">
+</p>
+
+### Interactive TUI Experience
+
+<p align="center">
+  <img src="docs/assets/tui_demo.gif" alt="Terminal recording showing interactive mode selection, fuzzy searching with live metadata preview, queuing multiple tracks with Tab, and playback skipping with Enter" width="100%">
+</p>
+
 *(Looking for the legacy Bash version? See [mpv-music-sh-archive](https://github.com/FurqanHun/mpv-music/tree/mpv-music-sh-archive))*
 
 ---

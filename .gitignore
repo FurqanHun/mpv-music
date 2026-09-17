@@ -10,3 +10,6 @@ target/
 .idea/
 *~
 *.swp
+
+asciinema/
+*.cast
