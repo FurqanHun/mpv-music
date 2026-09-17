@@ -13,7 +13,6 @@ This minor release brings the largest architectural and stability overhaul since
 
 ### Features & Improvements
 - **Comprehensive Test Suite:** Added an automated test suite which brings the total to 143 tests (134 in-module unit/edge tests + 9 end-to-end sandbox integration tests in `tests/cli_user_flows_test.rs`) that directly exercise runtime production code without mocking.
-- **Pure Binary Architecture:** Retained `mpv-music` strictly as a 100% executable application binary without introducing an unnecessary `lib.rs` library crate.
 - **Codebase Modularization:** Refactored monolithic files across `src/tui/`, `src/app/`, and `src/player/` into clean, single-responsibility submodules (`src/app/` coordinator, flags, library, logging, filter; `src/player/` builder, target, ytdlp, radio; `src/tui/` tracks, dirs, tags, search, radio, items, icons).
 - **Type Safety & Enums:** Replaced raw string arguments with strongly-typed enums (`LoopMode`, `MediaType`, `TargetKind`, `TagField`) across `src/` while maintaining 100% backward compatibility with existing user configs and index cache files.
 - **MpvCommandBuilder:** Introduced `MpvCommandBuilder` for deterministic player command construction, video/audio mode validation, and flag assembly.
@@ -24,7 +23,7 @@ This minor release brings the largest architectural and stability overhaul since
 - **Configurable Backends:** Added `player` and `ytdlp` configuration options (and `--player`, `--ytdlp` CLI flags) to support custom media player binaries and yt-dlp forks.
 - **Config Auto-Population:** Automatically discovers and populates newly introduced configuration keys with default values upon load without overwriting user settings.
 - **Directory Management UX:** Added visual feedback delays, directory icons (`📁`), clearer removal prompts, and a new option to browse configured directories directly in the Settings menu.
-- **yt-dlp Firefox User-Agent:** Bumped the default yt-dlp User-Agent string to modern Firefox 156.0 with automatic migration of legacy strings in existing config files upon load.
+- **yt-dlp Firefox User-Agent:** Bumped the default yt-dlp User-Agent string to modern Firefox 156.0.
 - **Nerd Font Enhancements:** Added Nerd Font glyph support to the player banner, status line, and interactive Skim input prompts.
 
 ### Bug Fixes

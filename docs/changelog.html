@@ -176,7 +176,6 @@
 <h3>Features &amp; Improvements</h3>
 <ul>
 <li><strong>Comprehensive Test Suite:</strong> Added an automated test suite which brings the total to 143 tests (134 in-module unit/edge tests + 9 end-to-end sandbox integration tests in <code>tests/cli_user_flows_test.rs</code>) that directly exercise runtime production code without mocking.</li>
-<li><strong>Pure Binary Architecture:</strong> Retained <code>mpv-music</code> strictly as a 100% executable application binary without introducing an unnecessary <code>lib.rs</code> library crate.</li>
 <li><strong>Codebase Modularization:</strong> Refactored monolithic files across <code>src/tui/</code>, <code>src/app/</code>, and <code>src/player/</code> into clean, single-responsibility submodules (<code>src/app/</code> coordinator, flags, library, logging, filter; <code>src/player/</code> builder, target, ytdlp, radio; <code>src/tui/</code> tracks, dirs, tags, search, radio, items, icons).</li>
 <li><strong>Type Safety &amp; Enums:</strong> Replaced raw string arguments with strongly-typed enums (<code>LoopMode</code>, <code>MediaType</code>, <code>TargetKind</code>, <code>TagField</code>) across <code>src/</code> while maintaining 100% backward compatibility with existing user configs and index cache files.</li>
 <li><strong>MpvCommandBuilder:</strong> Introduced <code>MpvCommandBuilder</code> for deterministic player command construction, video/audio mode validation, and flag assembly.</li>
@@ -187,7 +186,7 @@
 <li><strong>Configurable Backends:</strong> Added <code>player</code> and <code>ytdlp</code> configuration options (and <code>--player</code>, <code>--ytdlp</code> CLI flags) to support custom media player binaries and yt-dlp forks.</li>
 <li><strong>Config Auto-Population:</strong> Automatically discovers and populates newly introduced configuration keys with default values upon load without overwriting user settings.</li>
 <li><strong>Directory Management UX:</strong> Added visual feedback delays, directory icons (<code>📁</code>), clearer removal prompts, and a new option to browse configured directories directly in the Settings menu.</li>
-<li><strong>yt-dlp Firefox User-Agent:</strong> Bumped the default yt-dlp User-Agent string to modern Firefox 156.0 with automatic migration of legacy strings in existing config files upon load.</li>
+<li><strong>yt-dlp Firefox User-Agent:</strong> Bumped the default yt-dlp User-Agent string to modern Firefox 156.0.</li>
 <li><strong>Nerd Font Enhancements:</strong> Added Nerd Font glyph support to the player banner, status line, and interactive Skim input prompts.</li>
 </ul>
 <h3>Bug Fixes</h3>
