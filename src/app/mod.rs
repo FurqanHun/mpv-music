@@ -1,3 +1,4 @@
+pub mod cleanup;
 pub mod filter;
 pub mod flags;
 pub mod library;
@@ -39,6 +40,8 @@ pub fn run(args: Cli) -> Result<()> {
     let mut cfg = config::load(config_path_override.clone())?;
 
     let _logger_handle = logging::init(&args, &cfg, log_dir)?;
+
+    cleanup::cleanup_stale_queue_files(log_dir);
 
     log::info!("Starting MPV-Music...");
     log::debug!("CLI Args: {:?}", args);
