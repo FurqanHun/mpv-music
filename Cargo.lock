@@ -1694,6 +1694,7 @@ dependencies = [
  "flexi_logger",
  "futures-util",
  "indicatif",
+ "libc",
  "lofty",
  "log",
  "rayon",
@@ -1707,6 +1708,7 @@ dependencies = [
  "toml",
  "ureq",
  "walkdir",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
