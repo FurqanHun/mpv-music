@@ -116,10 +116,11 @@ pub fn manage_remove_menu(cfg: &mut config::Config) -> Result<bool> {
     let opts = SkimOptionsBuilder::default()
         .multi(true)
         .prompt(&remove_prompt)
-        .header("   Select directories to remove (TAB to select, ENTER to confirm)")
+        .header("   Select directories to remove (TAB select, Ctrl+A all, ENTER confirm)")
         .reverse(true)
         //.typos(2)
         .inline_info(true)
+        .bind(super::multi_select_binds())
         .build()
         .unwrap();
 

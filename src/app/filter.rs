@@ -103,7 +103,7 @@ pub fn handle_cli_filters(
 
                 if let Some(selected_vals) = tui::run_skim_multi_selection(
                     options_vec,
-                    &format!("Which {}s? (TAB to select multiple) > ", field.as_str()),
+                    &format!("Which {}s? (TAB select, Ctrl+A all) > ", field.as_str()),
                 ) {
                     let selected_set: HashSet<String> = selected_vals.into_iter().collect();
 

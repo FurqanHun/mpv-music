@@ -45,6 +45,7 @@ where
         .reverse(true)
         //.typos(2)
         .inline_info(true)
+        .bind(super::multi_select_binds())
         .build()
         .unwrap();
 
@@ -120,6 +121,7 @@ pub fn run_dir_mode(
         //.typos(2)
         .inline_info(true)
         .preview("")
+        .bind(super::multi_select_binds())
         .build()
         .unwrap();
 

@@ -78,6 +78,7 @@ pub fn run_search_mode(
         //.typos(2)
         .inline_info(true)
         .preview("")
+        .bind(super::multi_select_binds())
         .build()
         .unwrap();
 

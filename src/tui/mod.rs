@@ -12,7 +12,7 @@ pub use dirs::{add_directory, remove_directory, run_manage_dirs_mode};
 pub use filter::apply_cli_filters;
 pub use icons::Icons;
 pub use radio::run_radio_mode;
-pub use runner::{run_skim_multi_selection, run_skim_simple};
+pub use runner::{multi_select_binds, run_skim_multi_selection, run_skim_simple};
 pub use search::run_search_mode;
 pub use tags::{run_post_filter_action, run_tag_mode};
 pub use tracks::{run_dir_mode, run_playlist_mode, run_track_mode};
@@ -248,7 +248,7 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
                             })
                             .collect();
 
-                        let prompt = "Delete Logs (TAB to select, ENTER to delete) > ";
+                        let prompt = "Delete Logs (TAB select, Ctrl+A all, ENTER delete) > ";
                         if let Some(selected) =
                             runner::run_skim_multi_selection(items.clone(), prompt)
                             && !selected.is_empty()

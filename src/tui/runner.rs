@@ -46,6 +46,13 @@ pub fn run_skim_input_prompt(prompt: &str, header: &str) -> Option<String> {
     if q.is_empty() { None } else { Some(q) }
 }
 
+pub fn multi_select_binds() -> Vec<String> {
+    vec![
+        "ctrl-a:select-all".to_string(),
+        "ctrl-d:deselect-all".to_string(),
+    ]
+}
+
 pub fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<String>> {
     let skim_items: Vec<MenuItem> = items
         .into_iter()
@@ -62,6 +69,7 @@ pub fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<
         //.typos(2)
         .inline_info(true)
         .multi(true)
+        .bind(multi_select_binds())
         .build()
         .unwrap();
 
@@ -83,5 +91,26 @@ pub fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<
         }
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_multi_select_binds_contains_expected_keys() {
+        let binds = multi_select_binds();
+        assert!(binds.contains(&"ctrl-a:select-all".to_string()));
+        assert!(binds.contains(&"ctrl-d:deselect-all".to_string()));
+    }
+
+    #[test]
+    fn test_multi_select_binds_in_skim_options_builder() {
+        let opts = SkimOptionsBuilder::default()
+            .multi(true)
+            .bind(multi_select_binds())
+            .build();
+        assert!(opts.is_ok());
     }
 }

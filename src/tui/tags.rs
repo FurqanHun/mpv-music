@@ -106,6 +106,7 @@ pub fn run_tag_picker(
         .reverse(true)
         //.typos(2)
         .inline_info(true)
+        .bind(super::multi_select_binds())
         .build()
         .unwrap();
 
