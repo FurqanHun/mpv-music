@@ -197,7 +197,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 
 > [!TIP]
 > **Menu Navigation:**  
-> Use arrow keys or type to fuzzy-filter items, and `ENTER` to select. Press `ESC` anywhere to instantly go back / cancel (or select the `q) Back` option with `ENTER`).
+> Use arrow keys or type to fuzzy-filter items, and `ENTER` to select. Press `ESC` anywhere to instantly go back / cancel (or select the `q) Back` option with `ENTER`). In multi-selection menus, use `TAB` to toggle items, `Ctrl+A` to select all matching items, and `Ctrl+D` to deselect all.
 
 ### Options:
 
@@ -502,6 +502,7 @@ For unsupported formats, the indexer falls back to filename parsing. I may imple
     * **`logging.rs`**: Multi-session file logging (`flexi_logger`), retention pruning, and stderr formatting.
     * **`library.rs`**: Track loading, session directory scanning, and index syncing.
     * **`filter.rs`**: Multi-stage CLI track filtering, comma tag matching, and interactive disambiguation.
+    * **`cleanup.rs`**: Process liveness checks and startup cleanup for orphaned queue files.
   * **`cli.rs`**: Defines the command-line interface arguments and flags (using `clap`).
   - **`tui/`**: The Terminal User Interface module.
     * **`mod.rs`**: Core orchestration, main & settings menus, and public API facade.
