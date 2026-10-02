@@ -195,6 +195,13 @@ pub fn apply_cli_overrides(cfg: &mut config::Config, args: &Cli) -> Result<()> {
         cfg.loop_mode = config::LoopMode::Track;
     }
 
+    if let Some(ref mode) = args.gapless {
+        cfg.gapless = mode.parse().unwrap_or(config::GaplessMode::True);
+    }
+    if args.no_gapless {
+        cfg.gapless = config::GaplessMode::False;
+    }
+
     if let Some(ref extensions) = args.ext {
         cfg.audio_exts = extensions
             .split(',')
@@ -323,5 +330,23 @@ mod tests {
         // start_idx = 2 - 1 = 1, so logs[1] (oldest) gets removed, logs[0] (newest) remains.
         assert!(!l1.exists());
         assert!(l2.exists());
+    }
+
+    #[test]
+    fn test_apply_cli_overrides_gapless() {
+        let mut cfg = config::Config::default();
+        assert_eq!(cfg.gapless, config::GaplessMode::Default);
+
+        let args_gapless = Cli::parse_from(["mpv-music", "--gapless"]);
+        apply_cli_overrides(&mut cfg, &args_gapless).unwrap();
+        assert_eq!(cfg.gapless, config::GaplessMode::True);
+
+        let args_no_gapless = Cli::parse_from(["mpv-music", "--no-gapless"]);
+        apply_cli_overrides(&mut cfg, &args_no_gapless).unwrap();
+        assert_eq!(cfg.gapless, config::GaplessMode::False);
+
+        let args_gapless_default = Cli::parse_from(["mpv-music", "--gapless", "default"]);
+        apply_cli_overrides(&mut cfg, &args_gapless_default).unwrap();
+        assert_eq!(cfg.gapless, config::GaplessMode::Default);
     }
 }

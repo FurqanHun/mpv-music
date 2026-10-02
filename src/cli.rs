@@ -135,6 +135,17 @@ pub struct Cli {
     pub repeat: bool,
 
     #[arg(
+        long,
+        num_args = 0..=1,
+        default_missing_value = "true",
+        help = "Enable gapless playback ('default', 'true', 'false')"
+    )]
+    pub gapless: Option<String>,
+
+    #[arg(long, help = "Disable gapless playback")]
+    pub no_gapless: bool,
+
+    #[arg(
         short = 'e',
         long,
         value_name = "EXT1,EXT2",
@@ -298,5 +309,12 @@ mod tests {
         assert_eq!(args.verbose, 2);
         assert_eq!(args.volume, Some(90));
         assert!(args.repeat);
+    }
+
+    #[test]
+    fn test_cli_gapless_flags() {
+        assert_eq!(Cli::parse_from(["mpv-music", "--gapless"]).gapless.as_deref(), Some("true"));
+        assert_eq!(Cli::parse_from(["mpv-music", "--gapless", "default"]).gapless.as_deref(), Some("default"));
+        assert!(Cli::parse_from(["mpv-music", "--no-gapless"]).no_gapless);
     }
 }

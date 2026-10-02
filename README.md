@@ -224,6 +224,8 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `--loop [<LOOP_ARG>]` | Enable looping (`inf`, `no`, `track`, or a NUMBER). |
 | `--no-loop` | Disable all looping. |
 | `--repeat` | Loop the current track (Repeat One). |
+| `--gapless [<MODE>]` | Enable gapless playback (`default`, `true`, `false`). Defaults to `true` if flag passed without value. |
+| `--no-gapless` | Disable gapless playback completely. |
 | `-e`, `--ext <EXT_LIST>` | Override allowed extensions (e.g. `-e mp3,flac`). |
 | `-g`, `--genre [<GENRE>]` | Filter by Genre (e.g. `-g 'Pop,Rock'`). |
 | `-a`, `--artist [<ARTIST>]` | Filter by Artist (e.g. `-a 'ado,gentle'`). |
@@ -319,6 +321,7 @@ mpv-music --config
 shuffle = true
 loop_mode = "inf"  # Options: "playlist" (same as inf), "track", "no", "inf", "5" (number of loops)
 volume = 100
+gapless = "default" # Options: "default" (sets "weak"), true (force gapless), false (disable)
 
 # --- Appearance ---
 nerd_fonts = "none"       # Options: "none" (standard emojis), "mono", "normal"
@@ -403,6 +406,7 @@ mpv_args = []
 | `shuffle` | Boolean | `true` | `-s`, `--shuffle` / `--no-shuffle` | Enable or disable random shuffle by default. |
 | `loop_mode` | String / Integer | `"inf"` | `--loop`, `--no-loop`, `--repeat` | Looping mode: `"inf"` (or `"playlist"`), `"track"` (or `"file"`), `"no"` (or `"off"`), or loop count (e.g. `5`). |
 | `volume` | Integer | `100` | `--volume <0-130>` | Playback volume percentage (`0` to `130`). Capped at 130 max. |
+| `gapless` | String / Boolean | `"default"` | `--gapless [<MODE>]`, `--no-gapless` | Gapless playback: `"default"` (stock MPV behavior), `true` (force gapless), `false` (disable). |
 | `nerd_fonts` | String / Boolean | `"none"` | — | Icon set: `"none"` (emojis), `"mono"` (monospace Nerd Fonts), `"normal"` (proportional/symbols), or `true`/`false`. |
 | `music_dirs` | Array of Strings | `["$HOME/Music"]` | `--manage-dirs`, `--add-dir`, `--remove-dir` | List of folder paths to index and search. |
 | `video_ok` | Boolean | `false` | `--video-ok` / `--no-video` | Scan and index video files alongside audio tracks. |

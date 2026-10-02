@@ -1,4 +1,4 @@
-use crate::config::{Config, LoopMode, NerdFontMode};
+use crate::config::{Config, GaplessMode, LoopMode, NerdFontMode};
 use crate::tui::Icons;
 use std::process::Command;
 
@@ -199,6 +199,26 @@ pub fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[Strin
         }
     }
 
+    let has_custom_gapless = config
+        .mpv_args
+        .iter()
+        .any(|a| a.starts_with("--gapless-audio"));
+
+    if !has_custom_gapless || config.gapless != GaplessMode::Default {
+        log::debug!("Setting gapless mode: {}", config.gapless);
+        match config.gapless {
+            GaplessMode::Default => {
+                cmd.arg("--gapless-audio=weak");
+            }
+            GaplessMode::True => {
+                cmd.arg("--gapless-audio=yes");
+            }
+            GaplessMode::False => {
+                cmd.arg("--gapless-audio=no");
+            }
+        }
+    }
+
     if !extra_args.is_empty() {
         log::debug!("Injecting manual CLI overrides: {:?}", extra_args);
         for arg in extra_args {
@@ -353,6 +373,7 @@ mod tests {
         assert!(args.iter().any(|a| a == "--no-term-osd-bar"));
         assert!(args.iter().any(|a| a.contains("MPV-MUSIC")));
         assert!(args.iter().any(|a| a.contains("term-status-msg")));
+        assert!(args.iter().any(|a| a == "--gapless-audio=weak"));
     }
 
     #[test]
@@ -368,6 +389,18 @@ mod tests {
             .map(|a| a.to_string_lossy().to_string())
             .collect();
         assert!(args.iter().any(|a| a == "--gapless-audio=yes"));
+        assert!(!args.iter().any(|a| a == "--gapless-audio=weak"));
+    }
+
+    #[test]
+    fn test_apply_common_args_gapless_modes() {
+        let mut cmd = Command::new("mpv");
+        apply_common_args(&mut cmd, &Config { gapless: GaplessMode::True, ..Default::default() }, &[]);
+        assert!(cmd.get_args().any(|a| a == "--gapless-audio=yes"));
+
+        let mut cmd = Command::new("mpv");
+        apply_common_args(&mut cmd, &Config { gapless: GaplessMode::False, ..Default::default() }, &[]);
+        assert!(cmd.get_args().any(|a| a == "--gapless-audio=no"));
     }
 
     #[test]

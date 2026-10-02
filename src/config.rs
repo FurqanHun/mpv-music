@@ -37,6 +37,7 @@ pub const KNOWN_CONFIG_KEYS: &[&str] = &[
     "shuffle",
     "loop_mode",
     "volume",
+    "gapless",
     "music_dirs",
     "video_ok",
     "watch",
@@ -105,6 +106,91 @@ where
     }
 
     deserializer.deserialize_any(NerdFontVisitor)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum GaplessMode {
+    #[default]
+    Default,
+    True,
+    False,
+}
+
+impl std::fmt::Display for GaplessMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Default => write!(f, "default"),
+            Self::True => write!(f, "true"),
+            Self::False => write!(f, "false"),
+        }
+    }
+}
+
+impl std::str::FromStr for GaplessMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let s_lower = s.trim().to_lowercase();
+        match s_lower.as_str() {
+            "default" | "weak" => Ok(Self::Default),
+            "true" | "yes" | "on" => Ok(Self::True),
+            "false" | "no" | "off" => Ok(Self::False),
+            other => Err(format!(
+                "Invalid gapless value '{}'. Valid options: 'default', 'true', 'false'.",
+                other
+            )),
+        }
+    }
+}
+
+impl serde::Serialize for GaplessMode {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::Default => serializer.serialize_str("default"),
+            Self::True => serializer.serialize_bool(true),
+            Self::False => serializer.serialize_bool(false),
+        }
+    }
+}
+
+pub fn deserialize_gapless<'de, D>(deserializer: D) -> std::result::Result<GaplessMode, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct GaplessVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for GaplessVisitor {
+        type Value = GaplessMode;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str(
+                "a boolean (true/false) or string (\"default\", \"true\", \"false\")",
+            )
+        }
+
+        fn visit_bool<E>(self, value: bool) -> std::result::Result<GaplessMode, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(if value {
+                GaplessMode::True
+            } else {
+                GaplessMode::False
+            })
+        }
+
+        fn visit_str<E>(self, value: &str) -> std::result::Result<GaplessMode, E>
+        where
+            E: serde::de::Error,
+        {
+            value.parse().map_err(E::custom)
+        }
+    }
+
+    deserializer.deserialize_any(GaplessVisitor)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -217,6 +303,8 @@ pub struct Config {
     #[serde(default, deserialize_with = "deserialize_loop_mode")]
     pub loop_mode: LoopMode,
     pub volume: u8,
+    #[serde(default, deserialize_with = "deserialize_gapless")]
+    pub gapless: GaplessMode,
 
     pub music_dirs: Vec<PathBuf>,
     pub video_ok: bool,
@@ -275,6 +363,7 @@ impl Default for Config {
             shuffle: true,
             loop_mode: LoopMode::Inf,
             volume: 100,
+            gapless: GaplessMode::Default,
             music_dirs,
             video_ok: false,
             watch: false,
@@ -799,6 +888,7 @@ mod tests {
             shuffle: false,
             loop_mode: LoopMode::Count(7),
             volume: 125,
+            gapless: GaplessMode::True,
             music_dirs: vec![PathBuf::from("/test/music1"), PathBuf::from("/test/music2")],
             video_ok: true,
             watch: true,
@@ -834,6 +924,7 @@ mod tests {
         assert!(loaded.scan_hidden_dirs);
         assert!(loaded.serial_mode);
         assert_eq!(loaded.nerd_fonts, NerdFontMode::Mono);
+        assert_eq!(loaded.gapless, GaplessMode::True);
         assert!(loaded.ytdlp_ejs_remote_github);
         assert_eq!(loaded.ytdlp_useragent, "CustomAgent/1.0");
         assert!(!loaded.enable_file_logging);
@@ -899,6 +990,37 @@ mod tests {
         }
 
         assert!(toml::from_str::<TestNerd>("nerd_fonts = \"invalid_unknown\"").is_err());
+    }
+
+    #[test]
+    fn test_gapless_mode_serde() {
+        #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        struct TestGapless {
+            #[serde(default, deserialize_with = "deserialize_gapless")]
+            gapless: GaplessMode,
+        }
+
+        assert_eq!(
+            toml::from_str::<TestGapless>("gapless = \"default\"").unwrap().gapless,
+            GaplessMode::Default
+        );
+        assert_eq!(
+            toml::from_str::<TestGapless>("gapless = \"weak\"").unwrap().gapless,
+            GaplessMode::Default
+        );
+        assert_eq!(
+            toml::from_str::<TestGapless>("gapless = true").unwrap().gapless,
+            GaplessMode::True
+        );
+        assert_eq!(
+            toml::from_str::<TestGapless>("gapless = false").unwrap().gapless,
+            GaplessMode::False
+        );
+        assert!(toml::from_str::<TestGapless>("gapless = \"invalid\"").is_err());
+
+        assert!(toml::to_string(&TestGapless { gapless: GaplessMode::Default }).unwrap().contains("gapless = \"default\""));
+        assert!(toml::to_string(&TestGapless { gapless: GaplessMode::True }).unwrap().contains("gapless = true"));
+        assert!(toml::to_string(&TestGapless { gapless: GaplessMode::False }).unwrap().contains("gapless = false"));
     }
 
     #[test]
