@@ -1,7 +1,8 @@
 param (
     [switch]$Dev,
     [switch]$Update,
-    [string]$Tag = ""
+    [string]$Tag = "",
+    [switch]$NoVerify
 )
 
 $RepoOwner = "FurqanHun"
@@ -53,73 +54,104 @@ if (-not [string]::IsNullOrWhiteSpace($Tag)) {
         Write-Host "`n[INFO] Fetching update: $Tag" -ForegroundColor Cyan
     }
     $LatestTag = $Tag
-    $AssetUrl = "https://github.com/$RepoOwner/$RepoName/releases/download/$LatestTag/mpv-music-$LatestTag-$ArchPlatform.zip"
 } else {
     Write-Host "`n[INFO] Fetching release info..." -ForegroundColor Cyan
     
     # Use TLS 1.2
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
+    $ApiEndpoint = "https://furqanhun.github.io/mpv-music/latest.json"
+    $Releases = Invoke-RestMethod -Uri $ApiEndpoint
+    
     if ($Dev) {
-        $ApiEndpoint = "https://api.github.com/repos/$RepoOwner/$RepoName/releases"
-        $Releases = Invoke-RestMethod -Uri $ApiEndpoint
-        $LatestRelease = $Releases[0]
+        $LatestTag = $Releases.dev.tag_name
     } else {
-        $ApiEndpoint = "https://api.github.com/repos/$RepoOwner/$RepoName/releases/latest"
-        $LatestRelease = Invoke-RestMethod -Uri $ApiEndpoint
+        $LatestTag = $Releases.stable.tag_name
     }
-
-    $LatestTag = $LatestRelease.tag_name
     
-    $AssetUrl = ""
-    foreach ($asset in $LatestRelease.assets) {
-        if ($asset.name -match $ArchPlatform) {
-            $AssetUrl = $asset.browser_download_url
-            break
-        }
-    }
-}
-
-if (-not [string]::IsNullOrWhiteSpace($AssetUrl)) {
-    Write-Host "[OK] Found pre-compiled binary for $ArchPlatform ($LatestTag)" -ForegroundColor Green
-    
-    $TempDir = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ([guid]::NewGuid().ToString())
-    New-Item -ItemType Directory -Path $TempDir | Out-Null
-    
-    $ZipPath = Join-Path $TempDir "mpv-music.zip"
-    
-    Write-Host "[INFO] Downloading..." -ForegroundColor Cyan
-    Invoke-WebRequest -Uri $AssetUrl -OutFile $ZipPath -UseBasicParsing
-    
-    Write-Host "[INFO] Extracting..." -ForegroundColor Cyan
-    Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
-    
-    $ExtractedExe = Get-ChildItem -Path $TempDir -Filter "mpv-music.exe" -Recurse | Select-Object -First 1
-    
-    if ($ExtractedExe) {
-        if (Test-Path $InstalledBinary) {
-            $OldBinary = "$InstalledBinary.old"
-            if (Test-Path $OldBinary) {
-                Remove-Item -Path $OldBinary -Force -ErrorAction SilentlyContinue
-            }
-            Rename-Item -Path $InstalledBinary -NewName "mpv-music.exe.old" -Force -ErrorAction SilentlyContinue
-            
-            $CleanupCmd = "Start-Sleep -Seconds 3; Remove-Item -Path '$OldBinary' -Force -ErrorAction SilentlyContinue"
-            Start-Process -FilePath "powershell.exe" -WindowStyle Hidden -ArgumentList "-NoProfile", "-Command", $CleanupCmd
-        }
-        Move-Item -Path $ExtractedExe.FullName -Destination $InstalledBinary -Force
-        Write-Host "[OK] Extracted and installed successfully." -ForegroundColor Green
-    } else {
-        Write-Host "[ERROR] mpv-music.exe not found in the downloaded archive." -ForegroundColor Red
-        Remove-Item -Path $TempDir -Recurse -Force
+    if ([string]::IsNullOrWhiteSpace($LatestTag)) {
+        Write-Host "[ERROR] Failed to parse latest version from $ApiEndpoint." -ForegroundColor Red
         exit 1
     }
-    
-    Remove-Item -Path $TempDir -Recurse -Force
-} else {
-    Write-Host "[ERROR] No pre-compiled binary found for your system." -ForegroundColor Red
+}
+
+$AssetName = "mpv-music-$LatestTag-$ArchPlatform.zip"
+$AssetUrl = "https://github.com/$RepoOwner/$RepoName/releases/download/$LatestTag/$AssetName"
+$ChecksumUrl = "https://github.com/$RepoOwner/$RepoName/releases/download/$LatestTag/checksums.txt"
+
+Write-Host "[OK] Target version: $ArchPlatform ($LatestTag)" -ForegroundColor Green
+
+$TempDir = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ([guid]::NewGuid().ToString())
+New-Item -ItemType Directory -Path $TempDir | Out-Null
+
+$ZipPath = Join-Path $TempDir $AssetName
+$ChecksumPath = Join-Path $TempDir "checksums.txt"
+
+Write-Host "[INFO] Downloading binary..." -ForegroundColor Cyan
+try {
+    Invoke-WebRequest -Uri $AssetUrl -OutFile $ZipPath -UseBasicParsing -ErrorAction Stop
+} catch {
+    Write-Host "[ERROR] Failed to download binary. Are you connected to the internet, and does this release exist?" -ForegroundColor Red
+    Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue
     exit 1
 }
+
+if (-not $NoVerify) {
+    Write-Host "[INFO] Downloading checksums..." -ForegroundColor Cyan
+    try {
+        Invoke-WebRequest -Uri $ChecksumUrl -OutFile $ChecksumPath -UseBasicParsing -ErrorAction Stop
+        Write-Host "[INFO] Verifying checksum..." -ForegroundColor Cyan
+        
+        $ExpectedHashLine = Select-String -Path $ChecksumPath -Pattern $AssetName | Select-Object -ExpandProperty Line
+        if (-not $ExpectedHashLine) {
+            Write-Host "[ERROR] Checksum for $AssetName not found in checksums.txt!" -ForegroundColor Red
+            Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+            exit 1
+        }
+        
+        $ExpectedHash = $ExpectedHashLine.Split(' ')[0].Trim()
+        
+        $ActualHash = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash
+        
+        if ($ActualHash -eq $ExpectedHash) {
+            Write-Host "[OK] Checksum verified." -ForegroundColor Green
+        } else {
+            Write-Host "[ERROR] Checksum validation failed! The download may be corrupted." -ForegroundColor Red
+            Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+            exit 1
+        }
+    } catch {
+        Write-Host "[WARN] checksums.txt not found on release. Skipping validation." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "[WARN] Checksum validation disabled via -NoVerify." -ForegroundColor Yellow
+}
+
+Write-Host "[INFO] Extracting..." -ForegroundColor Cyan
+Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
+
+$ExtractedExe = Get-ChildItem -Path $TempDir -Filter "mpv-music.exe" -Recurse | Select-Object -First 1
+
+if ($ExtractedExe) {
+    if (Test-Path $InstalledBinary) {
+        $OldBinary = "$InstalledBinary.old"
+        if (Test-Path $OldBinary) {
+            Remove-Item -Path $OldBinary -Force -ErrorAction SilentlyContinue
+        }
+        Rename-Item -Path $InstalledBinary -NewName "mpv-music.exe.old" -Force -ErrorAction SilentlyContinue
+        
+        $CleanupCmd = "Start-Sleep -Seconds 3; Remove-Item -Path '$OldBinary' -Force -ErrorAction SilentlyContinue"
+        Start-Process -FilePath "powershell.exe" -WindowStyle Hidden -ArgumentList "-NoProfile", "-Command", $CleanupCmd
+    }
+    Move-Item -Path $ExtractedExe.FullName -Destination $InstalledBinary -Force
+    Write-Host "[OK] Extracted and installed successfully." -ForegroundColor Green
+} else {
+    Write-Host "[ERROR] mpv-music.exe not found in the downloaded archive." -ForegroundColor Red
+    Remove-Item -Path $TempDir -Recurse -Force
+    exit 1
+}
+
+Remove-Item -Path $TempDir -Recurse -Force
 
 if ($Update) {
     Write-Host "[OK] mpv-music successfully updated in $InstalledBinary" -ForegroundColor Green

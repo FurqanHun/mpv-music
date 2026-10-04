@@ -19,11 +19,13 @@ NC='\033[0m'
 DEV_MODE=false
 UPDATE_MODE=false
 TARGET_TAG=""
+NO_VERIFY=false
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --dev) DEV_MODE=true; shift ;;
         --update) UPDATE_MODE=true; shift ;;
         --tag) TARGET_TAG="$2"; shift 2 ;;
+        --no-verify) NO_VERIFY=true; shift ;;
         *) shift ;;
     esac
 done
@@ -34,10 +36,23 @@ else
     echo -e "${BLUE}🎧 mpv-music Rust Installer${NC}"
 fi
 
-if ! command -v jq &>/dev/null; then
-    echo -e "${RED}[ERROR]${NC} 'jq' is not installed. It is required for the installer to parse release data."
-    echo -e "Please install it via your package manager (e.g., 'sudo dnf install jq' or 'brew install jq')."
+if command -v curl >/dev/null 2>&1; then
+    FETCH_CMD="curl -sL"
+    DOWNLOAD_CMD="curl -f -# -L -o"
+elif command -v wget >/dev/null 2>&1; then
+    FETCH_CMD="wget -qO-"
+    DOWNLOAD_CMD="wget -q --show-progress -O"
+else
+    echo -e "${RED}[ERROR]${NC} 'curl' or 'wget' is required."
     exit 1
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+    SHASUM_CMD="sha256sum -c"
+elif command -v shasum >/dev/null 2>&1; then
+    SHASUM_CMD="shasum -a 256 -c"
+else
+    SHASUM_CMD=""
 fi
 
 # --- 1. System Detection ---
@@ -90,27 +105,76 @@ if [[ -n "$TARGET_TAG" ]]; then
         echo -e "\n${BLUE}[INFO]${NC} Fetching update: $TARGET_TAG"
     fi
     LATEST_TAG="$TARGET_TAG"
-    ASSET_URL="https://github.com/FurqanHun/mpv-music/releases/download/$LATEST_TAG/mpv-music-${LATEST_TAG}-${ARCH}-${PLATFORM}.tar.gz"
 else
     echo -e "\n${BLUE}[INFO]${NC} Fetching release info..."
-    if [[ "$DEV_MODE" == "true" ]]; then
-        API_ENDPOINT="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases"
-        LATEST_JSON=$(curl -sL "$API_ENDPOINT" | jq '.[0]')
-    else
-        API_ENDPOINT="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
-        LATEST_JSON=$(curl -sL "$API_ENDPOINT")
-    fi
+    API_ENDPOINT="https://furqanhun.github.io/mpv-music/latest.json"
+    LATEST_JSON=$($FETCH_CMD "$API_ENDPOINT")
 
-    LATEST_TAG=$(echo "$LATEST_JSON" | jq -r ".tag_name // empty")
-    ASSET_URL=$(echo "$LATEST_JSON" | jq -r ".assets[] | select(.name | contains(\"$ARCH\") and contains(\"$PLATFORM\")) | .browser_download_url" 2>/dev/null || echo "")
+    if [[ "$DEV_MODE" == "true" ]]; then
+        LATEST_TAG=$(echo "$LATEST_JSON" | grep -o '"dev".*' | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4)
+    else
+        LATEST_TAG=$(echo "$LATEST_JSON" | sed 's/"dev".*//' | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4)
+    fi
+    
+    if [[ -z "$LATEST_TAG" ]]; then
+        echo -e "${RED}[ERROR]${NC} Failed to parse latest version from $API_ENDPOINT."
+        exit 1
+    fi
 fi
 
+ASSET_NAME="mpv-music-${LATEST_TAG}-${ARCH}-${PLATFORM}.tar.gz"
+ASSET_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$LATEST_TAG/$ASSET_NAME"
+CHECKSUM_URL="https://github.com/$REPO_OWNER/$REPO_NAME/releases/download/$LATEST_TAG/checksums.txt"
+
 # --- 4. Install Logic ---
-if [[ -n "$ASSET_URL" && "$ASSET_URL" != "null" ]]; then
-    echo -e "${GREEN}[OK]${NC} Found pre-compiled binary for $ARCH-$PLATFORM ($LATEST_TAG)"
+if [[ -n "$LATEST_TAG" ]]; then
+    echo -e "${GREEN}[OK]${NC} Target version: $ARCH-$PLATFORM ($LATEST_TAG)"
     TEMP_DIR=$(mktemp -d)
-    curl -sL "$ASSET_URL" -o "$TEMP_DIR/mpv-music.tar.gz"
-    tar -xzf "$TEMP_DIR/mpv-music.tar.gz" -C "$TEMP_DIR"
+    
+    echo -e "${BLUE}[INFO]${NC} Downloading binary..."
+    if ! $DOWNLOAD_CMD "$TEMP_DIR/$ASSET_NAME" "$ASSET_URL"; then
+        echo -e "${RED}[ERROR]${NC} Failed to download binary. Are you connected to the internet, and does this release exist?"
+        rm -rf "$TEMP_DIR"
+        exit 1
+    fi
+
+    if [[ "$NO_VERIFY" == "false" ]]; then
+        if [[ -n "$SHASUM_CMD" ]]; then
+            echo -e "${BLUE}[INFO]${NC} Downloading checksums..."
+            if $DOWNLOAD_CMD "$TEMP_DIR/checksums.txt" "$CHECKSUM_URL"; then
+                echo -e "${BLUE}[INFO]${NC} Verifying checksum..."
+                cd "$TEMP_DIR" || exit 1
+                
+                EXPECTED_HASH=$(grep "$ASSET_NAME" checksums.txt | awk '{print $1}' || true)
+                if [[ -z "$EXPECTED_HASH" ]]; then
+                    echo -e "${RED}[ERROR]${NC} Checksum for $ASSET_NAME not found in checksums.txt!"
+                    cd - > /dev/null || exit 1
+                    rm -rf "$TEMP_DIR"
+                    exit 1
+                fi
+                
+                echo "$EXPECTED_HASH  $ASSET_NAME" > expected.sha256
+                
+                if ! $SHASUM_CMD expected.sha256 > /dev/null 2>&1; then
+                    echo -e "${RED}[ERROR]${NC} Checksum validation failed! The download may be corrupted."
+                    cd - > /dev/null || exit 1
+                    rm -rf "$TEMP_DIR"
+                    exit 1
+                fi
+                echo -e "${GREEN}[OK]${NC} Checksum verified."
+                cd - > /dev/null || exit 1
+            else
+                echo -e "${YELLOW}[WARN]${NC} checksums.txt not found on release. Skipping validation."
+            fi
+        else
+            echo -e "${YELLOW}[WARN]${NC} Checksum validation tool not found. Skipping validation."
+        fi
+    else
+        echo -e "${YELLOW}[WARN]${NC} Checksum validation disabled via --no-verify."
+    fi
+
+    echo -e "${BLUE}[INFO]${NC} Extracting..."
+    tar -xzf "$TEMP_DIR/$ASSET_NAME" -C "$TEMP_DIR"
     BINARY_SOURCE=$(find "$TEMP_DIR" -type f -name "mpv-music" | head -n 1)
     mv "$BINARY_SOURCE" "$INSTALLED_BINARY"
     rm -rf "$TEMP_DIR"

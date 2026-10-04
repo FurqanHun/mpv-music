@@ -102,6 +102,14 @@ jobs:
           cd ..
 
           echo "ASSET=$ARCHIVE_NAME" >> $GITHUB_ENV
+          sha256sum "$ARCHIVE_NAME" > "$ARCHIVE_NAME.sha256"
+
+      - name: Upload Checksum Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksum-${{ matrix.target }}
+          path: ${{ env.ASSET }}.sha256
+          retention-days: 1
 
       - name: Upload Release Assets
         env:
@@ -115,3 +123,33 @@ jobs:
           fi
 
           gh release upload "$TAG_NAME" ${{ env.ASSET }} --clobber
+
+  upload-checksums:
+    name: Upload Checksums
+    needs: build-and-upload
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Download all checksums
+        uses: actions/download-artifact@v4
+        with:
+          pattern: checksum-*
+          path: checksums
+          merge-multiple: true
+
+      - name: Create final checksums.txt
+        run: |
+          cat checksums/*.sha256 > checksums.txt
+
+      - name: Upload to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+          else
+            TAG_NAME=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          fi
+          gh release upload "$TAG_NAME" checksums.txt --clobber
