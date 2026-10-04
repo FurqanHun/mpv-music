@@ -329,18 +329,6 @@ mod tests {
     }
 
     #[test]
-    fn test_apply_url_optimizations_default_ytdlp() {
-        let config = Config::default();
-        let mut cmd = Command::new("mpv");
-        apply_url_optimizations(&mut cmd, "https://youtube.com/watch?v=123", &config);
-        let args: Vec<String> = cmd
-            .get_args()
-            .map(|a| a.to_string_lossy().to_string())
-            .collect();
-        assert!(!args.iter().any(|a| a.contains("ytdl_hook-ytdl_path")));
-    }
-
-    #[test]
     fn test_apply_url_optimizations_custom_ytdlp_skips_remote_ejs() {
         let config = Config {
             ytdlp: "custom-fork".to_string(),

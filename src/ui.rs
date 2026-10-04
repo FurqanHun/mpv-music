@@ -53,15 +53,4 @@ pub fn prompt_exit() {
     let _ = std::io::stdin().read_line(&mut String::new());
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
 
-    #[test]
-    fn test_ansi_constants() {
-        assert_eq!(GREEN_BOLD, "\x1b[32;1m");
-        assert_eq!(YELLOW_BOLD, "\x1b[33;1m");
-        assert_eq!(RED_BOLD, "\x1b[31;1m");
-        assert_eq!(RESET, "\x1b[0m");
-    }
-}

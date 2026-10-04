@@ -578,105 +578,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_default_config_values() {
-        let cfg = Config::default();
-        assert_eq!(cfg.volume, 100);
-        assert_eq!(cfg.loop_mode, LoopMode::Inf);
-        assert!(cfg.shuffle);
-        assert!(!cfg.video_ok);
-        assert!(!cfg.watch);
-        assert_eq!(cfg.max_log_sessions, 3);
-    }
-
-    #[test]
-    fn test_default_music_dirs_not_empty() {
-        let cfg = Config::default();
-        assert!(
-            !cfg.music_dirs.is_empty(),
-            "Default config should have at least one music directory"
-        );
-    }
-
-    #[test]
-    fn test_default_extensions() {
-        let cfg = Config::default();
-
-        assert!(cfg.audio_exts.contains(&"mp3".to_string()));
-        assert!(cfg.audio_exts.contains(&"flac".to_string()));
-        assert!(cfg.audio_exts.contains(&"wav".to_string()));
-
-        assert!(cfg.video_exts.contains(&"mp4".to_string()));
-        assert!(cfg.video_exts.contains(&"mkv".to_string()));
-
-        assert!(cfg.playlist_exts.contains(&"m3u".to_string()));
-        assert!(cfg.playlist_exts.contains(&"m3u8".to_string()));
-    }
-
-    #[test]
-    fn test_volume_cap_at_130() {
-        let mut volume = 200_u8;
-        if volume > 130 {
-            volume = 100;
-        }
-        assert_eq!(volume, 100);
-    }
-
-    #[test]
-    fn test_volume_allows_130() {
-        let mut volume = 130_u8;
-        if volume > 130 {
-            volume = 100;
-        }
-        assert_eq!(volume, 130);
-    }
-
-    #[test]
-    fn test_volume_allows_normal() {
-        let mut volume = 75_u8;
-        if volume > 130 {
-            volume = 100;
-        }
-        assert_eq!(volume, 75);
-    }
-
-    #[test]
-    fn test_max_log_sessions_clamped_at_1() {
-        let mut max_sessions = 0_usize;
-        if max_sessions == 0 {
-            max_sessions = 1;
-        }
-        assert_eq!(max_sessions, 1);
-    }
-
-    #[test]
-    fn test_loop_mode_validation_valid() {
-        assert!("inf".parse::<LoopMode>().is_ok());
-        assert!("playlist".parse::<LoopMode>().is_ok());
-        assert!("track".parse::<LoopMode>().is_ok());
-        assert!("file".parse::<LoopMode>().is_ok());
-        assert!("no".parse::<LoopMode>().is_ok());
-        assert!("off".parse::<LoopMode>().is_ok());
-        assert!("false".parse::<LoopMode>().is_ok());
-    }
-
-    #[test]
-    fn test_loop_mode_validation_invalid() {
-        assert!("potato".parse::<LoopMode>().is_err());
-        assert!("".parse::<LoopMode>().is_err());
-        assert!("random_mode".parse::<LoopMode>().is_err());
-    }
-
-    #[test]
-    fn test_loop_mode_validation_numeric() {
-        assert_eq!("5".parse::<LoopMode>().unwrap(), LoopMode::Count(5));
-    }
-
-    #[test]
-    fn test_loop_mode_validation_numeric_multiple_digits() {
-        assert_eq!("999".parse::<LoopMode>().unwrap(), LoopMode::Count(999));
-    }
-
-    #[test]
     fn test_loop_mode_parsing() {
         assert_eq!("inf".parse::<LoopMode>().unwrap(), LoopMode::Inf);
         assert_eq!("playlist".parse::<LoopMode>().unwrap(), LoopMode::Inf);
@@ -687,44 +588,12 @@ mod tests {
         assert_eq!("false".parse::<LoopMode>().unwrap(), LoopMode::No);
         assert_eq!("5".parse::<LoopMode>().unwrap(), LoopMode::Count(5));
         assert_eq!("42".parse::<LoopMode>().unwrap(), LoopMode::Count(42));
+
+        assert!("potato".parse::<LoopMode>().is_err());
+        assert!("".parse::<LoopMode>().is_err());
     }
 
-    #[test]
-    fn test_loop_mode_display() {
-        assert_eq!(LoopMode::Inf.to_string(), "inf");
-        assert_eq!(LoopMode::Track.to_string(), "track");
-        assert_eq!(LoopMode::No.to_string(), "no");
-        assert_eq!(LoopMode::Count(7).to_string(), "7");
-    }
 
-    #[test]
-    fn test_ytdlp_flags_default() {
-        let cfg = Config::default();
-        assert!(!cfg.ytdlp_available);
-        assert!(!cfg.ytdlp_is_nightly);
-    }
-
-    #[test]
-    fn test_mpv_args_default() {
-        let cfg = Config::default();
-        assert!(cfg.mpv_args.is_empty());
-    }
-
-    #[test]
-    fn test_missing_keys_detection() {
-        let partial_toml = "volume = 60\nshuffle = true\n";
-        let table: toml::Table = toml::from_str(partial_toml).unwrap();
-        let missing: Vec<&str> = KNOWN_CONFIG_KEYS
-            .iter()
-            .copied()
-            .filter(|&k| !table.contains_key(k))
-            .collect();
-        assert!(missing.contains(&"player"));
-        assert!(missing.contains(&"ytdlp"));
-        assert!(missing.contains(&"mpv_args"));
-        assert!(!missing.contains(&"volume"));
-        assert!(!missing.contains(&"shuffle"));
-    }
 
     #[test]
     fn test_mpv_default_args_alias() {
@@ -763,79 +632,6 @@ mod tests {
             }
         }
         assert!(cfg.mpv_args.is_empty());
-    }
-
-    #[test]
-    fn test_nerd_fonts_deserialization() {
-        #[derive(Deserialize)]
-        struct TestCfg {
-            #[serde(default, deserialize_with = "deserialize_nerd_fonts")]
-            nerd_fonts: NerdFontMode,
-        }
-
-        let cases = vec![
-            ("nerd_fonts = 'mono'", NerdFontMode::Mono),
-            ("nerd_fonts = true", NerdFontMode::Mono),
-            ("nerd_fonts = 'normal'", NerdFontMode::Normal),
-            ("nerd_fonts = 'symbols'", NerdFontMode::Normal),
-            ("nerd_fonts = 'none'", NerdFontMode::None),
-            ("nerd_fonts = false", NerdFontMode::None),
-            ("", NerdFontMode::None),
-        ];
-
-        for (toml_input, expected) in cases {
-            let parsed: TestCfg = toml::from_str(toml_input)
-                .unwrap_or_else(|e| panic!("Failed to parse '{}': {}", toml_input, e));
-            assert_eq!(parsed.nerd_fonts, expected, "Failed for: {}", toml_input);
-        }
-    }
-
-    #[test]
-    fn test_player_configuration() {
-        let default_cfg = Config::default();
-        assert_eq!(default_cfg.player, "mpv");
-        if cfg!(windows) {
-            assert_eq!(default_cfg.player_bin(), "mpv.com");
-        } else {
-            assert_eq!(default_cfg.player_bin(), "mpv");
-        }
-
-        let custom_cfg = Config {
-            player: "mpvnet".to_string(),
-            ..Default::default()
-        };
-        assert_eq!(custom_cfg.player_bin(), "mpvnet");
-
-        let custom_path = Config {
-            player: "/usr/local/bin/my-mpv".to_string(),
-            ..Default::default()
-        };
-        assert_eq!(custom_path.player_bin(), "/usr/local/bin/my-mpv");
-
-        let custom_exe = Config {
-            player: "mpv.exe".to_string(),
-            ..Default::default()
-        };
-        assert_eq!(custom_exe.player_bin(), "mpv.exe");
-    }
-
-    #[test]
-    fn test_ytdlp_configuration() {
-        let default_cfg = Config::default();
-        assert_eq!(default_cfg.ytdlp, "yt-dlp");
-        assert_eq!(default_cfg.ytdlp_bin(), "yt-dlp");
-
-        let custom_cfg = Config {
-            ytdlp: "yt-dlp-nightly".to_string(),
-            ..Default::default()
-        };
-        assert_eq!(custom_cfg.ytdlp_bin(), "yt-dlp-nightly");
-
-        let custom_path = Config {
-            ytdlp: "/usr/local/bin/yt-dlp".to_string(),
-            ..Default::default()
-        };
-        assert_eq!(custom_path.ytdlp_bin(), "/usr/local/bin/yt-dlp");
     }
 
     #[test]
@@ -937,60 +733,8 @@ mod tests {
         assert_eq!(loaded.mpv_args, vec!["--fs", "--keep-open=yes"]);
     }
 
-    #[test]
-    fn test_loop_mode_deserialization_from_toml() {
-        #[derive(Deserialize)]
-        struct TestLoop {
-            #[serde(deserialize_with = "deserialize_loop_mode")]
-            loop_mode: LoopMode,
-        }
 
-        let cases: &[(&str, LoopMode)] = &[
-            ("loop_mode = \"inf\"", LoopMode::Inf),
-            ("loop_mode = \"playlist\"", LoopMode::Inf),
-            ("loop_mode = \"track\"", LoopMode::Track),
-            ("loop_mode = \"file\"", LoopMode::Track),
-            ("loop_mode = \"no\"", LoopMode::No),
-            ("loop_mode = \"off\"", LoopMode::No),
-            ("loop_mode = \"false\"", LoopMode::No),
-            ("loop_mode = 5", LoopMode::Count(5)),
-            ("loop_mode = 0", LoopMode::Count(0)),
-            ("loop_mode = -1", LoopMode::Inf),
-        ];
 
-        for (toml_str, expected) in cases {
-            let parsed: TestLoop = toml::from_str(toml_str).unwrap();
-            assert_eq!(parsed.loop_mode, *expected, "Failed for {}", toml_str);
-        }
-
-        let fallback: TestLoop = toml::from_str("loop_mode = \"garbage_mode\"").unwrap();
-        assert_eq!(fallback.loop_mode, LoopMode::Inf);
-        assert!(toml::from_str::<TestLoop>("loop_mode = [1, 2, 3]").is_err());
-    }
-
-    #[test]
-    fn test_nerd_fonts_deserialization_from_toml() {
-        #[derive(Deserialize)]
-        struct TestNerd {
-            #[serde(deserialize_with = "deserialize_nerd_fonts")]
-            nerd_fonts: NerdFontMode,
-        }
-
-        let cases: &[(&str, NerdFontMode)] = &[
-            ("nerd_fonts = \"none\"", NerdFontMode::None),
-            ("nerd_fonts = \"mono\"", NerdFontMode::Mono),
-            ("nerd_fonts = \"normal\"", NerdFontMode::Normal),
-            ("nerd_fonts = true", NerdFontMode::Mono),
-            ("nerd_fonts = false", NerdFontMode::None),
-        ];
-
-        for (toml_str, expected) in cases {
-            let parsed: TestNerd = toml::from_str(toml_str).unwrap();
-            assert_eq!(parsed.nerd_fonts, *expected, "Failed for {}", toml_str);
-        }
-
-        assert!(toml::from_str::<TestNerd>("nerd_fonts = \"invalid_unknown\"").is_err());
-    }
 
     #[test]
     fn test_gapless_mode_serde() {

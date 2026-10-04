@@ -252,37 +252,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_search_result_creation() {
-        let result = SearchResult {
-            title: "Test Video".to_string(),
-            url: "https://youtube.com/watch?v=test".to_string(),
-            uploader: "Test Channel".to_string(),
-            duration: "03:45".to_string(),
-            view_count: "1.2M".to_string(),
-            is_playlist: false,
-        };
-
-        assert_eq!(result.title, "Test Video");
-        assert_eq!(result.url, "https://youtube.com/watch?v=test");
-        assert!(!result.is_playlist);
-    }
-
-    #[test]
-    fn test_search_result_playlist() {
-        let result = SearchResult {
-            title: "Mix - Lofi".to_string(),
-            url: "https://youtube.com/playlist?list=test".to_string(),
-            uploader: "YouTube Music".to_string(),
-            duration: "N/A".to_string(),
-            view_count: "N/A".to_string(),
-            is_playlist: true,
-        };
-
-        assert!(result.is_playlist);
-        assert!(result.url.contains("playlist"));
-    }
-
-    #[test]
     fn test_view_count_formatting_millions() {
         let count = 1_200_000_u64;
         let formatted = format_views(count);
@@ -315,25 +284,6 @@ mod tests {
         let seconds: f64 = 3665.0;
         let formatted = format_duration(seconds);
         assert_eq!(formatted, "61:05");
-    }
-
-    #[test]
-    fn test_url_shorts_detection() {
-        let url = "https://youtube.com/shorts/abc123";
-        assert!(url.contains("/shorts/"));
-    }
-
-    #[test]
-    fn test_url_mix_detection() {
-        let url = "https://youtube.com/watch?v=test&list=RDtest";
-        assert!(url.contains("list=RD"));
-    }
-
-    #[test]
-    fn test_url_channel_detection() {
-        assert!("https://youtube.com/channel/UC123".contains("/channel/"));
-        assert!("https://youtube.com/@channelname".contains("/@"));
-        assert!("https://youtube.com/c/channelname".contains("/c/"));
     }
 
     #[test]

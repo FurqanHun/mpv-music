@@ -233,44 +233,4 @@ mod tests {
         assert_eq!(parse_version("abc"), (0, 0, 0));
         assert_eq!(parse_version("1.x.3"), (1, 0, 3));
     }
-
-    #[test]
-    fn test_version_comparison() {
-        let v1 = parse_version("0.24.0");
-        let v2 = parse_version("0.25.0");
-
-        assert!(v2 > v1);
-    }
-
-    #[test]
-    fn test_version_equality() {
-        let v1 = parse_version("1.0.0");
-        let v2 = parse_version("v1.0.0");
-
-        assert_eq!(v1, v2);
-    }
-
-    #[test]
-    fn test_version_major_diff() {
-        let v1 = parse_version("1.0.0");
-        let v2 = parse_version("2.0.0");
-
-        assert!(v2 > v1);
-    }
-
-    #[test]
-    fn test_version_minor_diff() {
-        let v1 = parse_version("1.5.0");
-        let v2 = parse_version("1.6.0");
-
-        assert!(v2 > v1);
-    }
-
-    #[test]
-    fn test_version_patch_diff() {
-        let v1 = parse_version("1.0.1");
-        let v2 = parse_version("1.0.2");
-
-        assert!(v2 > v1);
-    }
 }

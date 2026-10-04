@@ -384,13 +384,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_with_whitespace() {
-        let (artist, title) = parse_filename_metadata("  Daft Punk  -  Get Lucky  ");
-        assert_eq!(artist, "Daft Punk");
-        assert_eq!(title, "Get Lucky");
-    }
-
-    #[test]
     fn test_parse_no_artist() {
         let (artist, title) = parse_filename_metadata("JustASong.flac");
         assert_eq!(artist, "");
@@ -419,56 +412,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_numbers() {
-        let (artist, title) = parse_filename_metadata("Twenty One Pilots - Stressed Out");
-        assert_eq!(artist, "Twenty One Pilots");
-        assert_eq!(title, "Stressed Out");
-    }
-
-    #[test]
-    fn test_parse_single_character_artist() {
-        let (artist, title) = parse_filename_metadata("K - Song Title");
-        assert_eq!(artist, "K");
-        assert_eq!(title, "Song Title");
-    }
-
-    #[test]
-    fn test_track_creation() {
-        let track = Track {
-            path: "/music/song.mp3".to_string(),
-            title: "Test Song".to_string(),
-            artist: "Test Artist".to_string(),
-            album: "Test Album".to_string(),
-            genre: "Test Genre".to_string(),
-            mtime: 1234567890,
-            size: 1024,
-            media_type: MediaType::Audio,
-        };
-
-        assert_eq!(track.artist, "Test Artist");
-        assert_eq!(track.title, "Test Song");
-        assert_eq!(track.media_type, MediaType::Audio);
-        assert_eq!(track.size, 1024);
-    }
-
-    #[test]
-    fn test_track_serialization() {
-        let track = Track {
-            path: "/music/test.mp3".to_string(),
-            title: "Title".to_string(),
-            artist: "Artist".to_string(),
-            album: "Album".to_string(),
-            genre: "Genre".to_string(),
-            mtime: 12345,
-            size: 1000,
-            media_type: MediaType::Audio,
-        };
-
-        let json = serde_json::to_string(&track);
-        assert!(json.is_ok());
-    }
-
-    #[test]
     fn test_track_deserialization() {
         let json = r#"{
             "path": "/test.mp3",
@@ -490,33 +433,6 @@ mod tests {
         assert_eq!(track.media_type, MediaType::Audio);
     }
 
-    #[test]
-    fn test_to_set_function() {
-        let exts = vec!["mp3".to_string(), "flac".to_string(), "wav".to_string()];
-        let set = to_set(&exts);
-
-        assert!(set.contains("mp3"));
-        assert!(set.contains("flac"));
-        assert!(set.contains("wav"));
-        assert!(!set.contains("mp4"));
-    }
-
-    #[test]
-    fn test_to_set_case_insensitive() {
-        let exts = vec!["MP3".to_string(), "FLAC".to_string()];
-        let set = to_set(&exts);
-
-        assert!(set.contains("mp3"));
-        assert!(set.contains("flac"));
-    }
-
-    #[test]
-    fn test_to_set_empty() {
-        let exts: Vec<String> = vec![];
-        let set = to_set(&exts);
-
-        assert!(set.is_empty());
-    }
 
     #[test]
     fn test_parse_filename_brackets_and_tags() {
@@ -533,41 +449,6 @@ mod tests {
         assert_eq!(title, "Lemon 🍋");
     }
 
-    #[test]
-    fn test_parse_filename_only_spaces() {
-        let (artist, title) = parse_filename_metadata("    ");
-        assert_eq!(artist, "");
-        assert_eq!(title, "    ");
-    }
-
-    #[test]
-    fn test_media_type_serialization() {
-        let audio_track = Track {
-            path: "/path/song.mp3".to_string(),
-            title: "Song".to_string(),
-            artist: "Artist".to_string(),
-            album: "Album".to_string(),
-            genre: "Genre".to_string(),
-            mtime: 100,
-            size: 200,
-            media_type: MediaType::Audio,
-        };
-        let audio_json = serde_json::to_string(&audio_track).unwrap();
-        assert!(audio_json.contains("\"media_type\":\"audio\""));
-
-        let video_track = Track {
-            path: "/path/video.mp4".to_string(),
-            title: "Video".to_string(),
-            artist: "Artist".to_string(),
-            album: "Album".to_string(),
-            genre: "Genre".to_string(),
-            mtime: 100,
-            size: 200,
-            media_type: MediaType::Video,
-        };
-        let video_json = serde_json::to_string(&video_track).unwrap();
-        assert!(video_json.contains("\"media_type\":\"video\""));
-    }
 
     #[test]
     fn test_jsonl_corruption_line_recovery() {

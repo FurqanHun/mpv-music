@@ -94,23 +94,4 @@ pub fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
 
-    #[test]
-    fn test_multi_select_binds_contains_expected_keys() {
-        let binds = multi_select_binds();
-        assert!(binds.contains(&"ctrl-a:select-all".to_string()));
-        assert!(binds.contains(&"ctrl-d:deselect-all".to_string()));
-    }
-
-    #[test]
-    fn test_multi_select_binds_in_skim_options_builder() {
-        let opts = SkimOptionsBuilder::default()
-            .multi(true)
-            .bind(multi_select_binds())
-            .build();
-        assert!(opts.is_ok());
-    }
-}

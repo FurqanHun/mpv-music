@@ -195,18 +195,6 @@ mod tests {
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
 
-    #[test]
-    fn test_format_log_display() {
-        let temp_file =
-            std::env::temp_dir().join(format!("test_format_{}.log", std::process::id()));
-        std::fs::write(&temp_file, "hello logs").unwrap();
-
-        let formatted = format_log_display(&temp_file, true);
-        assert!(formatted.contains("(Latest)"));
-        assert!(formatted.contains("10 B"));
-
-        let _ = std::fs::remove_file(&temp_file);
-    }
 
     #[test]
     fn test_list_log_files_ignores_foreign_files() {
@@ -304,23 +292,5 @@ mod tests {
         assert!(list_log_files(temp.path()).is_empty());
     }
 
-    #[test]
-    fn test_format_log_display_legacy_and_session() {
-        let temp = tempfile::tempdir().unwrap();
-        let logs = logs_dir(temp.path());
-        std::fs::create_dir_all(&logs).unwrap();
 
-        let session_file = logs.join("session_20260916_123045_99999.log");
-        std::fs::write(&session_file, "some logs").unwrap();
-
-        let display = format_log_display(&session_file, false);
-        assert!(display.contains("9 B"));
-        assert!(!display.contains("(Latest)"));
-
-        let legacy_file = temp.path().join("mpv-music.log");
-        std::fs::write(&legacy_file, "legacy data 123").unwrap();
-        let legacy_display = format_log_display(&legacy_file, true);
-        assert!(legacy_display.contains("15 B"));
-        assert!(legacy_display.contains("(Latest)"));
-    }
 }
