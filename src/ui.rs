@@ -52,5 +52,3 @@ pub fn prompt_exit() {
     eprintln!("\nPress Enter to exit...");
     let _ = std::io::stdin().read_line(&mut String::new());
 }
-
-

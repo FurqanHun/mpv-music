@@ -132,5 +132,3 @@ pub fn check(cfg: &mut Config) -> Result<()> {
 
     Ok(())
 }
-
-

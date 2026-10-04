@@ -252,5 +252,3 @@ pub async fn start_radio_sync(target_url: &str, ipc_socket: String) -> Result<()
         backoff = (backoff * 2).min(Duration::from_secs(60));
     }
 }
-
-

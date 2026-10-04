@@ -383,11 +383,25 @@ mod tests {
     #[test]
     fn test_apply_common_args_gapless_modes() {
         let mut cmd = Command::new("mpv");
-        apply_common_args(&mut cmd, &Config { gapless: GaplessMode::True, ..Default::default() }, &[]);
+        apply_common_args(
+            &mut cmd,
+            &Config {
+                gapless: GaplessMode::True,
+                ..Default::default()
+            },
+            &[],
+        );
         assert!(cmd.get_args().any(|a| a == "--gapless-audio=yes"));
 
         let mut cmd = Command::new("mpv");
-        apply_common_args(&mut cmd, &Config { gapless: GaplessMode::False, ..Default::default() }, &[]);
+        apply_common_args(
+            &mut cmd,
+            &Config {
+                gapless: GaplessMode::False,
+                ..Default::default()
+            },
+            &[],
+        );
         assert!(cmd.get_args().any(|a| a == "--gapless-audio=no"));
     }
 

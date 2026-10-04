@@ -291,5 +291,3 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
     }
     Ok(())
 }
-
-

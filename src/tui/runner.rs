@@ -93,5 +93,3 @@ pub fn run_skim_multi_selection(items: Vec<String>, prompt: &str) -> Option<Vec<
         None
     }
 }
-
-

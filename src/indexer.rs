@@ -433,7 +433,6 @@ mod tests {
         assert_eq!(track.media_type, MediaType::Audio);
     }
 
-
     #[test]
     fn test_parse_filename_brackets_and_tags() {
         let (artist, title) =
@@ -448,7 +447,6 @@ mod tests {
         assert_eq!(artist, "米津玄師");
         assert_eq!(title, "Lemon 🍋");
     }
-
 
     #[test]
     fn test_jsonl_corruption_line_recovery() {

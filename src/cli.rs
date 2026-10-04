@@ -213,5 +213,3 @@ pub struct Cli {
     #[arg(long, allow_hyphen_values = true, num_args = 1.., help = "Pass arguments to mpv")]
     pub mpv_args: Option<Vec<String>>,
 }
-
-

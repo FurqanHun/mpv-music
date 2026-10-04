@@ -195,7 +195,6 @@ mod tests {
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
 
-
     #[test]
     fn test_list_log_files_ignores_foreign_files() {
         let temp = tempfile::tempdir().unwrap();
@@ -291,6 +290,4 @@ mod tests {
         assert!(!legacy.exists());
         assert!(list_log_files(temp.path()).is_empty());
     }
-
-
 }

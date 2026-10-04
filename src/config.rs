@@ -166,9 +166,8 @@ where
         type Value = GaplessMode;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str(
-                "a boolean (true/false) or string (\"default\", \"true\", \"false\")",
-            )
+            formatter
+                .write_str("a boolean (true/false) or string (\"default\", \"true\", \"false\")")
         }
 
         fn visit_bool<E>(self, value: bool) -> std::result::Result<GaplessMode, E>
@@ -593,8 +592,6 @@ mod tests {
         assert!("".parse::<LoopMode>().is_err());
     }
 
-
-
     #[test]
     fn test_mpv_default_args_alias() {
         let default_cfg = Config::default();
@@ -733,9 +730,6 @@ mod tests {
         assert_eq!(loaded.mpv_args, vec!["--fs", "--keep-open=yes"]);
     }
 
-
-
-
     #[test]
     fn test_gapless_mode_serde() {
         #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -745,26 +739,52 @@ mod tests {
         }
 
         assert_eq!(
-            toml::from_str::<TestGapless>("gapless = \"default\"").unwrap().gapless,
+            toml::from_str::<TestGapless>("gapless = \"default\"")
+                .unwrap()
+                .gapless,
             GaplessMode::Default
         );
         assert_eq!(
-            toml::from_str::<TestGapless>("gapless = \"weak\"").unwrap().gapless,
+            toml::from_str::<TestGapless>("gapless = \"weak\"")
+                .unwrap()
+                .gapless,
             GaplessMode::Default
         );
         assert_eq!(
-            toml::from_str::<TestGapless>("gapless = true").unwrap().gapless,
+            toml::from_str::<TestGapless>("gapless = true")
+                .unwrap()
+                .gapless,
             GaplessMode::True
         );
         assert_eq!(
-            toml::from_str::<TestGapless>("gapless = false").unwrap().gapless,
+            toml::from_str::<TestGapless>("gapless = false")
+                .unwrap()
+                .gapless,
             GaplessMode::False
         );
         assert!(toml::from_str::<TestGapless>("gapless = \"invalid\"").is_err());
 
-        assert!(toml::to_string(&TestGapless { gapless: GaplessMode::Default }).unwrap().contains("gapless = \"default\""));
-        assert!(toml::to_string(&TestGapless { gapless: GaplessMode::True }).unwrap().contains("gapless = true"));
-        assert!(toml::to_string(&TestGapless { gapless: GaplessMode::False }).unwrap().contains("gapless = false"));
+        assert!(
+            toml::to_string(&TestGapless {
+                gapless: GaplessMode::Default
+            })
+            .unwrap()
+            .contains("gapless = \"default\"")
+        );
+        assert!(
+            toml::to_string(&TestGapless {
+                gapless: GaplessMode::True
+            })
+            .unwrap()
+            .contains("gapless = true")
+        );
+        assert!(
+            toml::to_string(&TestGapless {
+                gapless: GaplessMode::False
+            })
+            .unwrap()
+            .contains("gapless = false")
+        );
     }
 
     #[test]

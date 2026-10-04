@@ -143,5 +143,3 @@ pub fn handle_cli_filters(
 
     Ok(())
 }
-
-
