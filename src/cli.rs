@@ -109,14 +109,14 @@ pub struct Cli {
     #[arg(
         long,
         value_name = "BIN",
-        help = "Specify the player binary (defaults to 'mpv')"
+        help = "Specify the player binary (defaults to 'mpv', compatible forks supported)"
     )]
     pub player: Option<String>,
 
     #[arg(
         long,
         value_name = "BIN",
-        help = "Specify the yt-dlp binary (defaults to 'yt-dlp')"
+        help = "Specify the yt-dlp binary (defaults to 'yt-dlp', compatible forks supported)"
     )]
     pub ytdlp: Option<String>,
 
@@ -201,7 +201,7 @@ pub struct Cli {
             long,
             visible_alias = "yt",
             num_args = 0..=1,
-            help = "Search YouTube directly (e.g. --yt 'lofi') Requires yt-dlp."
+            help = "Search YouTube directly (e.g. --yt 'lofi') Requires yt-dlp (or a compatible fork)."
         )]
     pub search: Option<Option<String>>,
     #[arg(

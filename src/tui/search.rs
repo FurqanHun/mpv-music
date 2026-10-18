@@ -18,10 +18,10 @@ pub fn run_search_mode(
         let hint = if ytdlp_cmd != "yt-dlp" {
             "Check your 'ytdlp' setting in config.toml or the --ytdlp CLI option."
         } else {
-            "Please install 'yt-dlp' to use Search and Streaming."
+            "Please install 'yt-dlp' via your package manager, or configure a compatible fork via the 'ytdlp' setting in config.toml (or --ytdlp)."
         };
         ui::warning(format!(
-            "Feature unavailable: '{}' not found.\n  mpv-music requires '{}' to use Search and Streaming.\n  {}",
+            "Feature unavailable: '{}' not found.\n  mpv-music requires '{}' (or a compatible fork) to use Search and Streaming.\n  {}",
             ytdlp_cmd, ytdlp_cmd, hint
         ));
         return Ok(());

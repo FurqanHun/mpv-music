@@ -56,10 +56,10 @@ pub fn check(cfg: &mut Config) -> Result<()> {
             let hint = if player_cmd != "mpv" && player_cmd != "mpv.com" {
                 "Check your 'player' setting in config.toml or the --player CLI option."
             } else {
-                "Please install it via your package manager (e.g. sudo dnf install mpv)."
+                "Please install mpv via your package manager, or configure a compatible fork via the 'player' setting in config.toml (or --player)."
             };
             ui::error(format!(
-                "Critical: '{}' not found!\nmpv-music requires '{}' to be installed and in your PATH.\n{}",
+                "Critical: '{}' not found!\nmpv-music requires '{}' (or a compatible fork) to be installed and in your PATH.\n{}",
                 player_cmd, player_cmd, hint
             ));
 
@@ -74,7 +74,7 @@ pub fn check(cfg: &mut Config) -> Result<()> {
         Ok(child) => child.wait_with_output(),
         Err(_) => {
             log::warn!(
-                "Dependency '{}' not found. Search and Streaming features disabled.",
+                "Dependency '{}' not found. Search and Streaming features disabled (compatible forks can be configured via 'ytdlp' in config.toml).",
                 ytdlp_cmd
             );
             cfg.ytdlp_available = false;
@@ -122,7 +122,7 @@ pub fn check(cfg: &mut Config) -> Result<()> {
         }
         Err(_) => {
             log::warn!(
-                "Dependency '{}' not found. Search and Streaming features disabled.",
+                "Dependency '{}' not found. Search and Streaming features disabled (compatible forks can be configured via 'ytdlp' in config.toml).",
                 ytdlp_cmd
             );
             cfg.ytdlp_available = false;
