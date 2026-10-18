@@ -68,7 +68,10 @@ impl SkimItem for TagItem {
         if self.count > shown {
             let remaining = self.count - shown;
             let noun = if remaining == 1 { "track" } else { "tracks" };
-            sample_text.push_str(&format!("  \x1b[90m... and {} more {}\x1b[0m\n", remaining, noun));
+            sample_text.push_str(&format!(
+                "  \x1b[90m... and {} more {}\x1b[0m\n",
+                remaining, noun
+            ));
         }
 
         let section_header = if self.count <= max_samples {
@@ -112,7 +115,10 @@ impl SkimItem for DirItem {
         if self.count > shown {
             let remaining = self.count - shown;
             let noun = if remaining == 1 { "file" } else { "files" };
-            sample_text.push_str(&format!("  \x1b[90m... and {} more {}\x1b[0m\n", remaining, noun));
+            sample_text.push_str(&format!(
+                "  \x1b[90m... and {} more {}\x1b[0m\n",
+                remaining, noun
+            ));
         }
 
         let section_header = if self.count <= max_samples {
@@ -156,7 +162,10 @@ impl SkimItem for PlaylistItem {
         if self.count > shown {
             let remaining = self.count - shown;
             let noun = if remaining == 1 { "entry" } else { "entries" };
-            content.push_str(&format!("  \x1b[90m... and {} more {}\x1b[0m\n", remaining, noun));
+            content.push_str(&format!(
+                "  \x1b[90m... and {} more {}\x1b[0m\n",
+                remaining, noun
+            ));
         }
 
         if content.is_empty() {
