@@ -76,7 +76,7 @@ pub fn run_tag_picker(
         *counts.entry(clean_key.to_string()).or_default() += 1;
 
         let sample_list = samples.entry(clean_key.to_string()).or_default();
-        if sample_list.len() < 10 {
+        if sample_list.len() < 15 {
             sample_list.push(t.title.clone());
         }
     }

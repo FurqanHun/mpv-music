@@ -58,17 +58,28 @@ impl SkimItem for TagItem {
     }
 
     fn preview(&self, _context: PreviewContext) -> ItemPreview {
+        let max_samples = 15;
         let mut sample_text = String::new();
-        for (i, song) in self.samples.iter().enumerate() {
-            if i >= 10 {
-                break;
-            }
+        let shown = self.samples.len().min(max_samples);
+        for (i, song) in self.samples.iter().take(shown).enumerate() {
             sample_text.push_str(&format!("  {}. {}\n", i + 1, song));
         }
 
+        if self.count > shown {
+            let remaining = self.count - shown;
+            let noun = if remaining == 1 { "track" } else { "tracks" };
+            sample_text.push_str(&format!("  \x1b[90m... and {} more {}\x1b[0m\n", remaining, noun));
+        }
+
+        let section_header = if self.count <= max_samples {
+            "Tracks:"
+        } else {
+            "Sample Tracks:"
+        };
+
         let output = format!(
-            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mTotal Tracks:\x1b[0m {}\n\n  \x1b[1;32mSample Tracks:\x1b[0m\n{}",
-            self.icon, self.name, self.count, sample_text
+            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mTotal Tracks:\x1b[0m {}\n\n  \x1b[1;32m{}\x1b[0m\n{}",
+            self.icon, self.name, self.count, section_header, sample_text
         );
         ItemPreview::AnsiText(output)
     }
@@ -91,17 +102,28 @@ impl SkimItem for DirItem {
     }
 
     fn preview(&self, _context: PreviewContext) -> ItemPreview {
+        let max_samples = 15;
         let mut sample_text = String::new();
-        for (i, song) in self.samples.iter().enumerate() {
-            if i >= 10 {
-                break;
-            }
+        let shown = self.samples.len().min(max_samples);
+        for (i, song) in self.samples.iter().take(shown).enumerate() {
             sample_text.push_str(&format!("  {}. {}\n", i + 1, song));
         }
 
+        if self.count > shown {
+            let remaining = self.count - shown;
+            let noun = if remaining == 1 { "file" } else { "files" };
+            sample_text.push_str(&format!("  \x1b[90m... and {} more {}\x1b[0m\n", remaining, noun));
+        }
+
+        let section_header = if self.count <= max_samples {
+            "Contents:"
+        } else {
+            "Sample Contents:"
+        };
+
         let output = format!(
-            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mPath:\x1b[0m {}\n  \x1b[1;33mFiles:\x1b[0m {}\n\n  \x1b[1;32mContents:\x1b[0m\n{}",
-            self.icon, self.dirname, self.path, self.count, sample_text
+            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mPath:\x1b[0m {}\n  \x1b[1;33mFiles:\x1b[0m {}\n\n  \x1b[1;32m{}\x1b[0m\n{}",
+            self.icon, self.dirname, self.path, self.count, section_header, sample_text
         );
         ItemPreview::AnsiText(output)
     }
@@ -124,21 +146,32 @@ impl SkimItem for PlaylistItem {
     }
 
     fn preview(&self, _context: PreviewContext) -> ItemPreview {
+        let max_samples = 15;
         let mut content = String::new();
-        for (i, line) in self.preview_lines.iter().enumerate() {
-            if i >= 10 {
-                break;
-            }
+        let shown = self.preview_lines.len().min(max_samples);
+        for (i, line) in self.preview_lines.iter().take(shown).enumerate() {
             content.push_str(&format!("  {}. {}\n", i + 1, line));
+        }
+
+        if self.count > shown {
+            let remaining = self.count - shown;
+            let noun = if remaining == 1 { "entry" } else { "entries" };
+            content.push_str(&format!("  \x1b[90m... and {} more {}\x1b[0m\n", remaining, noun));
         }
 
         if content.is_empty() {
             content.push_str("  (Empty or Binary Playlist)\n");
         }
 
+        let section_header = if self.count <= max_samples {
+            "Tracks:"
+        } else {
+            "Sample Tracks:"
+        };
+
         let output = format!(
-            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mPath:\x1b[0m {}\n  \x1b[1;33mEntries:\x1b[0m {}\n\n  \x1b[1;32mFirst Few Tracks:\x1b[0m\n{}",
-            self.icon, self.name, self.path, self.count, content
+            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mPath:\x1b[0m {}\n  \x1b[1;33mEntries:\x1b[0m {}\n\n  \x1b[1;32m{}\x1b[0m\n{}",
+            self.icon, self.name, self.path, self.count, section_header, content
         );
         ItemPreview::AnsiText(output)
     }
