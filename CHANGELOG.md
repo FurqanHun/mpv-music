@@ -2,6 +2,28 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
+## [v0.29.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.29.1) - 2026-10-18
+
+This patch release brings improved preview ergonomics, bulk multi-selection keybindings, gapless playback controls, rate-limit-free installer and updater scripts with checksum verification, and dependency updates.
+
+### Features & Improvements
+- **Preview Sample Limits & Overflow Indicators:** Increased preview sample limits from 10 to 15 items for folders, playlists, and tags, and added subtle `... and X more` indicators for larger collections.
+- **Bulk Multi-Selection:** Added `Ctrl-A` (select all) and `Ctrl-D` (deselect all) keybindings to interactive multi-selection menus.
+- **Gapless Playback Control:** Added `gapless` configuration (`"default"`, `true`, `false`) in `config.toml` along with `--gapless [<MODE>]` and `--no-gapless` CLI flags for seamless track transitions.
+- **Installer & Updater Overhaul:** Updated `install.sh` and `install.ps1` to bypass GitHub API rate limits via the website feed, add live download progress indicators, and enforce SHA-256 checksum verification.
+- **Compatible Player/Downloader Fork Guidance:** Clarified startup checks and help messages to mention that compatible forks (such as `mpv.net`) can be configured via `player` and `ytdlp` in `config.toml` or CLI flags.
+- **Firefox User-Agent Updates:** Bumped the default yt-dlp User-Agent string to modern Firefox 158.0.
+- **Showcase & Demos:** Added Asciinema recordings and preview screenshots to documentation.
+
+### Bug Fixes
+- **Queue File Cleanup:** Automatically purge orphaned IPC queue files on startup (`app/cleanup.rs`).
+
+### Dependencies & Chores
+- Updated all dependencies in `Cargo.lock` to their latest releases.
+- Cleaned up redundant and padding tests in the test suite while maintaining full regression coverage.
+
+---
+
 ## [v0.29.0](https://github.com/FurqanHun/mpv-music/releases/tag/v0.29.0) - 2026-09-16
 
 This minor release brings the largest architectural and stability overhaul since the rewrite. It introduces complete codebase modularization, strongly-typed enums across all subsystems, an automated test suite, an isolated multi-session logging system with retention controls, unified UI console output, and configurable player/yt-dlp backends.
