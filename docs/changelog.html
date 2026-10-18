@@ -162,8 +162,38 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
-                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.29.0" target="_blank" class="tag">v0.29.0</a>
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.29.1" target="_blank" class="tag">v0.29.1</a>
                 <span class="latest-badge">Latest</span>
+                <span style="margin-left: auto;">October 18, 2026</span>
+            </div>
+            <div class="body">
+                <p>This patch release brings improved preview ergonomics, bulk multi-selection keybindings, gapless playback controls, rate-limit-free installer and updater scripts with checksum verification, and dependency updates.</p>
+<h3>Features &amp; Improvements</h3>
+<ul>
+<li><strong>Preview Sample Limits &amp; Overflow Indicators:</strong> Increased preview sample limits from 10 to 15 items for folders, playlists, and tags, and added subtle <code>... and X more</code> indicators for larger collections.</li>
+<li><strong>Bulk Multi-Selection:</strong> Added <code>Ctrl-A</code> (select all) and <code>Ctrl-D</code> (deselect all) keybindings to interactive multi-selection menus.</li>
+<li><strong>Gapless Playback Control:</strong> Added <code>gapless</code> configuration (<code>"default"</code>, <code>true</code>, <code>false</code>) in <code>config.toml</code> along with <code>--gapless [&lt;MODE&gt;]</code> and <code>--no-gapless</code> CLI flags for seamless track transitions.</li>
+<li><strong>Installer &amp; Updater Overhaul:</strong> Updated <code>install.sh</code> and <code>install.ps1</code> to bypass GitHub API rate limits via the website feed, add live download progress indicators, and enforce SHA-256 checksum verification.</li>
+<li><strong>Compatible Player/Downloader Fork Guidance:</strong> Clarified startup checks and help messages to mention that compatible forks (such as <code>mpv.net</code>) can be configured via <code>player</code> and <code>ytdlp</code> in <code>config.toml</code> or CLI flags.</li>
+<li><strong>Firefox User-Agent Updates:</strong> Bumped the default yt-dlp User-Agent string to modern Firefox 158.0.</li>
+<li><strong>Showcase &amp; Demos:</strong> Added Asciinema recordings and preview screenshots to documentation.</li>
+</ul>
+<h3>Bug Fixes</h3>
+<ul>
+<li><strong>Queue File Cleanup:</strong> Automatically purge orphaned IPC queue files on startup (<code>app/cleanup.rs</code>).</li>
+</ul>
+<h3>Dependencies &amp; Chores</h3>
+<ul>
+<li>Updated all dependencies in <code>Cargo.lock</code> to their latest releases.</li>
+<li>Cleaned up redundant and padding tests in the test suite while maintaining full regression coverage.</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.29.0" target="_blank" class="tag">v0.29.0</a>
+                
                 <span style="margin-left: auto;">September 16, 2026</span>
             </div>
             <div class="body">
