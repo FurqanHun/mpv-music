@@ -3,6 +3,7 @@
 [![version](https://img.shields.io/github/v/release/FurqanHun/mpv-music?include_prereleases&label=release&labelColor=27303D&color=blue&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/FurqanHun/mpv-music/releases)
 [![mpv-music build status](https://img.shields.io/github/actions/workflow/status/FurqanHun/mpv-music/release.yml?label=build&labelColor=27303D&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/FurqanHun/mpv-music/actions/workflows/release.yml)
 [![crates.io](https://img.shields.io/crates/v/mpv-music?label=crates.io&labelColor=27303D&color=orange&logo=rust&logoColor=FFFFFF&style=flat)](https://crates.io/crates/mpv-music)
+[![Copr](https://img.shields.io/badge/Fedora_Copr-mpv--music-294172?logo=fedora&logoColor=FFFFFF&style=flat)](https://copr.fedorainfracloud.org/coprs/furqanhun/mpv-music/)
 
 [![github downloads](https://img.shields.io/github/downloads/FurqanHun/mpv-music/total?label=github%20downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/FurqanHun/mpv-music/releases)
 [![crates.io downloads](https://img.shields.io/crates/d/mpv-music?label=crates.io%20downloads&labelColor=27303D&color=0D1117&logo=rust&logoColor=FFFFFF&style=flat)](https://crates.io/crates/mpv-music)
@@ -107,6 +108,17 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 * **WSL (Windows Subsystem for Linux):** Fully Supported.
 * **macOS / BSD:** Should work fine on macOS and BSD systems. Check [FAQ](#platform-support).
 * **Windows (Native/Git Bash):** Fully Supported. Check [FAQ](#platform-support).
+
+### Fedora (Copr)
+
+If you are on Fedora (supports active Fedora releases on `x86_64` and `aarch64`):
+
+```bash
+sudo dnf copr enable furqanhun/mpv-music
+sudo dnf install mpv-music
+```
+
+*(See the [furqanhun/mpv-music Copr page](https://copr.fedorainfracloud.org/coprs/furqanhun/mpv-music/) for repository details).*
 
 ### From crates.io (Recommended)
 

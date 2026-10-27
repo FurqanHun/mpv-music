@@ -27,6 +27,7 @@ exclude = [
     "install.sh",
     "install.ps1",
     ".github/",
+    "packaging/",
 ]
 
 [features]
