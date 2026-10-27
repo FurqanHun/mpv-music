@@ -153,3 +153,20 @@ jobs:
             TAG_NAME=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
           fi
           gh release upload "$TAG_NAME" checksums.txt --clobber
+
+  trigger-copr:
+    name: Trigger Fedora Copr Build
+    needs: upload-checksums
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Copr Webhook
+        env:
+          COPR_WEBHOOK: ${{ secrets.COPR_WEBHOOK }}
+        run: |
+          if [ -n "$COPR_WEBHOOK" ]; then
+            echo "Triggering Fedora Copr rebuild..."
+            curl -X POST -sSL -f "$COPR_WEBHOOK"
+            echo "Copr build successfully triggered!"
+          else
+            echo "COPR_WEBHOOK secret is not configured; skipping Copr build."
+          fi
