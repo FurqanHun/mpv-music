@@ -163,5 +163,26 @@ mod tests {
         assert_eq!(res.len(), 2);
         assert!(res.iter().any(|t| t.title == "July"));
         assert!(res.iter().any(|t| t.title == "And July"));
+
+        let args = Cli::parse_from(["mpv-music", "-t", "ujuly and"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].title, "And July");
+
+        let args = Cli::parse_from(["mpv-music", "-t", "and ujuly"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].title, "And July");
+
+        let args = Cli::parse_from(["mpv-music", "-t", "ujuly adn"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].title, "And July");
+
+        let args = Cli::parse_from(["mpv-music", "-t", "unjuly"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 2);
+        assert!(res.iter().any(|t| t.title == "July"));
+        assert!(res.iter().any(|t| t.title == "And July"));
     }
 }
