@@ -1,0 +1,170 @@
+pub fn normalize_char(c: char) -> Option<&'static str> {
+    if ('\u{FF01}'..='\u{FF5E}').contains(&c) {
+        let ascii_code = (c as u32) - 0xFEE0;
+        if let Some(ch) = char::from_u32(ascii_code) {
+            return match ch {
+                'A'..='Z' | 'a'..='z' => match ch.to_ascii_lowercase() {
+                    'a' => Some("a"), 'b' => Some("b"), 'c' => Some("c"), 'd' => Some("d"), 'e' => Some("e"),
+                    'f' => Some("f"), 'g' => Some("g"), 'h' => Some("h"), 'i' => Some("i"), 'j' => Some("j"),
+                    'k' => Some("k"), 'l' => Some("l"), 'm' => Some("m"), 'n' => Some("n"), 'o' => Some("o"),
+                    'p' => Some("p"), 'q' => Some("q"), 'r' => Some("r"), 's' => Some("s"), 't' => Some("t"),
+                    'u' => Some("u"), 'v' => Some("v"), 'w' => Some("w"), 'x' => Some("x"), 'y' => Some("y"),
+                    'z' => Some("z"),
+                    _ => None,
+                },
+                '0' => Some("0"), '1' => Some("1"), '2' => Some("2"), '3' => Some("3"), '4' => Some("4"),
+                '5' => Some("5"), '6' => Some("6"), '7' => Some("7"), '8' => Some("8"), '9' => Some("9"),
+                '\'' | '`' => None,
+                '-' | '_' | '~' => Some("-"),
+                ' ' => Some(" "),
+                _ => None,
+            };
+        }
+    }
+
+    if c == '\u{3000}' {
+        return Some(" ");
+    }
+
+    match c {
+        'a' | 'A' | 'á' | 'Á' | 'à' | 'À' | 'â' | 'Â' | 'ä' | 'Ä' | 'ã' | 'Ã' | 'å' | 'Å' | 'ā' | 'Ā' | 'ą' | 'Ą' => Some("a"),
+        'æ' | 'Æ' => Some("ae"),
+        'b' | 'B' => Some("b"),
+        'c' | 'C' | 'ç' | 'Ç' | 'ć' | 'Ć' | 'č' | 'Č' => Some("c"),
+        'd' | 'D' | 'ď' | 'Ď' | 'đ' | 'Đ' => Some("d"),
+        'e' | 'E' | 'é' | 'É' | 'è' | 'È' | 'ê' | 'Ê' | 'ë' | 'Ë' | 'ē' | 'Ē' | 'ę' | 'Ę' | 'ě' | 'Ě' => Some("e"),
+        'f' | 'F' => Some("f"),
+        'g' | 'G' | 'ğ' | 'Ğ' => Some("g"),
+        'h' | 'H' => Some("h"),
+        'i' | 'I' | 'í' | 'Í' | 'ì' | 'Ì' | 'î' | 'Î' | 'ï' | 'Ï' | 'ī' | 'Ī' | 'ı' => Some("i"),
+        'j' | 'J' => Some("j"),
+        'k' | 'K' => Some("k"),
+        'l' | 'L' | 'ł' | 'Ł' | 'ĺ' | 'Ĺ' | 'ľ' | 'Ľ' => Some("l"),
+        'm' | 'M' => Some("m"),
+        'n' | 'N' | 'ñ' | 'Ñ' | 'ń' | 'Ń' | 'ň' | 'Ň' => Some("n"),
+        'o' | 'O' | 'ó' | 'Ó' | 'ò' | 'Ò' | 'ô' | 'Ô' | 'ö' | 'Ö' | 'õ' | 'Õ' | 'ø' | 'Ø' | 'ō' | 'Ō' | 'ő' | 'Ő' => Some("o"),
+        'œ' | 'Œ' => Some("oe"),
+        'p' | 'P' => Some("p"),
+        'q' | 'Q' => Some("q"),
+        'r' | 'R' | 'ŕ' | 'Ŕ' | 'ř' | 'Ř' => Some("r"),
+        's' | 'S' | 'ś' | 'Ś' | 'š' | 'Š' | 'ş' | 'Ş' => Some("s"),
+        'ß' => Some("ss"),
+        't' | 'T' | 'ť' | 'Ť' | 'ţ' | 'Ţ' => Some("t"),
+        'u' | 'U' | 'ú' | 'Ú' | 'ù' | 'Ù' | 'û' | 'Û' | 'ü' | 'Ü' | 'ū' | 'Ū' | 'ů' | 'Ů' | 'ű' | 'Ű' => Some("u"),
+        'v' | 'V' => Some("v"),
+        'w' | 'W' => Some("w"),
+        'x' | 'X' => Some("x"),
+        'y' | 'Y' | 'ý' | 'Ý' | 'ÿ' | 'Ÿ' => Some("y"),
+        'z' | 'Z' | 'ź' | 'Ź' | 'ż' | 'Ż' | 'ž' | 'Ž' => Some("z"),
+
+        '0'..='9' => match c {
+            '0' => Some("0"), '1' => Some("1"), '2' => Some("2"), '3' => Some("3"), '4' => Some("4"),
+            '5' => Some("5"), '6' => Some("6"), '7' => Some("7"), '8' => Some("8"), '9' => Some("9"),
+            _ => None,
+        },
+
+        '\'' | '’' | '‘' | '`' | '´' | '"' | '“' | '”' | '„' => Some(""),
+
+        '-' | '–' | '—' | '−' | '‐' => Some("-"),
+
+        ' ' | '\t' | '\n' | '\r' => Some(" "),
+        '.' => Some("."),
+        ',' => Some(","),
+        '!' => Some("!"),
+        '?' => Some("?"),
+        '/' => Some("/"),
+        '\\' => Some("\\"),
+        '&' => Some("&"),
+        '+' => Some("+"),
+        '(' => Some("("),
+        ')' => Some(")"),
+        '[' => Some("["),
+        ']' => Some("]"),
+        '{' => Some("{"),
+        '}' => Some("}"),
+
+        _ => None,
+    }
+}
+
+pub fn normalize_search_text(input: &str) -> String {
+    let mut normalized = String::with_capacity(input.len());
+    let mut last_was_space = false;
+
+    for c in input.chars() {
+        match normalize_char(c) {
+            Some("") => {}
+            Some(" ") => {
+                if !last_was_space && !normalized.is_empty() {
+                    normalized.push(' ');
+                    last_was_space = true;
+                }
+            }
+            Some(rep) => {
+                normalized.push_str(rep);
+                last_was_space = false;
+            }
+            None => {
+                for lower_c in c.to_lowercase() {
+                    if lower_c.is_whitespace() {
+                        if !last_was_space && !normalized.is_empty() {
+                            normalized.push(' ');
+                            last_was_space = true;
+                        }
+                    } else {
+                        normalized.push(lower_c);
+                        last_was_space = false;
+                    }
+                }
+            }
+        }
+    }
+
+    if last_was_space && normalized.ends_with(' ') {
+        normalized.pop();
+    }
+
+    normalized
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_case_and_accents() {
+        assert_eq!(normalize_search_text("Café"), "cafe");
+        assert_eq!(normalize_search_text("MÖTLEY CRÜE"), "motley crue");
+        assert_eq!(normalize_search_text("Tōkyō"), "tokyo");
+        assert_eq!(normalize_search_text("Beyoncé"), "beyonce");
+    }
+
+    #[test]
+    fn test_fullwidth_japanese_characters() {
+        assert_eq!(normalize_search_text("Ｊｕｌｙ"), "july");
+        assert_eq!(normalize_search_text("Ｈｅｌｌｏ　Ｗｏｒｌｄ"), "hello world");
+    }
+
+    #[test]
+    fn test_apostrophes_quotes_dashes() {
+        assert_eq!(normalize_search_text("Don’t Speak"), "dont speak");
+        assert_eq!(normalize_search_text("Dont Speak"), "dont speak");
+        assert_eq!(normalize_search_text("I'm Yours"), "im yours");
+        assert_eq!(normalize_search_text("Im Yours"), "im yours");
+        assert_eq!(normalize_search_text("Rock – Roll"), "rock - roll");
+        assert_eq!(normalize_search_text("“Hello”"), "hello");
+    }
+
+    #[test]
+    fn test_whitespace_collapsing() {
+        assert_eq!(normalize_search_text("   July   Song   "), "july song");
+        assert_eq!(normalize_search_text("July\t\nSong"), "july song");
+    }
+
+    #[test]
+    fn test_cjk_preservation() {
+        assert_eq!(normalize_search_text("夜に駆ける"), "夜に駆ける");
+        assert_eq!(normalize_search_text("아이유"), "아이유");
+        assert_eq!(normalize_search_text("YOASOBI - 夜に駆ける"), "yoasobi - 夜に駆ける");
+    }
+}
