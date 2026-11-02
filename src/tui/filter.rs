@@ -143,4 +143,19 @@ mod tests {
         assert_eq!(res.len(), 1);
         assert_eq!(res[0].title, "July (feat. DEAN)");
     }
+
+    #[test]
+    fn test_apply_cli_filters_typo_fuzzy() {
+        let tracks = vec![
+            sample_track("July", "DEAN", "130 mood", "R&B"),
+            sample_track("And July", "Heize", "And July", "R&B"),
+            sample_track("Different Song", "Artist", "Album", "Pop"),
+        ];
+
+        let args = Cli::parse_from(["mpv-music", "-t", "jlu"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 2);
+        assert!(res.iter().any(|t| t.title == "July"));
+        assert!(res.iter().any(|t| t.title == "And July"));
+    }
 }

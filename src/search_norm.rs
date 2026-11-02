@@ -1,3 +1,6 @@
+use skim::fuzzy_matcher::FuzzyMatcher;
+use skim::fuzzy_matcher::fzy::FzyMatcher;
+
 pub fn normalize_char(c: char) -> Option<&'static str> {
     if ('\u{FF01}'..='\u{FF5E}').contains(&c) {
         let ascii_code = (c as u32) - 0xFEE0;
@@ -174,25 +177,80 @@ pub fn clean_noise(input: &str) -> String {
     }
 }
 
-pub fn match_all_tokens(query: &str, target: &str) -> bool {
+fn match_token(token: &str, norm_target: &str, norm_clean: &str) -> Option<i64> {
+    if norm_clean == token || norm_target == token {
+        return Some(10_000);
+    }
+    if norm_clean.contains(token) || norm_target.contains(token) {
+        return Some(2_000);
+    }
+
+    let token_len = token.chars().count();
+    if token_len >= 3 {
+        let matcher = FzyMatcher::default().ignore_case().max_typos(Some(1));
+        let words = norm_target
+            .split(|c: char| !c.is_alphanumeric())
+            .chain(norm_clean.split(|c: char| !c.is_alphanumeric()));
+
+        let mut best_score = None;
+        for word in words {
+            if word.is_empty() {
+                continue;
+            }
+            if word.chars().count().abs_diff(token_len) <= 1 {
+                if let Some(score) = matcher.fuzzy_match(word, token) {
+                    best_score = Some(best_score.map_or(score, |b: i64| b.max(score)));
+                }
+            }
+        }
+        return best_score;
+    }
+
+    None
+}
+
+pub fn score_match(query: &str, target: &str) -> Option<i64> {
     let norm_target = normalize_search_text(target);
     let norm_clean = normalize_search_text(&clean_noise(target));
     let norm_query = normalize_search_text(query);
 
     let tokens: Vec<&str> = norm_query.split_whitespace().collect();
     if tokens.is_empty() {
-        return true;
+        return Some(0);
     }
 
-    tokens.iter().all(|token| {
-        norm_target.contains(token) || norm_clean.contains(token)
-    })
+    let mut total_score = 0;
+    for token in tokens {
+        match match_token(token, &norm_target, &norm_clean) {
+            Some(score) => total_score += score,
+            None => return None,
+        }
+    }
+
+    Some(total_score)
+}
+
+pub fn match_all_tokens(query: &str, target: &str) -> bool {
+    score_match(query, target).is_some()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_skim_matcher_behavior() {
+        let exact = score_match("july", "July").unwrap();
+        let partial = score_match("july", "And July").unwrap();
+        let typo = score_match("jlu", "July").unwrap();
+
+        assert!(exact > partial);
+        assert!(partial > typo);
+        assert!(score_match("xyz", "July").is_none());
+        assert!(score_match("july and", "One Piece : Drums of Liberation x Overtaken - TU Symphony Orchestra").is_none());
+        assert!(score_match("july and", "And July").is_some());
+        assert!(score_match("jlu and", "And July").is_some());
+    }
     #[test]
     fn test_case_and_accents() {
         assert_eq!(normalize_search_text("Café"), "cafe");
@@ -248,5 +306,10 @@ mod tests {
         assert!(match_all_tokens("dean july", "July (feat. DEAN)"));
         assert!(match_all_tokens("creep radiohead", "Radiohead - Creep"));
         assert!(!match_all_tokens("july heize", "July (feat. DEAN)"));
+
+        assert!(match_all_tokens("jlu", "July"));
+        assert!(match_all_tokens("jlu", "And July"));
+        assert!(match_all_tokens("crep", "Creep"));
+        assert!(match_all_tokens("raduohead", "Radiohead"));
     }
 }
