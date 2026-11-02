@@ -41,9 +41,11 @@ pub fn apply_cli_filters(
                                     .any(|tag| tag == term)
                         })
                     } else {
-                        search_vals
-                            .iter()
-                            .any(|term| field_norm.contains(term) || field_clean_norm.contains(term))
+                        search_vals.iter().any(|term| {
+                            field_norm.contains(term)
+                                || field_clean_norm.contains(term)
+                                || crate::search_norm::match_all_tokens(term, field)
+                        })
                     }
                 } else {
                     true
@@ -122,5 +124,23 @@ mod tests {
         let res = apply_cli_filters(&tracks, &args, true);
         assert_eq!(res.len(), 1);
         assert_eq!(res[0].title, "Creep [Remastered 2021]");
+    }
+
+    #[test]
+    fn test_apply_cli_filters_multi_word() {
+        let tracks = vec![
+            sample_track("July (feat. DEAN)", "Heize", "And July", "R&B"),
+            sample_track("And July", "Heize", "And July", "R&B"),
+        ];
+
+        let args = Cli::parse_from(["mpv-music", "-t", "dean july"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].title, "July (feat. DEAN)");
+
+        let args = Cli::parse_from(["mpv-music", "-t", "july dean"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].title, "July (feat. DEAN)");
     }
 }

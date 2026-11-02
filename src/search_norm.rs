@@ -174,6 +174,21 @@ pub fn clean_noise(input: &str) -> String {
     }
 }
 
+pub fn match_all_tokens(query: &str, target: &str) -> bool {
+    let norm_target = normalize_search_text(target);
+    let norm_clean = normalize_search_text(&clean_noise(target));
+    let norm_query = normalize_search_text(query);
+
+    let tokens: Vec<&str> = norm_query.split_whitespace().collect();
+    if tokens.is_empty() {
+        return true;
+    }
+
+    tokens.iter().all(|token| {
+        norm_target.contains(token) || norm_clean.contains(token)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,5 +240,13 @@ mod tests {
         assert_eq!(clean_noise("夜に駆ける（Official Music Video）"), "夜に駆ける");
         assert_eq!(clean_noise("紅蓮華【アニメver.】"), "紅蓮華");
         assert_eq!(clean_noise("Song「TV Size」"), "Song");
+    }
+
+    #[test]
+    fn test_match_all_tokens() {
+        assert!(match_all_tokens("july dean", "July (feat. DEAN)"));
+        assert!(match_all_tokens("dean july", "July (feat. DEAN)"));
+        assert!(match_all_tokens("creep radiohead", "Radiohead - Creep"));
+        assert!(!match_all_tokens("july heize", "July (feat. DEAN)"));
     }
 }
