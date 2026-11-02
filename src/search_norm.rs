@@ -7,16 +7,44 @@ pub fn normalize_char(c: char) -> Option<&'static str> {
         if let Some(ch) = char::from_u32(ascii_code) {
             return match ch {
                 'A'..='Z' | 'a'..='z' => match ch.to_ascii_lowercase() {
-                    'a' => Some("a"), 'b' => Some("b"), 'c' => Some("c"), 'd' => Some("d"), 'e' => Some("e"),
-                    'f' => Some("f"), 'g' => Some("g"), 'h' => Some("h"), 'i' => Some("i"), 'j' => Some("j"),
-                    'k' => Some("k"), 'l' => Some("l"), 'm' => Some("m"), 'n' => Some("n"), 'o' => Some("o"),
-                    'p' => Some("p"), 'q' => Some("q"), 'r' => Some("r"), 's' => Some("s"), 't' => Some("t"),
-                    'u' => Some("u"), 'v' => Some("v"), 'w' => Some("w"), 'x' => Some("x"), 'y' => Some("y"),
+                    'a' => Some("a"),
+                    'b' => Some("b"),
+                    'c' => Some("c"),
+                    'd' => Some("d"),
+                    'e' => Some("e"),
+                    'f' => Some("f"),
+                    'g' => Some("g"),
+                    'h' => Some("h"),
+                    'i' => Some("i"),
+                    'j' => Some("j"),
+                    'k' => Some("k"),
+                    'l' => Some("l"),
+                    'm' => Some("m"),
+                    'n' => Some("n"),
+                    'o' => Some("o"),
+                    'p' => Some("p"),
+                    'q' => Some("q"),
+                    'r' => Some("r"),
+                    's' => Some("s"),
+                    't' => Some("t"),
+                    'u' => Some("u"),
+                    'v' => Some("v"),
+                    'w' => Some("w"),
+                    'x' => Some("x"),
+                    'y' => Some("y"),
                     'z' => Some("z"),
                     _ => None,
                 },
-                '0' => Some("0"), '1' => Some("1"), '2' => Some("2"), '3' => Some("3"), '4' => Some("4"),
-                '5' => Some("5"), '6' => Some("6"), '7' => Some("7"), '8' => Some("8"), '9' => Some("9"),
+                '0' => Some("0"),
+                '1' => Some("1"),
+                '2' => Some("2"),
+                '3' => Some("3"),
+                '4' => Some("4"),
+                '5' => Some("5"),
+                '6' => Some("6"),
+                '7' => Some("7"),
+                '8' => Some("8"),
+                '9' => Some("9"),
                 '\'' | '`' => None,
                 '-' | '_' | '~' => Some("-"),
                 ' ' => Some(" "),
@@ -30,22 +58,27 @@ pub fn normalize_char(c: char) -> Option<&'static str> {
     }
 
     match c {
-        'a' | 'A' | 'á' | 'Á' | 'à' | 'À' | 'â' | 'Â' | 'ä' | 'Ä' | 'ã' | 'Ã' | 'å' | 'Å' | 'ā' | 'Ā' | 'ą' | 'Ą' => Some("a"),
+        'a' | 'A' | 'á' | 'Á' | 'à' | 'À' | 'â' | 'Â' | 'ä' | 'Ä' | 'ã' | 'Ã' | 'å' | 'Å' | 'ā'
+        | 'Ā' | 'ą' | 'Ą' => Some("a"),
         'æ' | 'Æ' => Some("ae"),
         'b' | 'B' => Some("b"),
         'c' | 'C' | 'ç' | 'Ç' | 'ć' | 'Ć' | 'č' | 'Č' => Some("c"),
         'd' | 'D' | 'ď' | 'Ď' | 'đ' | 'Đ' => Some("d"),
-        'e' | 'E' | 'é' | 'É' | 'è' | 'È' | 'ê' | 'Ê' | 'ë' | 'Ë' | 'ē' | 'Ē' | 'ę' | 'Ę' | 'ě' | 'Ě' => Some("e"),
+        'e' | 'E' | 'é' | 'É' | 'è' | 'È' | 'ê' | 'Ê' | 'ë' | 'Ë' | 'ē' | 'Ē' | 'ę' | 'Ę' | 'ě'
+        | 'Ě' => Some("e"),
         'f' | 'F' => Some("f"),
         'g' | 'G' | 'ğ' | 'Ğ' => Some("g"),
         'h' | 'H' => Some("h"),
-        'i' | 'I' | 'í' | 'Í' | 'ì' | 'Ì' | 'î' | 'Î' | 'ï' | 'Ï' | 'ī' | 'Ī' | 'ı' => Some("i"),
+        'i' | 'I' | 'í' | 'Í' | 'ì' | 'Ì' | 'î' | 'Î' | 'ï' | 'Ï' | 'ī' | 'Ī' | 'ı' => {
+            Some("i")
+        }
         'j' | 'J' => Some("j"),
         'k' | 'K' => Some("k"),
         'l' | 'L' | 'ł' | 'Ł' | 'ĺ' | 'Ĺ' | 'ľ' | 'Ľ' => Some("l"),
         'm' | 'M' => Some("m"),
         'n' | 'N' | 'ñ' | 'Ñ' | 'ń' | 'Ń' | 'ň' | 'Ň' => Some("n"),
-        'o' | 'O' | 'ó' | 'Ó' | 'ò' | 'Ò' | 'ô' | 'Ô' | 'ö' | 'Ö' | 'õ' | 'Õ' | 'ø' | 'Ø' | 'ō' | 'Ō' | 'ő' | 'Ő' => Some("o"),
+        'o' | 'O' | 'ó' | 'Ó' | 'ò' | 'Ò' | 'ô' | 'Ô' | 'ö' | 'Ö' | 'õ' | 'Õ' | 'ø' | 'Ø' | 'ō'
+        | 'Ō' | 'ő' | 'Ő' => Some("o"),
         'œ' | 'Œ' => Some("oe"),
         'p' | 'P' => Some("p"),
         'q' | 'Q' => Some("q"),
@@ -53,7 +86,8 @@ pub fn normalize_char(c: char) -> Option<&'static str> {
         's' | 'S' | 'ś' | 'Ś' | 'š' | 'Š' | 'ş' | 'Ş' => Some("s"),
         'ß' => Some("ss"),
         't' | 'T' | 'ť' | 'Ť' | 'ţ' | 'Ţ' => Some("t"),
-        'u' | 'U' | 'ú' | 'Ú' | 'ù' | 'Ù' | 'û' | 'Û' | 'ü' | 'Ü' | 'ū' | 'Ū' | 'ů' | 'Ů' | 'ű' | 'Ű' => Some("u"),
+        'u' | 'U' | 'ú' | 'Ú' | 'ù' | 'Ù' | 'û' | 'Û' | 'ü' | 'Ü' | 'ū' | 'Ū' | 'ů' | 'Ů' | 'ű'
+        | 'Ű' => Some("u"),
         'v' | 'V' => Some("v"),
         'w' | 'W' => Some("w"),
         'x' | 'X' => Some("x"),
@@ -61,8 +95,16 @@ pub fn normalize_char(c: char) -> Option<&'static str> {
         'z' | 'Z' | 'ź' | 'Ź' | 'ż' | 'Ż' | 'ž' | 'Ž' => Some("z"),
 
         '0'..='9' => match c {
-            '0' => Some("0"), '1' => Some("1"), '2' => Some("2"), '3' => Some("3"), '4' => Some("4"),
-            '5' => Some("5"), '6' => Some("6"), '7' => Some("7"), '8' => Some("8"), '9' => Some("9"),
+            '0' => Some("0"),
+            '1' => Some("1"),
+            '2' => Some("2"),
+            '3' => Some("3"),
+            '4' => Some("4"),
+            '5' => Some("5"),
+            '6' => Some("6"),
+            '7' => Some("7"),
+            '8' => Some("8"),
+            '9' => Some("9"),
             _ => None,
         },
 
@@ -224,10 +266,10 @@ fn match_token(token: &str, norm_target: &str, norm_clean: &str) -> Option<i64> 
             if word.is_empty() {
                 continue;
             }
-            if word.chars().count().abs_diff(token_len) <= 1 {
-                if let Some(score) = matcher.fuzzy_match(word, token) {
-                    best_score = Some(best_score.map_or(score, |b: i64| b.max(score)));
-                }
+            if word.chars().count().abs_diff(token_len) <= 1
+                && let Some(score) = matcher.fuzzy_match(word, token)
+            {
+                best_score = Some(best_score.map_or(score, |b: i64| b.max(score)));
             }
         }
         return best_score;
@@ -248,10 +290,7 @@ pub fn score_match(query: &str, target: &str) -> Option<i64> {
 
     let mut total_score = 0;
     for token in tokens {
-        match match_token(token, &norm_target, &norm_clean) {
-            Some(score) => total_score += score,
-            None => return None,
-        }
+        total_score += match_token(token, &norm_target, &norm_clean)?;
     }
 
     let len_diff = norm_target.len().saturating_sub(norm_query.len()) as i64;
@@ -292,7 +331,13 @@ mod tests {
         assert!(word_boundary > substring);
         assert!(substring > typo);
         assert!(score_match("xyz", "July").is_none());
-        assert!(score_match("july and", "One Piece : Drums of Liberation x Overtaken - TU Symphony Orchestra").is_none());
+        assert!(
+            score_match(
+                "july and",
+                "One Piece : Drums of Liberation x Overtaken - TU Symphony Orchestra"
+            )
+            .is_none()
+        );
         assert!(score_match("july and", "And July").is_some());
         assert!(score_match("jlu and", "And July").is_some());
 
@@ -311,7 +356,10 @@ mod tests {
     #[test]
     fn test_fullwidth_japanese_characters() {
         assert_eq!(normalize_search_text("Ｊｕｌｙ"), "july");
-        assert_eq!(normalize_search_text("Ｈｅｌｌｏ　Ｗｏｒｌｄ"), "hello world");
+        assert_eq!(
+            normalize_search_text("Ｈｅｌｌｏ　Ｗｏｒｌｄ"),
+            "hello world"
+        );
     }
 
     #[test]
@@ -334,7 +382,10 @@ mod tests {
     fn test_cjk_preservation() {
         assert_eq!(normalize_search_text("夜に駆ける"), "夜に駆ける");
         assert_eq!(normalize_search_text("아이유"), "아이유");
-        assert_eq!(normalize_search_text("YOASOBI - 夜に駆ける"), "yoasobi - 夜に駆ける");
+        assert_eq!(
+            normalize_search_text("YOASOBI - 夜に駆ける"),
+            "yoasobi - 夜に駆ける"
+        );
     }
 
     #[test]
@@ -344,7 +395,10 @@ mod tests {
         assert_eq!(clean_noise("Song (Official Audio) [HD]"), "Song");
         assert_eq!(clean_noise("July feat. DEAN"), "July");
         assert_eq!(clean_noise("(Acoustic)"), "(Acoustic)");
-        assert_eq!(clean_noise("夜に駆ける（Official Music Video）"), "夜に駆ける");
+        assert_eq!(
+            clean_noise("夜に駆ける（Official Music Video）"),
+            "夜に駆ける"
+        );
         assert_eq!(clean_noise("紅蓮華【アニメver.】"), "紅蓮華");
         assert_eq!(clean_noise("Song「TV Size」"), "Song");
     }

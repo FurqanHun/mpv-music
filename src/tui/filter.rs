@@ -9,7 +9,7 @@ pub fn apply_cli_filters(
     let prepare_terms = |arg: &Option<Option<String>>| -> Option<Vec<String>> {
         arg.as_ref().and_then(|opt| opt.as_ref()).map(|val| {
             val.split(',')
-                .map(|s| crate::search_norm::normalize_search_text(s))
+                .map(crate::search_norm::normalize_search_text)
                 .filter(|s| !s.is_empty())
                 .collect()
         })
@@ -26,8 +26,9 @@ pub fn apply_cli_filters(
             let matches = |field: &str, terms: &Option<Vec<String>>| {
                 if let Some(search_vals) = terms {
                     let field_norm = crate::search_norm::normalize_search_text(field);
-                    let field_clean_norm =
-                        crate::search_norm::normalize_search_text(&crate::search_norm::clean_noise(field));
+                    let field_clean_norm = crate::search_norm::normalize_search_text(
+                        &crate::search_norm::clean_noise(field),
+                    );
 
                     if exact {
                         search_vals.iter().any(|term| {
@@ -112,7 +113,12 @@ mod tests {
     fn test_apply_cli_filters_clean_noise() {
         let tracks = vec![
             sample_track("July (feat. DEAN)", "Heize", "And July", "R&B"),
-            sample_track("Creep [Remastered 2021]", "Radiohead", "Pablo Honey", "Rock"),
+            sample_track(
+                "Creep [Remastered 2021]",
+                "Radiohead",
+                "Pablo Honey",
+                "Rock",
+            ),
         ];
 
         let args = Cli::parse_from(["mpv-music", "-t", "july"]);
