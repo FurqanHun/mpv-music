@@ -127,6 +127,53 @@ pub fn normalize_search_text(input: &str) -> String {
     normalized
 }
 
+pub fn clean_noise(input: &str) -> String {
+    let mut cleaned = String::with_capacity(input.len());
+    let mut in_parenthesis = 0;
+    let mut in_bracket = 0;
+
+    for c in input.chars() {
+        match c {
+            '(' | '\u{FF08}' => in_parenthesis += 1,
+            ')' | '\u{FF09}' => {
+                if in_parenthesis > 0 {
+                    in_parenthesis -= 1;
+                }
+            }
+            '[' | '\u{FF3B}' | '【' | '〔' | '〈' | '《' | '「' | '『' | '〖' | '〘' | '〚' => {
+                in_bracket += 1
+            }
+            ']' | '\u{FF3D}' | '】' | '〕' | '〉' | '》' | '」' | '』' | '〗' | '〙' | '〛' => {
+                if in_bracket > 0 {
+                    in_bracket -= 1;
+                }
+            }
+            _ => {
+                if in_parenthesis == 0 && in_bracket == 0 {
+                    cleaned.push(c);
+                }
+            }
+        }
+    }
+
+    let mut result = cleaned.trim();
+    if let Some(pos) = result.to_lowercase().find(" feat. ") {
+        result = result[..pos].trim();
+    } else if let Some(pos) = result.to_lowercase().find(" ft. ") {
+        result = result[..pos].trim();
+    } else if let Some(pos) = result.to_lowercase().find(" feat ") {
+        result = result[..pos].trim();
+    } else if let Some(pos) = result.to_lowercase().find(" ft ") {
+        result = result[..pos].trim();
+    }
+
+    if result.is_empty() {
+        input.trim().to_string()
+    } else {
+        result.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -166,5 +213,17 @@ mod tests {
         assert_eq!(normalize_search_text("夜に駆ける"), "夜に駆ける");
         assert_eq!(normalize_search_text("아이유"), "아이유");
         assert_eq!(normalize_search_text("YOASOBI - 夜に駆ける"), "yoasobi - 夜に駆ける");
+    }
+
+    #[test]
+    fn test_clean_noise() {
+        assert_eq!(clean_noise("July (feat. DEAN)"), "July");
+        assert_eq!(clean_noise("Creep [Remastered 2021]"), "Creep");
+        assert_eq!(clean_noise("Song (Official Audio) [HD]"), "Song");
+        assert_eq!(clean_noise("July feat. DEAN"), "July");
+        assert_eq!(clean_noise("(Acoustic)"), "(Acoustic)");
+        assert_eq!(clean_noise("夜に駆ける（Official Music Video）"), "夜に駆ける");
+        assert_eq!(clean_noise("紅蓮華【アニメver.】"), "紅蓮華");
+        assert_eq!(clean_noise("Song「TV Size」"), "Song");
     }
 }

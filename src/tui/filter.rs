@@ -26,6 +26,8 @@ pub fn apply_cli_filters(
             let matches = |field: &str, terms: &Option<Vec<String>>| {
                 if let Some(search_vals) = terms {
                     let field_norm = crate::search_norm::normalize_search_text(field);
+                    let field_clean_norm =
+                        crate::search_norm::normalize_search_text(&crate::search_norm::clean_noise(field));
 
                     if exact {
                         search_vals.iter().any(|term| {
@@ -33,9 +35,15 @@ pub fn apply_cli_filters(
                                 .split([';', ','])
                                 .map(|s| s.trim())
                                 .any(|tag| tag == term)
+                                || field_clean_norm
+                                    .split([';', ','])
+                                    .map(|s| s.trim())
+                                    .any(|tag| tag == term)
                         })
                     } else {
-                        search_vals.iter().any(|term| field_norm.contains(term))
+                        search_vals
+                            .iter()
+                            .any(|term| field_norm.contains(term) || field_clean_norm.contains(term))
                     }
                 } else {
                     true
@@ -96,5 +104,23 @@ mod tests {
         let res = apply_cli_filters(&tracks, &args, false);
         assert_eq!(res.len(), 1);
         assert_eq!(res[0].title, "Don’t Speak");
+    }
+
+    #[test]
+    fn test_apply_cli_filters_clean_noise() {
+        let tracks = vec![
+            sample_track("July (feat. DEAN)", "Heize", "And July", "R&B"),
+            sample_track("Creep [Remastered 2021]", "Radiohead", "Pablo Honey", "Rock"),
+        ];
+
+        let args = Cli::parse_from(["mpv-music", "-t", "july"]);
+        let res = apply_cli_filters(&tracks, &args, true);
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].title, "July (feat. DEAN)");
+
+        let args = Cli::parse_from(["mpv-music", "-t", "creep"]);
+        let res = apply_cli_filters(&tracks, &args, true);
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].title, "Creep [Remastered 2021]");
     }
 }
