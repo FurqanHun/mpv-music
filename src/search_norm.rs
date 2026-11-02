@@ -267,9 +267,14 @@ fn match_token(token: &str, norm_target: &str, norm_clean: &str) -> Option<i64> 
                 continue;
             }
             let word_len = word.chars().count();
-            if word_len >= 3
-                && word_len.abs_diff(token_len) <= 1
-                && let Some(score) = matcher.fuzzy_match(word, token)
+            if word_len >= 3 && word_len >= token_len && word_len - token_len <= 1 {
+                if let Some(score) = matcher.fuzzy_match(word, token) {
+                    best_score = Some(best_score.map_or(score, |b: i64| b.max(score)));
+                }
+            } else if word_len >= 4
+                && token_len > word_len
+                && token_len - word_len <= 1
+                && let Some(score) = matcher.fuzzy_match(token, word)
             {
                 best_score = Some(best_score.map_or(score, |b: i64| b.max(score)));
             } else if word_len >= 3
@@ -427,5 +432,7 @@ mod tests {
         assert!(match_all_tokens("jlu", "And July"));
         assert!(match_all_tokens("crep", "Creep"));
         assert!(match_all_tokens("raduohead", "Radiohead"));
+        assert!(match_all_tokens("controeversy", "Controversy"));
+        assert!(match_all_tokens("controeversy", "I'm a Controversy"));
     }
 }

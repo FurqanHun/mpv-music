@@ -68,12 +68,14 @@ pub fn resolve_cli_candidates(tracks: &[Track], args: &Cli) -> Vec<Track> {
             crate::search_norm::sort_by_relevance(&mut filtered, query, |t| field.extract(t));
 
             let has_strong_match = filtered.iter().any(|t| {
-                crate::search_norm::score_match(query, field.extract(t)).unwrap_or(i64::MIN) >= 9_000
+                crate::search_norm::score_match(query, field.extract(t)).unwrap_or(i64::MIN)
+                    >= 9_000
             });
 
             if has_strong_match {
                 filtered.retain(|t| {
-                    crate::search_norm::score_match(query, field.extract(t)).unwrap_or(i64::MIN) >= 9_000
+                    crate::search_norm::score_match(query, field.extract(t)).unwrap_or(i64::MIN)
+                        >= 9_000
                 });
             }
         }
@@ -96,6 +98,23 @@ pub fn handle_cli_filters(
     }
 
     if let Some(field) = active_filter_field(args) {
+        if field == TagField::Title {
+            if filtered.len() == 1 {
+                log::info!("Single match found. Playing directly.");
+                player::play(&filtered[0].path, cfg, extra_mpv_args)?;
+                return Ok(());
+            }
+
+            ui::info(format!("Found {} matching tracks.", filtered.len()));
+            if args.play_all {
+                let paths: Vec<String> = filtered.iter().map(|t| t.path.clone()).collect();
+                player::play_files(&paths, cfg, extra_mpv_args)?;
+            } else {
+                tui::run_track_mode(&filtered, cfg, extra_mpv_args)?;
+            }
+            return Ok(());
+        }
+
         let mut seen = HashSet::new();
         let mut unique_options: Vec<String> = Vec::new();
         for t in &filtered {
@@ -130,7 +149,7 @@ pub fn handle_cli_filters(
     }
 
     ui::info(format!("Found {} matching tracks.", filtered.len()));
-    if args.play_all || args.title.is_some() {
+    if args.play_all {
         let paths: Vec<String> = filtered.iter().map(|t| t.path.clone()).collect();
         player::play_files(&paths, cfg, extra_mpv_args)?;
     } else {
@@ -217,5 +236,19 @@ mod tests {
         assert_eq!(candidates.len(), 2);
         assert_eq!(candidates[0].title, "Juli");
         assert_eq!(candidates[1].title, "Jule");
+    }
+
+    #[test]
+    fn test_resolve_cli_candidates_insertion_typo() {
+        let tracks = vec![
+            sample_track("I'm a Controversy", "Ado", "Album", "Pop"),
+            sample_track("Radiohead - Creep", "Radiohead", "Pablo Honey", "Rock"),
+        ];
+
+        let args = Cli::parse_from(["mpv-music", "-t", "controeversy"]);
+        let candidates = resolve_cli_candidates(&tracks, &args);
+
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].title, "I'm a Controversy");
     }
 }
