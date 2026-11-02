@@ -179,10 +179,37 @@ pub fn clean_noise(input: &str) -> String {
 
 fn match_token(token: &str, norm_target: &str, norm_clean: &str) -> Option<i64> {
     if norm_clean == token || norm_target == token {
-        return Some(10_000);
+        return Some(100_000);
     }
+    if norm_clean.starts_with(token) || norm_target.starts_with(token) {
+        return Some(50_000);
+    }
+
+    let words = norm_target
+        .split(|c: char| !c.is_alphanumeric())
+        .chain(norm_clean.split(|c: char| !c.is_alphanumeric()))
+        .filter(|w| !w.is_empty());
+
+    let mut found_word_exact = false;
+    let mut found_word_prefix = false;
+    for word in words {
+        if word == token {
+            found_word_exact = true;
+            break;
+        } else if word.starts_with(token) {
+            found_word_prefix = true;
+        }
+    }
+
+    if found_word_exact {
+        return Some(30_000);
+    }
+    if found_word_prefix {
+        return Some(20_000);
+    }
+
     if norm_clean.contains(token) || norm_target.contains(token) {
-        return Some(2_000);
+        return Some(10_000);
     }
 
     let token_len = token.chars().count();
@@ -227,6 +254,9 @@ pub fn score_match(query: &str, target: &str) -> Option<i64> {
         }
     }
 
+    let len_diff = norm_target.len().saturating_sub(norm_query.len()) as i64;
+    total_score -= len_diff.min(100);
+
     Some(total_score)
 }
 
@@ -234,22 +264,41 @@ pub fn match_all_tokens(query: &str, target: &str) -> bool {
     score_match(query, target).is_some()
 }
 
+pub fn sort_by_relevance<T, F>(items: &mut [T], query: &str, field_extractor: F)
+where
+    F: Fn(&T) -> &str,
+{
+    items.sort_by(|a, b| {
+        let score_a = score_match(query, field_extractor(a)).unwrap_or(i64::MIN);
+        let score_b = score_match(query, field_extractor(b)).unwrap_or(i64::MIN);
+        score_b.cmp(&score_a)
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_skim_matcher_behavior() {
+    fn test_relevance_scoring_tiers() {
         let exact = score_match("july", "July").unwrap();
-        let partial = score_match("july", "And July").unwrap();
+        let prefix = score_match("july", "July Morning").unwrap();
+        let word_boundary = score_match("july", "And July").unwrap();
+        let substring = score_match("july", "Unjuly").unwrap();
         let typo = score_match("jlu", "July").unwrap();
 
-        assert!(exact > partial);
-        assert!(partial > typo);
+        assert!(exact > prefix);
+        assert!(prefix > word_boundary);
+        assert!(word_boundary > substring);
+        assert!(substring > typo);
         assert!(score_match("xyz", "July").is_none());
         assert!(score_match("july and", "One Piece : Drums of Liberation x Overtaken - TU Symphony Orchestra").is_none());
         assert!(score_match("july and", "And July").is_some());
         assert!(score_match("jlu and", "And July").is_some());
+
+        let mut titles = vec!["Unjuly", "And July", "July", "July Morning"];
+        sort_by_relevance(&mut titles, "july", |t| t);
+        assert_eq!(titles, vec!["July", "July Morning", "And July", "Unjuly"]);
     }
     #[test]
     fn test_case_and_accents() {
