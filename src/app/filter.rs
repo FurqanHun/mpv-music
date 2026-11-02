@@ -66,6 +66,16 @@ pub fn resolve_cli_candidates(tracks: &[Track], args: &Cli) -> Vec<Track> {
 
         if let Some(query) = query_str {
             crate::search_norm::sort_by_relevance(&mut filtered, query, |t| field.extract(t));
+
+            let has_strong_match = filtered.iter().any(|t| {
+                crate::search_norm::score_match(query, field.extract(t)).unwrap_or(i64::MIN) >= 9_000
+            });
+
+            if has_strong_match {
+                filtered.retain(|t| {
+                    crate::search_norm::score_match(query, field.extract(t)).unwrap_or(i64::MIN) >= 9_000
+                });
+            }
         }
     }
 
@@ -176,5 +186,36 @@ mod tests {
 
         assert_eq!(candidates.len(), 1);
         assert_eq!(candidates[0].title, "Radiohead - Creep");
+    }
+
+    #[test]
+    fn test_resolve_cli_candidates_prunes_fuzzy_noise_when_strong_match_exists() {
+        let tracks = vec![
+            sample_track("July", "DEAN", "130 mood", "R&B"),
+            sample_track("Juicy", "Doja Cat", "Hot Pink", "Pop"),
+            sample_track("Something Else", "Artist", "Album", "Pop"),
+        ];
+
+        let args = Cli::parse_from(["mpv-music", "-t", "july"]);
+        let candidates = resolve_cli_candidates(&tracks, &args);
+
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].title, "July");
+    }
+
+    #[test]
+    fn test_resolve_cli_candidates_keeps_fuzzy_matches_when_no_strong_match() {
+        let tracks = vec![
+            sample_track("Juli", "Artist A", "Album A", "Pop"),
+            sample_track("Jule", "Artist B", "Album B", "Pop"),
+            sample_track("Radiohead - Creep", "Radiohead", "Pablo Honey", "Rock"),
+        ];
+
+        let args = Cli::parse_from(["mpv-music", "-t", "july"]);
+        let candidates = resolve_cli_candidates(&tracks, &args);
+
+        assert_eq!(candidates.len(), 2);
+        assert_eq!(candidates[0].title, "Juli");
+        assert_eq!(candidates[1].title, "Jule");
     }
 }
