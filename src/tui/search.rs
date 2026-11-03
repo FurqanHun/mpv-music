@@ -62,11 +62,7 @@ pub fn run_search_mode(
 
     let skim_items: Vec<SearchItem> = results
         .into_iter()
-        .map(|r| SearchItem {
-            result: r,
-            playlist_icon: icons.playlist(),
-            video_icon: icons.video_stream(),
-        })
+        .map(|r| SearchItem::new(r, icons.playlist(), icons.video_stream()))
         .collect();
 
     let search_prompt = icons.prompt(icons.target_search(), "Search");
@@ -75,7 +71,9 @@ pub fn run_search_mode(
         .multi(true)
         .prompt(&search_prompt)
         .reverse(true)
-        //.typos(2)
+        .normalize(true)
+        .typos(skim::Typos::Smart)
+        .no_hscroll(true)
         .inline_info(true)
         .preview("")
         .bind(super::multi_select_binds())

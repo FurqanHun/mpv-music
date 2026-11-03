@@ -90,12 +90,7 @@ pub fn run_tag_picker(
             let count = *counts.get(k).unwrap();
             let sample_list = samples.get(k).unwrap().clone();
 
-            TagItem {
-                name: k.clone(),
-                count,
-                samples: sample_list,
-                icon: icon.to_string(),
-            }
+            TagItem::new(k.clone(), count, sample_list, icon.to_string())
         })
         .collect();
 
@@ -104,7 +99,9 @@ pub fn run_tag_picker(
         .prompt(&prompt)
         .preview("")
         .reverse(true)
-        //.typos(2)
+        .normalize(true)
+        .typos(skim::Typos::Smart)
+        .no_hscroll(true)
         .inline_info(true)
         .bind(super::multi_select_binds())
         .build()
@@ -123,9 +120,7 @@ pub fn run_tag_picker(
 
     let mut selected_names = HashSet::new();
     for item in selected_items {
-        let text = item.text();
-        let name = text.rsplit_once(" (").map(|(n, _)| n).unwrap_or(&text);
-        selected_names.insert(name.to_string());
+        selected_names.insert(item.output().to_string());
     }
 
     let filtered: Vec<&indexer::Track> = tracks

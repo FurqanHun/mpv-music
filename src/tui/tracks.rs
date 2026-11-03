@@ -20,18 +20,13 @@ where
             if track.is_playlist() {
                 return None;
             }
-            let display = format!("{} - {}", track.artist, track.title);
             let icon = if track.is_video() {
                 icons.video()
             } else {
                 icons.track()
             };
 
-            Some(TrackItem {
-                track: track.clone(),
-                display_text: display,
-                icon,
-            })
+            Some(TrackItem::new(track.clone(), icon))
         })
         .collect();
 
@@ -43,7 +38,9 @@ where
         .prompt(&track_prompt)
         .header("   Artist                Title")
         .reverse(true)
-        //.typos(2)
+        .normalize(true)
+        .typos(skim::Typos::Smart)
+        .no_hscroll(true)
         .inline_info(true)
         .bind(super::multi_select_binds())
         .build()
@@ -102,13 +99,7 @@ pub fn run_dir_mode(
                 .to_string_lossy()
                 .to_string();
 
-            DirItem {
-                dirname: name,
-                path,
-                count,
-                samples: files,
-                icon: icons.folder(),
-            }
+            DirItem::new(name, path, count, files, icons.folder())
         })
         .collect();
 
@@ -118,7 +109,9 @@ pub fn run_dir_mode(
         .prompt(&folder_prompt)
         .header("   Directory Name")
         .reverse(true)
-        //.typos(2)
+        .normalize(true)
+        .typos(skim::Typos::Smart)
+        .no_hscroll(true)
         .inline_info(true)
         .preview("")
         .bind(super::multi_select_binds())
@@ -210,13 +203,13 @@ pub fn run_playlist_mode(
                     (0, vec!["(Could not read file)".to_string()])
                 };
 
-                Some(PlaylistItem {
-                    name: t.title.clone(),
-                    path: t.path.clone(),
+                Some(PlaylistItem::new(
+                    t.title.clone(),
+                    t.path.clone(),
                     count,
-                    preview_lines: lines,
-                    icon: icons.playlist(),
-                })
+                    lines,
+                    icons.playlist(),
+                ))
             } else {
                 None
             }
@@ -228,7 +221,9 @@ pub fn run_playlist_mode(
         .multi(true)
         .prompt(&playlist_prompt)
         .reverse(true)
-        //.typos(2)
+        .normalize(true)
+        .typos(skim::Typos::Smart)
+        .no_hscroll(true)
         .inline_info(true)
         .preview("")
         .build()

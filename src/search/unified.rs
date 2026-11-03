@@ -1,8 +1,8 @@
+use super::norm::{normalize_search_text, score_match};
 use crate::cli::Cli;
 use crate::config::Config;
 use crate::indexer::Track;
 use crate::player;
-use super::norm::{normalize_search_text, score_match};
 use crate::tui;
 use crate::ui;
 use anyhow::Result;

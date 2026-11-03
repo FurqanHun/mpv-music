@@ -9,13 +9,26 @@ pub struct TrackItem {
     pub icon: &'static str,
 }
 
+impl TrackItem {
+    pub fn new(track: indexer::Track, icon: &'static str) -> Self {
+        let display_text = format!("{} - {}", track.artist, track.title);
+        Self {
+            track,
+            display_text,
+            icon,
+        }
+    }
+}
+
 impl SkimItem for TrackItem {
     fn text(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.display_text)
     }
+
     fn output(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.track.path)
     }
+
     fn preview(&self, _ctx: PreviewContext) -> ItemPreview {
         let ext = std::path::Path::new(&self.track.path)
             .extension()
@@ -52,9 +65,24 @@ pub struct TagItem {
     pub icon: String,
 }
 
+impl TagItem {
+    pub fn new(name: String, count: usize, samples: Vec<String>, icon: String) -> Self {
+        Self {
+            name,
+            count,
+            samples,
+            icon,
+        }
+    }
+}
+
 impl SkimItem for TagItem {
     fn text(&self) -> Cow<'_, str> {
         Cow::Owned(format!("{} ({})", self.name, self.count))
+    }
+
+    fn output(&self) -> Cow<'_, str> {
+        Cow::Borrowed(&self.name)
     }
 
     fn preview(&self, _context: PreviewContext) -> ItemPreview {
@@ -96,10 +124,29 @@ pub struct DirItem {
     pub icon: &'static str,
 }
 
+impl DirItem {
+    pub fn new(
+        dirname: String,
+        path: String,
+        count: usize,
+        samples: Vec<String>,
+        icon: &'static str,
+    ) -> Self {
+        Self {
+            dirname,
+            path,
+            count,
+            samples,
+            icon,
+        }
+    }
+}
+
 impl SkimItem for DirItem {
     fn text(&self) -> Cow<'_, str> {
         Cow::Owned(format!("{} ({})", self.dirname, self.count))
     }
+
     fn output(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.path)
     }
@@ -143,10 +190,29 @@ pub struct PlaylistItem {
     pub icon: &'static str,
 }
 
+impl PlaylistItem {
+    pub fn new(
+        name: String,
+        path: String,
+        count: usize,
+        preview_lines: Vec<String>,
+        icon: &'static str,
+    ) -> Self {
+        Self {
+            name,
+            path,
+            count,
+            preview_lines,
+            icon,
+        }
+    }
+}
+
 impl SkimItem for PlaylistItem {
     fn text(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.name)
     }
+
     fn output(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.path)
     }
@@ -192,10 +258,25 @@ pub struct SearchItem {
     pub video_icon: &'static str,
 }
 
+impl SearchItem {
+    pub fn new(
+        result: search::SearchResult,
+        playlist_icon: &'static str,
+        video_icon: &'static str,
+    ) -> Self {
+        Self {
+            result,
+            playlist_icon,
+            video_icon,
+        }
+    }
+}
+
 impl SkimItem for SearchItem {
     fn text(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.result.title)
     }
+
     fn output(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.result.url)
     }
@@ -225,13 +306,16 @@ pub struct MenuItem {
     pub text: String,
     pub id: String,
 }
+
 impl SkimItem for MenuItem {
     fn text(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.text)
     }
+
     fn output(&self) -> Cow<'_, str> {
         Cow::Borrowed(&self.id)
     }
+
     fn preview(&self, _ctx: PreviewContext) -> ItemPreview {
         ItemPreview::Text(self.id.clone())
     }
