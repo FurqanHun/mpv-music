@@ -2,7 +2,7 @@ use crate::cli::Cli;
 use crate::config::Config;
 use crate::indexer::Track;
 use crate::player;
-use crate::search_norm::{normalize_search_text, score_match};
+use super::norm::{normalize_search_text, score_match};
 use crate::tui;
 use crate::ui;
 use anyhow::Result;

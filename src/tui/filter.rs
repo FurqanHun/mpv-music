@@ -9,7 +9,7 @@ pub fn apply_cli_filters(
     let prepare_terms = |arg: &Option<Option<String>>| -> Option<Vec<String>> {
         arg.as_ref().and_then(|opt| opt.as_ref()).map(|val| {
             val.split(',')
-                .map(crate::search_norm::normalize_search_text)
+                .map(crate::search::norm::normalize_search_text)
                 .filter(|s| !s.is_empty())
                 .collect()
         })
@@ -25,9 +25,9 @@ pub fn apply_cli_filters(
         .filter(|t| {
             let matches = |field: &str, terms: &Option<Vec<String>>| {
                 if let Some(search_vals) = terms {
-                    let field_norm = crate::search_norm::normalize_search_text(field);
-                    let field_clean_norm = crate::search_norm::normalize_search_text(
-                        &crate::search_norm::clean_noise(field),
+                    let field_norm = crate::search::norm::normalize_search_text(field);
+                    let field_clean_norm = crate::search::norm::normalize_search_text(
+                        &crate::search::norm::clean_noise(field),
                     );
 
                     if exact {
@@ -45,7 +45,7 @@ pub fn apply_cli_filters(
                         search_vals.iter().any(|term| {
                             field_norm.contains(term)
                                 || field_clean_norm.contains(term)
-                                || crate::search_norm::match_all_tokens(term, field)
+                                || crate::search::norm::match_all_tokens(term, field)
                         })
                     }
                 } else {

@@ -16,7 +16,7 @@ pub fn is_local_cli_mode_requested(args: &Cli) -> bool {
         || args
             .target
             .as_ref()
-            .is_some_and(|t| !crate::search_unified::is_direct_playback_target(t))
+            .is_some_and(|t| !crate::search::unified::is_direct_playback_target(t))
 }
 
 fn load_or_scan_library(cfg: &Config, args: &Cli) -> Result<Vec<Track>> {
@@ -67,7 +67,7 @@ pub fn load_or_scan_tracks(
                 return Ok(None);
             }
             tracks = session_tracks;
-        } else if crate::search_unified::is_direct_playback_target(target) {
+        } else if crate::search::unified::is_direct_playback_target(target) {
             if target.starts_with("http://") || target.starts_with("https://") {
                 ui::info(format!(
                     "Loading stream from '{}' and launching player...",

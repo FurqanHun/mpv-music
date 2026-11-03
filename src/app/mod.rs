@@ -117,9 +117,9 @@ pub fn run(args: Cli) -> Result<()> {
     }
 
     if let Some(target) = args.target.as_deref()
-        && !crate::search_unified::is_direct_playback_target(target)
+        && !crate::search::unified::is_direct_playback_target(target)
     {
-        crate::search_unified::handle_unified_search(&tracks, target, &cfg, &args, extra_mpv_args)?;
+        crate::search::unified::handle_unified_search(&tracks, target, &cfg, &args, extra_mpv_args)?;
         return Ok(());
     }
 

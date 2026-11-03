@@ -65,16 +65,16 @@ pub fn resolve_cli_candidates(tracks: &[Track], args: &Cli) -> Vec<Track> {
         };
 
         if let Some(query) = query_str {
-            crate::search_norm::sort_by_relevance(&mut filtered, query, |t| field.extract(t));
+            crate::search::norm::sort_by_relevance(&mut filtered, query, |t| field.extract(t));
 
             let has_strong_match = filtered.iter().any(|t| {
-                crate::search_norm::score_match(query, field.extract(t)).unwrap_or(i64::MIN)
+                crate::search::norm::score_match(query, field.extract(t)).unwrap_or(i64::MIN)
                     >= 9_000
             });
 
             if has_strong_match {
                 filtered.retain(|t| {
-                    crate::search_norm::score_match(query, field.extract(t)).unwrap_or(i64::MIN)
+                    crate::search::norm::score_match(query, field.extract(t)).unwrap_or(i64::MIN)
                         >= 9_000
                 });
             }
