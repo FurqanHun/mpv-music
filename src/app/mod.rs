@@ -116,6 +116,13 @@ pub fn run(args: Cli) -> Result<()> {
         return Ok(());
     }
 
+    if let Some(target) = args.target.as_deref()
+        && !crate::search_unified::is_direct_playback_target(target)
+    {
+        crate::search_unified::handle_unified_search(&tracks, target, &cfg, &args, extra_mpv_args)?;
+        return Ok(());
+    }
+
     if args.play_all {
         let paths: Vec<String> = tracks.iter().map(|t| t.path.clone()).collect();
         player::play_files(&paths, &cfg, extra_mpv_args)?;

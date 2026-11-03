@@ -258,3 +258,27 @@ fn test_user_flow_cli_filter_with_no_tracks() {
     );
     assert!(combined.contains("No match") || combined.contains("No music found"));
 }
+
+#[test]
+fn test_user_flow_unified_query_no_tracks() {
+    let temp = tempfile::tempdir().expect("Failed to create tempdir");
+    let fake_config_dir = temp.path().join("config");
+    let fake_data_dir = temp.path().join("data");
+    fs::create_dir_all(&fake_config_dir).unwrap();
+    fs::create_dir_all(&fake_data_dir).unwrap();
+
+    let output = Command::new(bin_path())
+        .arg("dean july")
+        .env("XDG_CONFIG_HOME", &fake_config_dir)
+        .env("XDG_DATA_HOME", &fake_data_dir)
+        .env("HOME", temp.path())
+        .output()
+        .expect("Failed to run mpv-music 'dean july'");
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(combined.contains("No match") || combined.contains("No music found"));
+}

@@ -7,6 +7,7 @@ mod player;
 mod radio;
 mod search;
 pub mod search_norm;
+pub mod search_unified;
 mod tui;
 pub mod ui;
 mod update;
