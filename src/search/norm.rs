@@ -235,24 +235,32 @@ fn bounded_levenshtein(s1: &str, s2: &str, max_dist: usize) -> Option<usize> {
         return None;
     }
 
+    let mut prev2 = [0usize; 64];
     let mut prev = [0usize; 64];
     let mut curr = [0usize; 64];
     for (j, item) in prev.iter_mut().enumerate().take(m + 1) {
         *item = j;
     }
 
+    let mut prev_ch1 = '\0';
     for (i, ch1) in s1.chars().enumerate() {
         curr[0] = i + 1;
         let mut min_row = curr[0];
         for j in 0..m {
             let cost = if ch1 == c2[j] { 0 } else { 1 };
-            curr[j + 1] = (prev[j + 1] + 1).min(curr[j] + 1).min(prev[j] + cost);
+            let mut val = (prev[j + 1] + 1).min(curr[j] + 1).min(prev[j] + cost);
+            if i > 0 && j > 0 && ch1 == c2[j - 1] && prev_ch1 == c2[j] {
+                val = val.min(prev2[j - 1] + 1);
+            }
+            curr[j + 1] = val;
             min_row = min_row.min(curr[j + 1]);
         }
         if min_row > max_dist {
             return None;
         }
+        prev2[..=m].copy_from_slice(&prev[..=m]);
         prev[..=m].copy_from_slice(&curr[..=m]);
+        prev_ch1 = ch1;
     }
 
     if prev[m] <= max_dist {
@@ -491,6 +499,8 @@ mod tests {
         assert!(match_all_tokens("controeversy", "I'm a Controversy"));
         assert!(match_all_tokens("notori", "Natori"));
         assert!(match_all_tokens("notori", "Vocella; Natori"));
+        assert!(match_all_tokens("gnetle", "Gentle"));
+        assert!(match_all_tokens("gnetle", "The Gentle Men"));
         assert!(match_all_tokens("unforgtable", "Unforgettable"));
     }
 }
