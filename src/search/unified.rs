@@ -7,6 +7,32 @@ use crate::tui;
 use crate::ui;
 use anyhow::Result;
 
+pub fn parse_query_branches(query: &str) -> Vec<Vec<String>> {
+    let or_normalized = query
+        .replace("||", "|")
+        .replace(" OR ", "|")
+        .replace(',', "|");
+
+    or_normalized
+        .split('|')
+        .map(|branch| branch.trim())
+        .filter(|branch| !branch.is_empty())
+        .map(|branch| {
+            let and_normalized = branch
+                .replace("&&", " ")
+                .replace(" AND ", " ")
+                .replace(" & ", " ")
+                .replace(';', " ");
+
+            and_normalized
+                .split_whitespace()
+                .map(|token| token.to_string())
+                .collect()
+        })
+        .filter(|tokens: &Vec<String>| !tokens.is_empty())
+        .collect()
+}
+
 pub fn is_direct_playback_target(target: &str) -> bool {
     let lower = target.to_lowercase();
     if lower.starts_with("http://")
@@ -23,30 +49,49 @@ pub fn is_direct_playback_target(target: &str) -> bool {
 }
 
 pub fn score_track_unified(query: &str, track: &Track) -> Option<i64> {
-    let norm_query = normalize_search_text(query);
-    let tokens: Vec<&str> = norm_query.split_whitespace().collect();
-    if tokens.is_empty() {
+    let branches = parse_query_branches(query);
+    if branches.is_empty() {
         return Some(0);
     }
 
-    let mut total_score = 0;
-    for token in &tokens {
-        let title_score = score_match(token, &track.title).map(|s| s + 20_000);
-        let artist_score = score_match(token, &track.artist).map(|s| s + 10_000);
-        let album_score = score_match(token, &track.album);
+    let mut best_score: Option<i64> = None;
 
-        let best_token_score = match (title_score, artist_score, album_score) {
-            (None, None, None) => return None,
-            (s1, s2, s3) => s1.into_iter().chain(s2).chain(s3).max().unwrap(),
-        };
+    for branch in branches {
+        let mut branch_score = 0;
+        let mut all_tokens_matched = true;
+        let mut branch_len = 0;
 
-        total_score += best_token_score;
+        for token in &branch {
+            let norm_token = normalize_search_text(token);
+            if norm_token.is_empty() {
+                continue;
+            }
+            branch_len += norm_token.len();
+
+            let title_score = score_match(&norm_token, &track.title).map(|s| s + 20_000);
+            let artist_score = score_match(&norm_token, &track.artist).map(|s| s + 10_000);
+            let album_score = score_match(&norm_token, &track.album);
+
+            let best_token_score = match (title_score, artist_score, album_score) {
+                (None, None, None) => {
+                    all_tokens_matched = false;
+                    break;
+                }
+                (s1, s2, s3) => s1.into_iter().chain(s2).chain(s3).max().unwrap(),
+            };
+
+            branch_score += best_token_score;
+        }
+
+        if all_tokens_matched {
+            let total_len = (track.title.len() + track.artist.len() + track.album.len()) as i64;
+            branch_score -= total_len.saturating_sub(branch_len as i64).min(100);
+
+            best_score = Some(best_score.map_or(branch_score, |current| current.max(branch_score)));
+        }
     }
 
-    let total_len = (track.title.len() + track.artist.len() + track.album.len()) as i64;
-    total_score -= total_len.saturating_sub(norm_query.len() as i64).min(100);
-
-    Some(total_score)
+    best_score
 }
 
 pub fn resolve_unified_candidates(tracks: &[Track], query: &str) -> Vec<Track> {
@@ -144,5 +189,75 @@ mod tests {
         assert_eq!(candidates.len(), 2);
         assert_eq!(candidates[0].title, "July");
         assert_eq!(candidates[1].title, "And July");
+    }
+
+    #[test]
+    fn test_parse_query_branches_operators() {
+        let parsed_pipe = parse_query_branches("natori | ado");
+        assert_eq!(parsed_pipe, vec![vec!["natori"], vec!["ado"]]);
+
+        let parsed_double_pipe = parse_query_branches("natori || ado");
+        assert_eq!(parsed_double_pipe, vec![vec!["natori"], vec!["ado"]]);
+
+        let parsed_or = parse_query_branches("natori OR ado");
+        assert_eq!(parsed_or, vec![vec!["natori"], vec!["ado"]]);
+
+        let parsed_comma = parse_query_branches("natori, ado");
+        assert_eq!(parsed_comma, vec![vec!["natori"], vec!["ado"]]);
+
+        let parsed_and_words = parse_query_branches("dean AND july");
+        assert_eq!(parsed_and_words, vec![vec!["dean", "july"]]);
+
+        let parsed_and_double = parse_query_branches("dean && july");
+        assert_eq!(parsed_and_double, vec![vec!["dean", "july"]]);
+
+        let parsed_and_amp = parse_query_branches("simon & garfunkel");
+        assert_eq!(parsed_and_amp, vec![vec!["simon", "garfunkel"]]);
+
+        let parsed_semicolon = parse_query_branches("vocella; natori");
+        assert_eq!(parsed_semicolon, vec![vec!["vocella", "natori"]]);
+
+        let parsed_embedded_amp = parse_query_branches("R&B | J-Pop");
+        assert_eq!(parsed_embedded_amp, vec![vec!["R&B"], vec!["J-Pop"]]);
+    }
+
+    #[test]
+    fn test_unified_search_or_matching() {
+        let track_natori = sample_track("Overdose", "Natori", "Theater");
+        let track_ado = sample_track("Show", "Ado", "Ado Collection");
+        let track_mj = sample_track("Smooth Criminal", "Michael Jackson", "Bad");
+
+        let tracks = vec![track_natori.clone(), track_ado.clone(), track_mj.clone()];
+
+        for q in &[
+            "natori | ado",
+            "natori || ado",
+            "natori OR ado",
+            "natori, ado",
+        ] {
+            let candidates = resolve_unified_candidates(&tracks, q);
+            assert_eq!(candidates.len(), 2, "Failed for query: {}", q);
+            let titles: Vec<&str> = candidates.iter().map(|t| t.title.as_str()).collect();
+            assert!(titles.contains(&"Overdose"));
+            assert!(titles.contains(&"Show"));
+            assert!(!titles.contains(&"Smooth Criminal"));
+        }
+    }
+
+    #[test]
+    fn test_unified_search_and_matching() {
+        let track_dean = sample_track("July", "DEAN", "130 mood");
+        let track_noah = sample_track("July", "Noah Cyrus", "NC-17");
+
+        let tracks = vec![track_dean.clone(), track_noah.clone()];
+
+        for q in &["dean july", "dean AND july", "dean && july"] {
+            let candidates = resolve_unified_candidates(&tracks, q);
+            assert_eq!(candidates.len(), 1, "Failed for query: {}", q);
+            assert_eq!(candidates[0].artist, "DEAN");
+        }
+
+        let track_duo = sample_track("Overdose", "Vocella; Natori", "Collab");
+        assert!(score_track_unified("vocella; natori", &track_duo).is_some());
     }
 }
