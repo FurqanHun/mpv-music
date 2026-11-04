@@ -48,65 +48,90 @@ pub fn is_direct_playback_target(target: &str) -> bool {
     path.exists()
 }
 
+pub fn score_branch(branch: &[String], track: &Track) -> Option<i64> {
+    let mut branch_score = 0;
+    let mut branch_len = 0;
+
+    for token in branch {
+        let norm_token = normalize_search_text(token);
+        if norm_token.is_empty() {
+            continue;
+        }
+        branch_len += norm_token.len();
+
+        let title_score = score_match(&norm_token, &track.title).map(|s| s + 20_000);
+        let artist_score = score_match(&norm_token, &track.artist).map(|s| s + 10_000);
+        let album_score = score_match(&norm_token, &track.album);
+
+        let best_token_score = match (title_score, artist_score, album_score) {
+            (None, None, None) => return None,
+            (s1, s2, s3) => s1.into_iter().chain(s2).chain(s3).max().unwrap(),
+        };
+
+        branch_score += best_token_score;
+    }
+
+    let total_len = (track.title.len() + track.artist.len() + track.album.len()) as i64;
+    branch_score -= total_len.saturating_sub(branch_len as i64).min(100);
+
+    Some(branch_score)
+}
+
 pub fn score_track_unified(query: &str, track: &Track) -> Option<i64> {
     let branches = parse_query_branches(query);
     if branches.is_empty() {
         return Some(0);
     }
 
-    let mut best_score: Option<i64> = None;
-
-    for branch in branches {
-        let mut branch_score = 0;
-        let mut all_tokens_matched = true;
-        let mut branch_len = 0;
-
-        for token in &branch {
-            let norm_token = normalize_search_text(token);
-            if norm_token.is_empty() {
-                continue;
-            }
-            branch_len += norm_token.len();
-
-            let title_score = score_match(&norm_token, &track.title).map(|s| s + 20_000);
-            let artist_score = score_match(&norm_token, &track.artist).map(|s| s + 10_000);
-            let album_score = score_match(&norm_token, &track.album);
-
-            let best_token_score = match (title_score, artist_score, album_score) {
-                (None, None, None) => {
-                    all_tokens_matched = false;
-                    break;
-                }
-                (s1, s2, s3) => s1.into_iter().chain(s2).chain(s3).max().unwrap(),
-            };
-
-            branch_score += best_token_score;
-        }
-
-        if all_tokens_matched {
-            let total_len = (track.title.len() + track.artist.len() + track.album.len()) as i64;
-            branch_score -= total_len.saturating_sub(branch_len as i64).min(100);
-
-            best_score = Some(best_score.map_or(branch_score, |current| current.max(branch_score)));
-        }
-    }
-
-    best_score
+    branches
+        .iter()
+        .filter_map(|branch| score_branch(branch, track))
+        .max()
 }
 
 pub fn resolve_unified_candidates(tracks: &[Track], query: &str) -> Vec<Track> {
+    let branches = parse_query_branches(query);
+    if branches.is_empty() {
+        return Vec::new();
+    }
+
+    let branch_has_strong: Vec<bool> = branches
+        .iter()
+        .map(|branch| {
+            tracks
+                .iter()
+                .any(|t| score_branch(branch, t).unwrap_or(i64::MIN) >= 30_000)
+        })
+        .collect();
+
     let mut scored: Vec<(i64, Track)> = tracks
         .iter()
-        .filter_map(|t| score_track_unified(query, t).map(|s| (s, t.clone())))
+        .filter_map(|t| {
+            let mut best_score: Option<i64> = None;
+            let mut keep = false;
+
+            for (i, branch) in branches.iter().enumerate() {
+                if let Some(s) = score_branch(branch, t) {
+                    best_score = Some(best_score.map_or(s, |curr| curr.max(s)));
+                    if branch_has_strong[i] {
+                        if s >= 30_000 {
+                            keep = true;
+                        }
+                    } else {
+                        keep = true;
+                    }
+                }
+            }
+
+            if keep {
+                best_score.map(|s| (s, t.clone()))
+            } else {
+                None
+            }
+        })
         .collect();
 
     scored.sort_by_key(|a| std::cmp::Reverse(a.0));
-
-    let has_strong_match = scored.iter().any(|(s, _)| *s >= 30_000);
-    if has_strong_match {
-        scored.retain(|(s, _)| *s >= 30_000);
-    }
-
     scored.into_iter().map(|(_, t)| t).collect()
 }
 
@@ -259,5 +284,20 @@ mod tests {
 
         let track_duo = sample_track("Overdose", "Vocella; Natori", "Collab");
         assert!(score_track_unified("vocella; natori", &track_duo).is_some());
+    }
+
+    #[test]
+    fn test_unified_search_per_branch_pruning() {
+        let track_natori = sample_track("Overdose", "Vocella; Natori", "Album");
+        let track_gentle = sample_track("Ghosts", "The Gentle Men", "Album");
+        let track_noise = sample_track("Other", "Gntle", "Album");
+
+        let tracks = vec![track_natori, track_gentle, track_noise];
+        let candidates = resolve_unified_candidates(&tracks, "notori || gentle");
+
+        assert_eq!(candidates.len(), 2);
+        let artists: Vec<&str> = candidates.iter().map(|t| t.artist.as_str()).collect();
+        assert!(artists.contains(&"Vocella; Natori"));
+        assert!(artists.contains(&"The Gentle Men"));
     }
 }

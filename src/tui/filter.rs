@@ -1,18 +1,29 @@
 use crate::cli::Cli;
 use crate::indexer;
 
+pub fn parse_filter_terms(val: &str) -> Vec<String> {
+    let or_normalized = val
+        .replace("||", "|")
+        .replace(" OR ", "|")
+        .replace(',', "|");
+
+    or_normalized
+        .split('|')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(crate::search::norm::normalize_search_text)
+        .collect()
+}
+
 pub fn apply_cli_filters(
     tracks: &[indexer::Track],
     args: &Cli,
     exact: bool,
 ) -> Vec<indexer::Track> {
     let prepare_terms = |arg: &Option<Option<String>>| -> Option<Vec<String>> {
-        arg.as_ref().and_then(|opt| opt.as_ref()).map(|val| {
-            val.split(',')
-                .map(crate::search::norm::normalize_search_text)
-                .filter(|s| !s.is_empty())
-                .collect()
-        })
+        arg.as_ref()
+            .and_then(|opt| opt.as_ref())
+            .map(|val| parse_filter_terms(val))
     };
 
     let genre_terms = prepare_terms(&args.genre);
@@ -184,5 +195,44 @@ mod tests {
         assert_eq!(res.len(), 2);
         assert!(res.iter().any(|t| t.title == "July"));
         assert!(res.iter().any(|t| t.title == "And July"));
+    }
+
+    #[test]
+    fn test_apply_cli_filters_same_flag_or_aliases() {
+        let tracks = vec![
+            sample_track("Show", "Ado", "Kyogen", "J-Pop"),
+            sample_track("Overdose", "Natori", "Theater", "Classical"),
+            sample_track("Creep", "Radiohead", "Pablo Honey", "Rock"),
+        ];
+
+        let args = Cli::parse_from(["mpv-music", "-a", "Ado || Natori"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 2);
+        assert!(res.iter().any(|t| t.artist == "Ado"));
+        assert!(res.iter().any(|t| t.artist == "Natori"));
+
+        let args = Cli::parse_from(["mpv-music", "-a", "Ado | Natori"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 2);
+
+        let args = Cli::parse_from(["mpv-music", "-a", "Ado, Natori"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 2);
+
+        let args = Cli::parse_from(["mpv-music", "-a", "Ado OR Natori"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 2);
+
+        let args = Cli::parse_from(["mpv-music", "-g", "J-Pop | Rock"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 2);
+        assert!(res.iter().any(|t| t.genre == "J-Pop"));
+        assert!(res.iter().any(|t| t.genre == "Rock"));
+
+        let args = Cli::parse_from(["mpv-music", "-t", "Show OR Creep"]);
+        let res = apply_cli_filters(&tracks, &args, false);
+        assert_eq!(res.len(), 2);
+        assert!(res.iter().any(|t| t.title == "Show"));
+        assert!(res.iter().any(|t| t.title == "Creep"));
     }
 }

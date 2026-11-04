@@ -65,19 +65,41 @@ pub fn resolve_cli_candidates(tracks: &[Track], args: &Cli) -> Vec<Track> {
         };
 
         if let Some(query) = query_str {
-            crate::search::norm::sort_by_relevance(&mut filtered, query, |t| field.extract(t));
+            let terms = tui::parse_filter_terms(query);
 
-            let has_strong_match = filtered.iter().any(|t| {
-                crate::search::norm::score_match(query, field.extract(t)).unwrap_or(i64::MIN)
-                    >= 9_000
+            let term_has_strong: Vec<bool> = terms
+                .iter()
+                .map(|term| {
+                    filtered.iter().any(|t| {
+                        crate::search::norm::score_match(term, field.extract(t)).unwrap_or(i64::MIN)
+                            >= 9_000
+                    })
+                })
+                .collect();
+
+            filtered.retain(|t| {
+                terms.iter().enumerate().any(|(i, term)| {
+                    if let Some(score) = crate::search::norm::score_match(term, field.extract(t)) {
+                        if term_has_strong[i] {
+                            score >= 9_000
+                        } else {
+                            true
+                        }
+                    } else {
+                        false
+                    }
+                })
             });
 
-            if has_strong_match {
-                filtered.retain(|t| {
-                    crate::search::norm::score_match(query, field.extract(t)).unwrap_or(i64::MIN)
-                        >= 9_000
-                });
-            }
+            let score_track = |t: &Track| -> i64 {
+                terms
+                    .iter()
+                    .filter_map(|term| crate::search::norm::score_match(term, field.extract(t)))
+                    .max()
+                    .unwrap_or(i64::MIN)
+            };
+
+            filtered.sort_by_key(|a| std::cmp::Reverse(score_track(a)));
         }
     }
 
@@ -250,5 +272,37 @@ mod tests {
 
         assert_eq!(candidates.len(), 1);
         assert_eq!(candidates[0].title, "I'm a Controversy");
+    }
+
+    #[test]
+    fn test_resolve_cli_candidates_or_aliases() {
+        let tracks = vec![
+            sample_track("Show", "Ado", "Kyogen", "J-Pop"),
+            sample_track("Overdose", "Natori", "Theater", "Pop"),
+            sample_track("Juicy", "Doja Cat", "Hot Pink", "Pop"),
+        ];
+
+        let args = Cli::parse_from(["mpv-music", "-a", "Ado || Natori"]);
+        let candidates = resolve_cli_candidates(&tracks, &args);
+
+        assert_eq!(candidates.len(), 2);
+        assert!(candidates.iter().any(|t| t.artist == "Ado"));
+        assert!(candidates.iter().any(|t| t.artist == "Natori"));
+    }
+
+    #[test]
+    fn test_resolve_cli_candidates_per_branch_pruning() {
+        let tracks = vec![
+            sample_track("Overdose", "Vocella; Natori", "Album", "Pop"),
+            sample_track("Ghosts", "The Gentle Men", "Album", "Rock"),
+            sample_track("Other", "Gentleeeee", "Album", "Pop"),
+        ];
+
+        let args = Cli::parse_from(["mpv-music", "-a", "notori || gentle"]);
+        let candidates = resolve_cli_candidates(&tracks, &args);
+
+        assert_eq!(candidates.len(), 2);
+        assert!(candidates.iter().any(|t| t.artist == "Vocella; Natori"));
+        assert!(candidates.iter().any(|t| t.artist == "The Gentle Men"));
     }
 }

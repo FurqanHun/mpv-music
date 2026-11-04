@@ -9,7 +9,7 @@ pub mod tags;
 pub mod tracks;
 
 pub use dirs::{add_directory, remove_directory, run_manage_dirs_mode};
-pub use filter::apply_cli_filters;
+pub use filter::{apply_cli_filters, parse_filter_terms};
 pub use icons::Icons;
 pub use radio::run_radio_mode;
 pub use runner::{multi_select_binds, run_skim_multi_selection, run_skim_simple};
