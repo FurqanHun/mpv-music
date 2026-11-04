@@ -219,6 +219,49 @@ pub fn clean_noise(input: &str) -> String {
     }
 }
 
+fn bounded_levenshtein(s1: &str, s2: &str, max_dist: usize) -> Option<usize> {
+    let mut c2 = ['\0'; 64];
+    let mut m = 0;
+    for ch in s2.chars() {
+        if m >= 60 {
+            return None;
+        }
+        c2[m] = ch;
+        m += 1;
+    }
+
+    let n = s1.chars().count();
+    if n.abs_diff(m) > max_dist || n > 60 {
+        return None;
+    }
+
+    let mut prev = [0usize; 64];
+    let mut curr = [0usize; 64];
+    for (j, item) in prev.iter_mut().enumerate().take(m + 1) {
+        *item = j;
+    }
+
+    for (i, ch1) in s1.chars().enumerate() {
+        curr[0] = i + 1;
+        let mut min_row = curr[0];
+        for j in 0..m {
+            let cost = if ch1 == c2[j] { 0 } else { 1 };
+            curr[j + 1] = (prev[j + 1] + 1).min(curr[j] + 1).min(prev[j] + cost);
+            min_row = min_row.min(curr[j + 1]);
+        }
+        if min_row > max_dist {
+            return None;
+        }
+        prev[..=m].copy_from_slice(&curr[..=m]);
+    }
+
+    if prev[m] <= max_dist {
+        Some(prev[m])
+    } else {
+        None
+    }
+}
+
 fn match_token(token: &str, norm_target: &str, norm_clean: &str) -> Option<i64> {
     if norm_clean == token || norm_target == token {
         return Some(100_000);
@@ -256,7 +299,6 @@ fn match_token(token: &str, norm_target: &str, norm_clean: &str) -> Option<i64> 
 
     let token_len = token.chars().count();
     if token_len >= 3 {
-        let matcher = FzyMatcher::default().ignore_case().max_typos(Some(1));
         let words = norm_target
             .split(|c: char| !c.is_alphanumeric())
             .chain(norm_clean.split(|c: char| !c.is_alphanumeric()));
@@ -267,19 +309,32 @@ fn match_token(token: &str, norm_target: &str, norm_clean: &str) -> Option<i64> 
                 continue;
             }
             let word_len = word.chars().count();
-            if word_len >= 3 && word_len >= token_len && word_len - token_len <= 1 {
+            let max_len = word_len.max(token_len);
+            let max_typos = if max_len >= 8 { 2 } else { 1 };
+
+            let matcher = FzyMatcher::default()
+                .ignore_case()
+                .max_typos(Some(max_typos));
+
+            if word_len >= 3 && word_len >= token_len && word_len - token_len <= max_typos {
                 if let Some(score) = matcher.fuzzy_match(word, token) {
                     best_score = Some(best_score.map_or(score, |b: i64| b.max(score)));
+                } else if token_len == word_len
+                    && let Some(dist) = bounded_levenshtein(word, token, max_typos)
+                {
+                    let score = ((max_typos + 1 - dist) * 40) as i64;
+                    best_score = Some(best_score.map_or(score, |b: i64| b.max(score)));
                 }
-            } else if word_len >= 4
-                && token_len > word_len
-                && token_len - word_len <= 1
-                && let Some(score) = matcher.fuzzy_match(token, word)
-            {
-                best_score = Some(best_score.map_or(score, |b: i64| b.max(score)));
+            } else if word_len >= 4 && token_len > word_len && token_len - word_len <= max_typos {
+                if let Some(score) = matcher.fuzzy_match(token, word) {
+                    best_score = Some(best_score.map_or(score, |b: i64| b.max(score)));
+                } else if let Some(dist) = bounded_levenshtein(word, token, max_typos) {
+                    let score = ((max_typos + 1 - dist) * 40) as i64;
+                    best_score = Some(best_score.map_or(score, |b: i64| b.max(score)));
+                }
             } else if word_len >= 3
                 && token_len > word_len
-                && token_len - word_len <= 2
+                && token_len - word_len <= 2.max(max_typos)
                 && token.contains(word)
                 && let Some(score) = matcher.fuzzy_match(token, word)
             {
@@ -434,5 +489,8 @@ mod tests {
         assert!(match_all_tokens("raduohead", "Radiohead"));
         assert!(match_all_tokens("controeversy", "Controversy"));
         assert!(match_all_tokens("controeversy", "I'm a Controversy"));
+        assert!(match_all_tokens("notori", "Natori"));
+        assert!(match_all_tokens("notori", "Vocella; Natori"));
+        assert!(match_all_tokens("unforgtable", "Unforgettable"));
     }
 }
