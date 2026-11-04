@@ -39,6 +39,18 @@ impl TagField {
     }
 }
 
+pub fn active_filter_count(args: &Cli) -> usize {
+    [
+        args.artist.is_some(),
+        args.genre.is_some(),
+        args.album.is_some(),
+        args.title.is_some(),
+    ]
+    .into_iter()
+    .filter(|&b| b)
+    .count()
+}
+
 pub fn active_filter_field(args: &Cli) -> Option<TagField> {
     if args.artist.is_some() {
         Some(TagField::Artist)
@@ -56,18 +68,28 @@ pub fn active_filter_field(args: &Cli) -> Option<TagField> {
 pub fn resolve_cli_candidates(tracks: &[Track], args: &Cli) -> Vec<Track> {
     let mut filtered = tui::apply_cli_filters(tracks, args, false);
 
-    if let Some(field) = active_filter_field(args) {
-        let query_str = match field {
-            TagField::Artist => args.artist.as_ref().and_then(|o| o.as_ref()),
-            TagField::Genre => args.genre.as_ref().and_then(|o| o.as_ref()),
-            TagField::Album => args.album.as_ref().and_then(|o| o.as_ref()),
-            TagField::Title => args.title.as_ref().and_then(|o| o.as_ref()),
-        };
+    let active_fields: Vec<(TagField, Vec<String>)> = [
+        (TagField::Artist, &args.artist),
+        (TagField::Genre, &args.genre),
+        (TagField::Album, &args.album),
+        (TagField::Title, &args.title),
+    ]
+    .into_iter()
+    .filter_map(|(field, opt)| {
+        opt.as_ref()
+            .and_then(|o| o.as_ref())
+            .map(|q| (field, tui::parse_filter_terms(q)))
+    })
+    .collect();
 
-        if let Some(query) = query_str {
-            let terms = tui::parse_filter_terms(query);
+    if active_fields.is_empty() {
+        return filtered;
+    }
 
-            let term_has_strong: Vec<bool> = terms
+    let term_has_strong: Vec<Vec<bool>> = active_fields
+        .iter()
+        .map(|(field, terms)| {
+            terms
                 .iter()
                 .map(|term| {
                     filtered.iter().any(|t| {
@@ -75,33 +97,67 @@ pub fn resolve_cli_candidates(tracks: &[Track], args: &Cli) -> Vec<Track> {
                             >= 9_000
                     })
                 })
-                .collect();
+                .collect()
+        })
+        .collect();
 
-            filtered.retain(|t| {
-                terms.iter().enumerate().any(|(i, term)| {
-                    if let Some(score) = crate::search::norm::score_match(term, field.extract(t)) {
-                        if term_has_strong[i] {
-                            score >= 9_000
+    if args.or || active_fields.len() == 1 {
+        filtered.retain(|t| {
+            active_fields
+                .iter()
+                .enumerate()
+                .any(|(f_idx, (field, terms))| {
+                    terms.iter().enumerate().any(|(t_idx, term)| {
+                        if let Some(score) =
+                            crate::search::norm::score_match(term, field.extract(t))
+                        {
+                            if term_has_strong[f_idx][t_idx] {
+                                score >= 9_000
+                            } else {
+                                true
+                            }
                         } else {
-                            true
+                            false
                         }
-                    } else {
-                        false
-                    }
+                    })
                 })
-            });
+        });
+    } else {
+        filtered.retain(|t| {
+            active_fields
+                .iter()
+                .enumerate()
+                .all(|(f_idx, (field, terms))| {
+                    terms.iter().enumerate().any(|(t_idx, term)| {
+                        if let Some(score) =
+                            crate::search::norm::score_match(term, field.extract(t))
+                        {
+                            if term_has_strong[f_idx][t_idx] {
+                                score >= 9_000
+                            } else {
+                                true
+                            }
+                        } else {
+                            false
+                        }
+                    })
+                })
+        });
+    }
 
-            let score_track = |t: &Track| -> i64 {
+    let score_track = |t: &Track| -> i64 {
+        active_fields
+            .iter()
+            .flat_map(|(field, terms)| {
                 terms
                     .iter()
                     .filter_map(|term| crate::search::norm::score_match(term, field.extract(t)))
-                    .max()
-                    .unwrap_or(i64::MIN)
-            };
+            })
+            .max()
+            .unwrap_or(i64::MIN)
+    };
 
-            filtered.sort_by_key(|a| std::cmp::Reverse(score_track(a)));
-        }
-    }
+    filtered.sort_by_key(|a| std::cmp::Reverse(score_track(a)));
 
     filtered
 }
@@ -119,24 +175,24 @@ pub fn handle_cli_filters(
         return Ok(());
     }
 
-    if let Some(field) = active_filter_field(args) {
-        if field == TagField::Title {
-            if filtered.len() == 1 {
-                log::info!("Single match found. Playing directly.");
-                player::play(&filtered[0].path, cfg, extra_mpv_args)?;
-                return Ok(());
-            }
-
-            ui::info(format!("Found {} matching tracks.", filtered.len()));
-            if args.play_all {
-                let paths: Vec<String> = filtered.iter().map(|t| t.path.clone()).collect();
-                player::play_files(&paths, cfg, extra_mpv_args)?;
-            } else {
-                tui::run_track_mode(&filtered, cfg, extra_mpv_args)?;
-            }
+    if active_filter_count(args) > 1 || active_filter_field(args) == Some(TagField::Title) {
+        if filtered.len() == 1 {
+            log::info!("Single match found. Playing directly.");
+            player::play(&filtered[0].path, cfg, extra_mpv_args)?;
             return Ok(());
         }
 
+        ui::info(format!("Found {} matching tracks.", filtered.len()));
+        if args.play_all {
+            let paths: Vec<String> = filtered.iter().map(|t| t.path.clone()).collect();
+            player::play_files(&paths, cfg, extra_mpv_args)?;
+        } else {
+            tui::run_track_mode(&filtered, cfg, extra_mpv_args)?;
+        }
+        return Ok(());
+    }
+
+    if let Some(field) = active_filter_field(args) {
         let mut seen = HashSet::new();
         let mut unique_options: Vec<String> = Vec::new();
         for t in &filtered {
@@ -295,7 +351,7 @@ mod tests {
         let tracks = vec![
             sample_track("Overdose", "Vocella; Natori", "Album", "Pop"),
             sample_track("Ghosts", "The Gentle Men", "Album", "Rock"),
-            sample_track("Other", "Gentleeeee", "Album", "Pop"),
+            sample_track("Other", "Gntle", "Album", "Pop"),
         ];
 
         let args = Cli::parse_from(["mpv-music", "-a", "notori || gentle"]);
@@ -304,5 +360,21 @@ mod tests {
         assert_eq!(candidates.len(), 2);
         assert!(candidates.iter().any(|t| t.artist == "Vocella; Natori"));
         assert!(candidates.iter().any(|t| t.artist == "The Gentle Men"));
+    }
+
+    #[test]
+    fn test_resolve_cli_candidates_multi_flag_or() {
+        let tracks = vec![
+            sample_track("Show", "Ado", "Kyogen", "J-Pop"),
+            sample_track("Overdose", "Natori", "Theater", "Pop"),
+            sample_track("Creep", "Radiohead", "Pablo Honey", "Rock"),
+        ];
+
+        let args = Cli::parse_from(["mpv-music", "-a", "Ado", "-g", "Rock", "--or"]);
+        let candidates = resolve_cli_candidates(&tracks, &args);
+
+        assert_eq!(candidates.len(), 2);
+        assert!(candidates.iter().any(|t| t.title == "Show"));
+        assert!(candidates.iter().any(|t| t.title == "Creep"));
     }
 }

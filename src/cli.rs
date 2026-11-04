@@ -184,6 +184,11 @@ pub struct Cli {
             help = "Filter by Title (Partial). Opens Track Mode if no value given."
         )]
     pub title: Option<Option<String>>,
+    #[arg(
+        long,
+        help = "Pool tracks matching any filter flag (OR/Union) instead of narrowing down (AND/Intersection)"
+    )]
+    pub or: bool,
 
     #[arg(short = 'v', long, action = clap::ArgAction::Count, help = "Display Verbose Information")]
     pub verbose: u8,

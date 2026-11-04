@@ -31,11 +31,23 @@ pub fn apply_cli_filters(
     let album_terms = prepare_terms(&args.album);
     let title_terms = prepare_terms(&args.title);
 
+    let has_any_filter = genre_terms.is_some()
+        || artist_terms.is_some()
+        || album_terms.is_some()
+        || title_terms.is_some();
+
+    if !has_any_filter {
+        return tracks.to_vec();
+    }
+
     tracks
         .iter()
         .filter(|t| {
-            let matches = |field: &str, terms: &Option<Vec<String>>| {
+            let matches_field = |field: &str, terms: &Option<Vec<String>>| {
                 if let Some(search_vals) = terms {
+                    if search_vals.is_empty() {
+                        return false;
+                    }
                     let field_norm = crate::search::norm::normalize_search_text(field);
                     let field_clean_norm = crate::search::norm::normalize_search_text(
                         &crate::search::norm::clean_noise(field),
@@ -64,10 +76,25 @@ pub fn apply_cli_filters(
                 }
             };
 
-            matches(&t.genre, &genre_terms)
-                && matches(&t.artist, &artist_terms)
-                && matches(&t.album, &album_terms)
-                && matches(&t.title, &title_terms)
+            if args.or {
+                genre_terms
+                    .as_ref()
+                    .is_some_and(|_| matches_field(&t.genre, &genre_terms))
+                    || artist_terms
+                        .as_ref()
+                        .is_some_and(|_| matches_field(&t.artist, &artist_terms))
+                    || album_terms
+                        .as_ref()
+                        .is_some_and(|_| matches_field(&t.album, &album_terms))
+                    || title_terms
+                        .as_ref()
+                        .is_some_and(|_| matches_field(&t.title, &title_terms))
+            } else {
+                matches_field(&t.genre, &genre_terms)
+                    && matches_field(&t.artist, &artist_terms)
+                    && matches_field(&t.album, &album_terms)
+                    && matches_field(&t.title, &title_terms)
+            }
         })
         .cloned()
         .collect()
@@ -234,5 +261,25 @@ mod tests {
         assert_eq!(res.len(), 2);
         assert!(res.iter().any(|t| t.title == "Show"));
         assert!(res.iter().any(|t| t.title == "Creep"));
+    }
+
+    #[test]
+    fn test_apply_cli_filters_multi_flag_and_vs_or() {
+        let tracks = vec![
+            sample_track("Show", "Ado", "Kyogen", "J-Pop"),
+            sample_track("Creep", "Radiohead", "Pablo Honey", "Rock"),
+            sample_track("Karma", "Radiohead", "OK Computer", "Alternative"),
+        ];
+
+        let args_and = Cli::parse_from(["mpv-music", "-a", "Radiohead", "-g", "Rock"]);
+        let res_and = apply_cli_filters(&tracks, &args_and, false);
+        assert_eq!(res_and.len(), 1);
+        assert_eq!(res_and[0].title, "Creep");
+
+        let args_or = Cli::parse_from(["mpv-music", "-a", "Ado", "-g", "Rock", "--or"]);
+        let res_or = apply_cli_filters(&tracks, &args_or, false);
+        assert_eq!(res_or.len(), 2);
+        assert!(res_or.iter().any(|t| t.title == "Show"));
+        assert!(res_or.iter().any(|t| t.title == "Creep"));
     }
 }
