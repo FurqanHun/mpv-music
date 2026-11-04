@@ -107,7 +107,7 @@ pub fn run_tag_picker(
         .build()
         .unwrap();
 
-    let output = Skim::run_items(opts, items).ok().context("Skim failed")?;
+    let output = super::runner::run_skim(opts, items).context("Skim failed")?;
 
     if output.is_abort {
         return Ok(false);

@@ -126,7 +126,7 @@ pub fn manage_remove_menu(cfg: &mut config::Config) -> Result<bool> {
         .build()
         .unwrap();
 
-    let output = Skim::run_items(opts, items).ok().context("Skim failed")?;
+    let output = super::runner::run_skim(opts, items).context("Skim failed")?;
 
     if output.is_abort {
         return Ok(false);

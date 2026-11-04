@@ -46,9 +46,7 @@ where
         .build()
         .unwrap();
 
-    let output = Skim::run_items(opts, skim_items)
-        .ok()
-        .context("Skim failed")?;
+    let output = super::runner::run_skim(opts, skim_items).context("Skim failed")?;
     if output.is_abort {
         return Ok(());
     }
@@ -118,9 +116,7 @@ pub fn run_dir_mode(
         .build()
         .unwrap();
 
-    let output = Skim::run_items(opts, skim_items)
-        .ok()
-        .context("Skim failed")?;
+    let output = super::runner::run_skim(opts, skim_items).context("Skim failed")?;
     if output.is_abort {
         return Ok(());
     }
@@ -229,9 +225,7 @@ pub fn run_playlist_mode(
         .build()
         .unwrap();
 
-    let output = Skim::run_items(opts, skim_items)
-        .ok()
-        .context("Skim failed")?;
+    let output = super::runner::run_skim(opts, skim_items).context("Skim failed")?;
     if output.is_abort {
         return Ok(());
     }

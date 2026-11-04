@@ -80,7 +80,7 @@ pub fn run_search_mode(
         .build()
         .unwrap();
 
-    if let Ok(output) = Skim::run_items(opts, skim_items) {
+    if let Some(output) = super::runner::run_skim(opts, skim_items) {
         if output.is_abort {
             return Ok(());
         }
