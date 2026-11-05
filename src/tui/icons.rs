@@ -115,7 +115,7 @@ impl Icons {
     pub fn album(&self) -> &'static str {
         match self.mode {
             NerdFontMode::None => "💿",
-            _ => "\u{f001}",
+            _ => "\u{ede9}",
         }
     }
 
