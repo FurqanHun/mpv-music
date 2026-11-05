@@ -95,7 +95,9 @@ pub fn run_search_mode(
             if selected_urls.len() == 1 {
                 let title = output.selected_items[0].text();
                 ui::info(format!("Loading '{}' and launching player...", title));
-                player::play(&selected_urls[0], cfg, extra_args)?;
+                let mut play_args = extra_args.to_vec();
+                play_args.push(format!("--force-media-title={}", title));
+                player::play(&selected_urls[0], cfg, &play_args)?;
             } else {
                 ui::info(format!(
                     "Loading {} tracks and launching player...",

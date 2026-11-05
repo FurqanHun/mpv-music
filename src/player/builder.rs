@@ -24,8 +24,9 @@ pub fn default_banner_text(nerd_fonts: NerdFontMode) -> String {
 pub fn default_status_msg(nerd_fonts: NerdFontMode) -> String {
     let icons = Icons::new(nerd_fonts);
     format!(
-        " {} ${{?metadata/artist:${{metadata/artist}} - }}${{?metadata/title:${{metadata/title}}}}${{!metadata/title:${{media-title}}}} • ${{time-pos}} / ${{duration}} • (${{percent-pos}}%)",
-        icons.play()
+        " {} ${{?metadata/artist:${{metadata/artist}} - }}${{?metadata/title:${{metadata/title}}}}${{!metadata/title:${{media-title}}}}${{?metadata/album: • {} ${{metadata/album}}}} • ${{time-pos}}${{!metadata/by-key/ytdl_is_live:${{?duration: / ${{duration}} • (${{percent-pos}}%)}}}}${{?metadata/by-key/ytdl_is_live: • [ LIVE ]}}${{!metadata/by-key/ytdl_is_live:${{!duration: • [ LIVE ]}}}}",
+        icons.play(),
+        icons.album()
     )
 }
 
@@ -125,12 +126,16 @@ pub fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[Strin
         cmd.arg("--audio-display=no");
     }
 
-    cmd.arg("--msg-level=cplayer=warn");
+    let is_debug = log::max_level() >= log::LevelFilter::Debug;
+    if is_debug {
+        cmd.arg("--msg-level=cplayer=warn");
+    } else {
+        cmd.arg("--msg-level=cplayer=warn,ffmpeg=no,ffmpeg/demuxer=no");
+    }
     cmd.arg("--display-tags=");
     cmd.arg("--no-term-osd-bar");
 
     let banner = default_banner_text(config.nerd_fonts);
-    let is_debug = log::max_level() >= log::LevelFilter::Debug;
     if is_debug {
         log::debug!("Skipping screen clear to preserve logs");
         cmd.arg(format!("--term-playing-msg=\n{}\n", banner));
@@ -227,6 +232,27 @@ pub fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[Strin
     }
 }
 
+pub fn ensure_clean_title_script() -> Option<std::path::PathBuf> {
+    let script_path = std::env::temp_dir().join("mpv-music-clean-title.lua");
+    let script_content = r#"local mp = require 'mp'
+mp.observe_property("media-title", "string", function(_, title)
+    if title then
+        local cleaned = title:gsub("%s+%d%d%d%d%-%d%d%-%d%d%s+%d%d:%d%d$", ""):gsub("%s+%d%d%d%d%-%d%d%-%d%d$", "")
+        if cleaned ~= title then
+            mp.set_property("force-media-title", cleaned)
+        end
+    end
+end)
+"#;
+    let needs_write = !script_path.exists()
+        || std::fs::read_to_string(&script_path).map_or(true, |c| c != script_content);
+    if needs_write && let Err(e) = std::fs::write(&script_path, script_content) {
+        log::warn!("Failed to create clean title script: {}", e);
+        return None;
+    }
+    Some(script_path)
+}
+
 pub fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config) {
     let kind = classify_target(target);
     let is_youtube = kind.is_youtube();
@@ -234,6 +260,10 @@ pub fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config)
 
     if is_url {
         log::debug!("Applying network stream optimizations");
+
+        if let Some(script) = ensure_clean_title_script() {
+            cmd.arg(format!("--script={}", script.to_string_lossy()));
+        }
 
         if target.contains("listen.moe") {
             log::debug!("LISTEN.moe detected: Forcing Live Mode (Cache=No, 1M Buffer)");
@@ -326,6 +356,17 @@ mod tests {
             args.iter()
                 .any(|a| a == "--script-opts-append=ytdl_hook-ytdl_path=custom-dlp")
         );
+        assert!(args.iter().any(|a| a.starts_with("--script=")));
+    }
+
+    #[test]
+    fn test_ensure_clean_title_script_creation() {
+        let script = ensure_clean_title_script();
+        assert!(script.is_some());
+        let path = script.unwrap();
+        assert!(path.exists());
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(content.contains("force-media-title"));
     }
 
     #[test]
@@ -357,7 +398,10 @@ mod tests {
             .get_args()
             .map(|a| a.to_string_lossy().to_string())
             .collect();
-        assert!(args.iter().any(|a| a == "--msg-level=cplayer=warn"));
+        assert!(
+            args.iter()
+                .any(|a| a == "--msg-level=cplayer=warn,ffmpeg=no,ffmpeg/demuxer=no")
+        );
         assert!(args.iter().any(|a| a == "--no-term-osd-bar"));
         assert!(args.iter().any(|a| a.contains("MPV-MUSIC")));
         assert!(args.iter().any(|a| a.contains("term-status-msg")));
@@ -422,6 +466,12 @@ mod tests {
             .find(|a| a.starts_with("--term-status-msg="))
             .unwrap();
         assert!(status_none.contains("▶"));
+        assert!(status_none.contains("[ LIVE ]"));
+        assert!(status_none.contains("ytdl_is_live"));
+        assert!(status_none.contains("${?duration:"));
+        assert!(status_none.contains("💿"));
+        assert!(status_none.contains("${metadata/album}"));
+        assert!(status_none.contains("${?metadata/artist:"));
         let banner_none = args_none
             .iter()
             .find(|a| a.starts_with("--term-playing-msg="))
@@ -443,6 +493,11 @@ mod tests {
             .find(|a| a.starts_with("--term-status-msg="))
             .unwrap();
         assert!(status_mono.contains("\u{f04b}"));
+        assert!(status_mono.contains("[ LIVE ]"));
+        assert!(status_mono.contains("ytdl_is_live"));
+        assert!(status_mono.contains("${?duration:"));
+        assert!(status_mono.contains("\u{ede9}"));
+        assert!(status_mono.contains("${metadata/album}"));
         let banner_mono = args_mono
             .iter()
             .find(|a| a.starts_with("--term-playing-msg="))

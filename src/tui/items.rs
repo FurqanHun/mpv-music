@@ -284,6 +284,8 @@ impl SkimItem for SearchItem {
     fn preview(&self, _ctx: PreviewContext) -> ItemPreview {
         let (icon, type_str) = if self.result.is_playlist {
             (self.playlist_icon, "Playlist / Mix")
+        } else if self.result.duration == "LIVE" || self.result.duration == "LIVE/???" {
+            (self.video_icon, "Live Stream")
         } else {
             (self.video_icon, "Video")
         };
@@ -318,5 +320,68 @@ impl SkimItem for MenuItem {
 
     fn preview(&self, _ctx: PreviewContext) -> ItemPreview {
         ItemPreview::Text(self.id.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_search_item_preview_live_stream() {
+        let live_result = search::SearchResult {
+            title: "Lofi Live".to_string(),
+            url: "https://youtube.com/watch?v=live123".to_string(),
+            uploader: "Lofi Channel".to_string(),
+            duration: "LIVE".to_string(),
+            view_count: "N/A".to_string(),
+            is_playlist: false,
+        };
+        let item = SearchItem::new(live_result, "icon_pl", "icon_vid");
+        let preview = item.preview(PreviewContext {
+            query: "",
+            cmd_query: "",
+            width: 80,
+            height: 24,
+            current_index: 0,
+            current_selection: "",
+            selected_indices: &[],
+            selections: &[],
+        });
+        if let ItemPreview::AnsiText(details) = preview {
+            assert!(details.contains("Live Stream"));
+            assert!(details.contains("LIVE"));
+        } else {
+            panic!("Expected AnsiText preview");
+        }
+    }
+
+    #[test]
+    fn test_search_item_preview_regular_video() {
+        let video_result = search::SearchResult {
+            title: "Regular Track".to_string(),
+            url: "https://youtube.com/watch?v=vod123".to_string(),
+            uploader: "Artist Channel".to_string(),
+            duration: "03:45".to_string(),
+            view_count: "1.2M".to_string(),
+            is_playlist: false,
+        };
+        let item = SearchItem::new(video_result, "icon_pl", "icon_vid");
+        let preview = item.preview(PreviewContext {
+            query: "",
+            cmd_query: "",
+            width: 80,
+            height: 24,
+            current_index: 0,
+            current_selection: "",
+            selected_indices: &[],
+            selections: &[],
+        });
+        if let ItemPreview::AnsiText(details) = preview {
+            assert!(details.contains("Video"));
+            assert!(details.contains("03:45"));
+        } else {
+            panic!("Expected AnsiText preview");
+        }
     }
 }

@@ -196,8 +196,13 @@ pub fn search_youtube(query: &str, limit: usize, ytdlp_bin: &str) -> Result<Vec<
                 .unwrap_or("Unknown Channel")
                 .to_string();
 
+            let is_live = v["is_live"].as_bool().unwrap_or(false)
+                || v["live_status"].as_str() == Some("is_live");
+
             let duration = if let Some(seconds) = v["duration"].as_f64() {
                 format_duration(seconds)
+            } else if is_live {
+                "LIVE".to_string()
             } else {
                 "LIVE/???".to_string()
             };
