@@ -22,6 +22,10 @@ fn test_user_flow_help_screens() {
     assert!(stdout_long.contains("--config"));
     assert!(stdout_long.contains("--manage-dirs"));
     assert!(stdout_long.contains("--radio"));
+    assert!(stdout_long.contains("--or"));
+    assert!(stdout_long.contains("SEARCH & OPERATORS:"));
+    assert!(stdout_long.contains("Global Search:"));
+    assert!(stdout_long.contains("INTERACTIVE TUI:"));
 
     let output_short = Command::new(bin_path())
         .arg("-h")

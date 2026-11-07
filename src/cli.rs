@@ -6,11 +6,25 @@ use clap::Parser;
     author,
     version,
     about = "mpv-music - A TUI-based music player wrapper for MPV",
-    after_help = "In interactive menus: use arrow keys/typing to filter, TAB to multi-select, Ctrl+A to select all, Ctrl+D to deselect, ENTER to confirm, ESC to go back.",
+    after_help = r#"
+SEARCH & OPERATORS:
+  Global Search:      mpv-music "dean july"                (unified search across title, artist, album)
+  OR Union:           mpv-music "natori || ado"            (aliases: ||, OR, |, comma)
+  AND Intersection:   mpv-music "ado && miku"              (aliases: &&, AND, space, semicolon)
+  Flag OR Aliases:    mpv-music -a "ado || eve" -g "rock, pop"
+  Multi-Flag Union:   mpv-music -a ado -g rock --or        (pools tracks matching either flag)
+
+INTERACTIVE TUI:
+  Navigation:         Type to filter, Up/Down arrow keys or Ctrl+N/Ctrl+P to navigate
+  Multi-Select:       TAB to toggle track, Ctrl+A select all, Ctrl+D deselect all
+  Playback:           ENTER to confirm & play, ESC to go back/exit"#,
     rename_all = "kebab-case"
 )]
 pub struct Cli {
-    #[arg(index = 1, help = "Directly play a file, directory, or URL")]
+    #[arg(
+        index = 1,
+        help = "Search library across Title/Artist/Album (e.g. 'dean july', 'ado || natori') or directly play a file, directory, or URL"
+    )]
     pub target: Option<String>,
 
     #[arg(
@@ -84,11 +98,11 @@ pub struct Cli {
     pub play_all: bool,
 
     #[arg(
-            short = 'l',
-            long,
-            num_args = 0..=1,
-            help = "Open Playlist Mode. Opens picker if no value given."
-        )]
+        short = 'l',
+        long,
+        num_args = 0..=1,
+        help = "Open Playlist Mode. Opens picker if empty or filter query if given."
+    )]
     pub playlist: Option<Option<String>>,
 
     #[arg(long, help = "Allow video files")]
@@ -157,7 +171,7 @@ pub struct Cli {
         short = 'g',
         long,
         num_args = 0..=1,
-        help = "Filter by Genre (e.g. -g 'Pop,Rock')"
+        help = "Filter by Genre (supports OR aliases like 'pop, rock' or 'pop || rock'). Opens picker if empty."
     )]
     pub genre: Option<Option<String>>,
 
@@ -165,7 +179,7 @@ pub struct Cli {
         short = 'a',
         long,
         num_args = 0..=1,
-        help = "Filter by Artist (e.g. -a 'ado,gentle')"
+        help = "Filter by Artist (supports OR aliases like 'ado, natori' or 'ado || natori'). Opens picker if empty."
     )]
     pub artist: Option<Option<String>>,
 
@@ -173,20 +187,20 @@ pub struct Cli {
         short = 'b',
         long,
         num_args = 0..=1,
-        help = "Filter by Album"
+        help = "Filter by Album (supports OR aliases like 'album a || album b'). Opens picker if empty."
     )]
     pub album: Option<Option<String>>,
 
     #[arg(
-            short = 't',
-            long,
-            num_args = 0..=1,
-            help = "Filter by Title (Partial). Opens Track Mode if no value given."
-        )]
+        short = 't',
+        long,
+        num_args = 0..=1,
+        help = "Filter by Title (supports OR aliases like 'song a || song b'). Opens Track Mode if empty."
+    )]
     pub title: Option<Option<String>>,
     #[arg(
         long,
-        help = "Pool tracks matching any filter flag (OR/Union) instead of narrowing down (AND/Intersection)"
+        help = "Combine multiple filter flags via OR (Union) instead of default AND (Intersection)"
     )]
     pub or: bool,
 
@@ -203,11 +217,11 @@ pub struct Cli {
     #[arg(long, help = "Force serial (single-threaded) processing")]
     pub serial: bool,
     #[arg(
-            long,
-            visible_alias = "yt",
-            num_args = 0..=1,
-            help = "Search YouTube directly (e.g. --yt 'lofi') Requires yt-dlp (or a compatible fork)."
-        )]
+        long,
+        visible_alias = "yt",
+        num_args = 0..=1,
+        help = "Search YouTube directly for tracks & live streams (e.g. --yt 'lofi'). Requires yt-dlp."
+    )]
     pub search: Option<Option<String>>,
     #[arg(
         long,
