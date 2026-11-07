@@ -8,6 +8,9 @@
 [![github downloads](https://img.shields.io/github/downloads/FurqanHun/mpv-music/total?label=github%20downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/FurqanHun/mpv-music/releases)
 [![crates.io downloads](https://img.shields.io/crates/d/mpv-music?label=crates.io%20downloads&labelColor=27303D&color=0D1117&logo=rust&logoColor=FFFFFF&style=flat)](https://crates.io/crates/mpv-music)
 
+> [!NOTE]
+> You are viewing the documentation for the **`master` development branch**, which contains unreleased features not yet in stable.  
+> For the documentation of the latest stable release (**v0.29.1**), please see the **[v0.29.1 README](https://github.com/FurqanHun/mpv-music/tree/v0.29.1)**.
 
 **mpv-music** is a blazing-fast, terminal-native music player and library browser written in Rust.
 
@@ -35,6 +38,7 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 - [Dependencies](#dependencies)
 - [Installation](#installation)
 - [Usage](#usage)
+  - [Search & Operators](#search--operators)
 - [Indexing](#indexing)
 - [Configuration](#configuration)
 - [FAQ](#faq)
@@ -46,17 +50,21 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 
 ## Features
 
-- **Native TUI:** Integrated Rust TUI (powered by `skim`) for deep UI customization and instant fuzzy searching.
+- **Native TUI:** Integrated Rust TUI (powered by `skim`) with anchored columns, adaptive typo tolerance, and instant fuzzy searching.
+- **Unified Global Search:** Search across Title, Artist, and Album simultaneously (`mpv-music "ado july"`) without needing dedicated flags.
+- **Intelligent Matching Engine:** Normalizes accents (`café` -> `cafe`), full-width Japanese characters (`Ｊｕｌｙ` -> `July`), punctuation/quotes, and strips noise tags (`(feat. ...)`, `[Remastered]`). Features out-of-order multi-word matching, tiered relevance scoring, and length-scaled typo tolerance with bounded Levenshtein fallback.
+- **Boolean Operators & Union Filtering:** Full boolean query support (`OR`, `||`, `,`, `AND`, `&&`, `;`) in global search, same-flag OR aliases (`-a "ado || eve"`), and multi-flag union via `--or` (`-a ado -g rock --or`).
+- **Interactive Disambiguation:** CLI filters prompt with a quick Skim picker when multiple candidates match rather than blindly auto-playing or guessing.
 - **Lightning-Fast Indexing:** Automatically scans your music directories utilizing multi-threading, caching metadata (Artist, Album, Title, Genre) into a JSONL index.
 - **Self-Healing Index:** Automatically validates index integrity on startup. It detects corruption (e.g., from power loss), surgically repairs broken lines to save your library, or triggers a smart rebuild to prevent crashes. In a blink of an eye.
-* **Rich Metadata Previews:** View song title, artist, album, and genre directly in the skim preview window.
+* **Rich Metadata Previews:** View song title, artist, album, and genre directly in the skim preview window with sample track counts and overflow indicators.
 * **Interactive Selection with Multiple Modes:**
   * **Directory Mode:** Navigate folders with clean names instead of full paths.
   * **Track Mode:** Fuzzy-search individual tracks with metadata previews.
   * **Playlist Mode:** Find and play your saved `.m3u` or `.pls` playlists.
   * **Tag Filter Mode:** Drill down by genre, artist, album, or title interactively.
   * **Play All:** Instantly play your entire indexed library.
-  * **Search & Stream URL:** Search YouTube or stream URLs directly from the menu.
+  * **Search & Stream URL:** Search YouTube (with automatic Shorts filtering) or stream URLs directly from the menu.
   * **Radio Mode**: Built-in support for diverse internet radio stations. Stations are sourced from respected, ad-free streams (discovered via the open [Radio-Browser.info](https://www.radio-browser.info/) database, aside from the official LISTEN.moe), including:
     * **LISTEN.moe** (J-Pop / K-Pop) - Includes live WebSocket metadata synchronization ([listen.moe](https://listen.moe)).
     * **SomaFM** (Ambient / Metal) - Listener-supported, commercial-free radio from San Francisco ([somafm.com](https://somafm.com)).
@@ -70,12 +78,11 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 * **Direct File/URL Playback:** Instantly play local audio/video files or URLs (YouTube, streams) without going through the menu.
 * **Custom Directory Support:** Pass a folder path to browse and filter only that directory instead of your full library.
 * **CLI Filtering:** Use flags like `--genre`, `--artist`, `--album`, `--title` for direct filtering. Pass a value or omit it to open an interactive picker.
-* **Smart Matching:** CLI filters attempt exact matches first, then fall back to partial matches with disambiguation.
 * **Configurable File Types:** Support for both audio and video extensions, easily tweakable.
 * **Custom MPV Flags:** Pass mpv flags directly or set defaults in the config.
 * **Video Toggle:** `--video-ok` lets you include videos in your library scans.
 * **Visual Playback:** `--watch (-w)` forces the MPV window to open, allowing you to watch videos or see cover art/visualizations during playback.
-* **YouTube Auto-Config:** Automatically detects JS runtimes (Node, QuickJS, Bun, Deno) for yt-dlp YouTube playback.
+* **YouTube Auto-Config:** Automatically detects JS runtimes (Node, QuickJS, Bun) for yt-dlp YouTube playback.
 * **Clean Logging:** Verbose (`-v`) and debug (`-d`) modes, multi-session logging (`logs/session_<timestamp>_<pid>.log`) with configurable retention, and built-in interactive log viewer (`--log`).
 
 ---
@@ -89,11 +96,11 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 #### Optional (but recommended):
 - **yt-dlp** - for playing URLs. https://github.com/yt-dlp/yt-dlp
   * Compatible forks and custom binary paths can also be used. You can configure this via the `ytdlp` option in `config.toml`.
-- **JS Runtime** - for YouTube playback (Node.js, QuickJS, Bun, or Deno). Node.js or QuickJS is recommended.
+- **JS Runtime** - for YouTube playback (Node.js, QuickJS, or Bun). Node.js or QuickJS is recommended.
 
 > [!NOTE]
 > YouTube playback now requires a JS runtime to bypass anti-bot protections.
-> `mpv-music` automatically detects and configures **Node**, **QuickJS**, **Bun**, or **Deno** for `yt-dlp`.
+> `mpv-music` automatically detects and configures **Node**, **QuickJS**, or **Bun** for `yt-dlp`.
 >
 > If you installed yt-dlp via a package manager (apt/dnf/pacman) instead of the official GitHub binary, it might be missing components. Try enabling the remote fix in your config (`mpv-music --config`):
 > `ytdlp_ejs_remote_github = true`
@@ -204,18 +211,19 @@ mpv-music [FILTER_FLAGS] [--play-all]
 ### Arguments:
 
 * **No args:** Runs interactive selection on your configured music directories.
+* **Search query:** Performs unified global search across Title, Artist, and Album (e.g. `mpv-music "ado july"`).
 * **File or URL:** Plays it instantly.
 * **Folder path:** Runs interactive search using just that folder.
 
 > [!TIP]
 > **Menu Navigation:**  
-> Use arrow keys or type to fuzzy-filter items, and `ENTER` to select. Press `ESC` anywhere to instantly go back / cancel (or select the `q) Back` option with `ENTER`). In multi-selection menus, use `TAB` to toggle items, `Ctrl+A` to select all matching items, and `Ctrl+D` to deselect all.
+> Use arrow keys or type to fuzzy-filter items, and `ENTER` to select. Press `ESC` anywhere to instantly go back / cancel (or select the `q) Back` option with `ENTER`). In multi-selection menus, use `TAB` to toggle items, `Ctrl+A` to select all matching items, `Ctrl+D` to deselect matching items (or all when search is cleared), and `Alt+D` to unconditionally deselect all.
 
 ### Options:
 
 | Option | Description |
 | :--- | :--- |
-| `[TARGET]` | Directly play a file, directory, or URL |
+| `[TARGET]` | Search library across Title/Artist/Album (e.g. `'ado july'`, `'ado \|\| natori'`) or directly play a file, directory, or URL |
 | `-r`, `--refresh-index` | Update index (incremental scan). Detects new/changed files. |
 | `--reindex` | Force a full re-scan of the library. |
 | `-u`, `--update` | Check for application updates. |
@@ -239,10 +247,11 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `--gapless [<MODE>]` | Enable gapless playback (`default`, `true`, `false`). Defaults to `true` if flag passed without value. |
 | `--no-gapless` | Disable gapless playback completely. |
 | `-e`, `--ext <EXT_LIST>` | Override allowed extensions (e.g. `-e mp3,flac`). |
-| `-g`, `--genre [<GENRE>]` | Filter by Genre (e.g. `-g 'Pop,Rock'`). |
-| `-a`, `--artist [<ARTIST>]` | Filter by Artist (e.g. `-a 'ado,gentle'`). |
-| `-b`, `--album [<ALBUM>]` | Filter by Album. |
-| `-t`, `--title [<TITLE>]` | Filter by Title (Partial). Opens Track Mode if no value given. |
+| `-g`, `--genre [<GENRE>]` | Filter by Genre (supports OR aliases like `'pop, rock'`). Opens picker if empty. |
+| `-a`, `--artist [<ARTIST>]` | Filter by Artist (supports OR aliases like `'ado \|\| eve'`). Opens picker if empty. |
+| `-b`, `--album [<ALBUM>]` | Filter by Album (supports OR aliases like `'album a \|\| album b'`). Opens picker if empty. |
+| `-t`, `--title [<TITLE>]` | Filter by Title (Partial, supports OR aliases). Opens Track Mode if empty. |
+| `--or` | Combine multiple filter flags via OR (Union) instead of default AND (Intersection). |
 | `-v`, `--verbose` | Display Verbose Information. |
 | `-d`, `--debug` | Debug mode. |
 | `--volume <VOLUME>` | Set volume (0-100). |
@@ -261,31 +270,52 @@ Any mpv flag also works: `--no-video`, `--volume=50`, `--shuffle`, etc.
 
 Session logs are saved to `~/.local/share/mpv-music/logs/` (`session_<timestamp>_<pid>.log`). By default, the most recent 3 sessions are preserved (configurable via `max_log_sessions`). You can disable file logging by setting `enable_file_logging = false` in your config.
 
+### Search & Operators:
+
+You can search your music library without needing explicit flags, or combine multiple flags with boolean logic:
+
+| Mode / Syntax | Examples | Behavior |
+| :--- | :--- | :--- |
+| **Global Library Search** | `mpv-music "ado july"` | Unified search across Title, Artist, and Album simultaneously |
+| **OR Union** | `mpv-music "natori \|\| ado"`<br>`mpv-music "ado, eve"` | Matches tracks containing either term (aliases: `\|\|`, `\|`, `,`, ` OR `) |
+| **AND Intersection** | `mpv-music "ado && miku"`<br>`mpv-music "ado; miku"` | Matches tracks containing both terms (aliases: `&&`, `&`, `;`, space, ` AND `) |
+| **Same-Flag OR** | `mpv-music -a "ado \|\| eve"`<br>`mpv-music -g "rock, pop"` | Filters tag values matching either operand within the same flag |
+| **Multi-Flag Union** | `mpv-music -a ado -g rock --or` | Combines different flags with OR (matches tracks by Ado OR in Rock genre) |
+
+> [!TIP]
+> The interactive TUI search bar also supports the same boolean aliases (`||`, `&&`, `,`, `;`, `OR`, `AND`), allowing you to type `ado, natori` directly into the search bar.
+
 ### Examples:
 
 ```bash
 mpv-music                              # full interactive menu
+mpv-music "ado july"                   # unified global library search (title, artist, album)
+mpv-music "natori || ado"              # unified OR search across library
+mpv-music "ado && miku"                # unified AND search across library
+mpv-music -a "ado || eve" -g "rock, pop" # same-flag OR filtering
+mpv-music -a ado -g rock --or          # multi-flag union (tracks by Ado OR in Rock genre)
 mpv-music /path/to/music               # interactive in a specific folder
 mpv-music ~/Music/track.flac           # plays file instantly
 mpv-music "https://youtube.com/watch..." # plays URL instantly
-mpv-music --yt "lofi"          # search YouTube directly from CLI (alias: --search)
+mpv-music --yt "lofi"                  # search YouTube directly from CLI (alias: --search)
 mpv-music --radio jpop                 # play a radio station directly (or --radio for picker)
 mpv-music /path/to/folder -a           # pick artist from that folder only
-mpv-music --genre="Rock" --play-all    # play all rock tracks
-mpv-music -g "Rock,Pop" --play-all     # multi-genre comma filtering
-mpv-music --artist="Ado"               # fuzzy search by artist
-mpv-music -p -a ado                     # play all tracks by Ado
-mpv-music -g -a "Daft Punk" -p         # pick genre, then play all Daft Punk
+mpv-music --genre="rock" --play-all    # play all rock tracks
+mpv-music -g "rock, pop" --play-all    # multi-genre OR filtering
+mpv-music --artist="ado"               # fuzzy search by artist
+mpv-music -p -a ado                    # play all tracks by Ado
+mpv-music -g -a "daft punk" -p         # pick genre, then play all Daft Punk
 mpv-music -w ~/Music/video.mp4         # play with video window enabled (watch mode)
 mpv-music --volume=50 --shuffle        # custom mpv flags
+mpv-music --gapless=true               # force gapless playback
 mpv-music --reindex                    # rebuild the index from scratch
 mpv-music --debug                      # run with full logging enabled
 mpv-music --verbose                    # prints verbose messages
 mpv-music --add-dir /path/to/music /path/to/music2 # Add multiple directories
 mpv-music --remove-dir /path/to/music /path/to/music2 # Remove multiple directories
-mpv-music --manage-dirs                  # Manage directories
-mpv-music --log                          # View recent session logs
-mpv-music --remove-log                   # Delete all session logs (or --remove-log 1 for oldest)
+mpv-music --manage-dirs                # Manage directories
+mpv-music --log                        # View recent session logs
+mpv-music --remove-log                 # Delete all session logs (or --remove-log 1 for oldest)
 ```
 
 ---
@@ -539,7 +569,10 @@ For unsupported formats, the indexer falls back to filename parsing. I may imple
     * **`target.rs`**: `TargetKind` enum, target classification, priority scanning, and playlist inspection.
     * **`ytdlp.rs`**: JS runtime probing (Node/QuickJS/Bun/Deno) and yt-dlp health checking.
     * **`radio.rs`**: Radio IPC socket setup and Listen.moe WebSocket synchronization.
-  * **`search.rs`**: **YouTube Backend.** Wraps `yt-dlp` to fetch search results and stream URLs.
+  - **`search/`**: **Search & Normalization Engine.**
+    * **`norm.rs`**: Normalization helpers for accents, Unicode, full-width Japanese characters, punctuation, noise tolerance, and scoring tiers.
+    * **`unified.rs`**: Multi-field unified query parser, candidate resolution, and boolean operator evaluation (`||`, `&&`, `,`, `;`).
+    * **`youtube.rs`**: Wraps `yt-dlp` to fetch YouTube search results, live streams, and stream URLs.
   * **`dep_check.rs`**: Validates runtime dependencies (mpv, yt-dlp versions) and environment health.
   * **`update.rs`**: Handles version comparison (SemVer) and checks GitHub for releases.
   * **`radio/`**: Radio Backend.
