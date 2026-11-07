@@ -6,7 +6,7 @@ use super::radio::{
     apply_radio_args, generate_ipc_socket, is_radio_station, spawn_radio_sync_if_needed,
 };
 use super::target::classify_target;
-use super::ytdlp::{check_deno_availability, has_command};
+use super::ytdlp::detect_js_runtime;
 
 pub const DEFAULT_BANNER_TEXT: &str = " ╔══  MPV-MUSIC  ══╗";
 
@@ -312,19 +312,13 @@ pub fn apply_url_optimizations(cmd: &mut Command, target: &str, config: &Config)
                 ytdl_opts.push_str("remote-components=ejs:github,");
             }
 
-            if check_deno_availability(ytdlp_bin) {
-                log::debug!("JS runtime check: Deno found (skipping fallbacks)");
-            } else if has_command("node") {
-                log::debug!("JS runtime check: node found");
-                ytdl_opts.push_str("js-runtimes=node,");
-            } else if has_command("qjs") || has_command("quickjs") {
-                log::debug!("JS runtime check: quickjs found");
-                ytdl_opts.push_str("js-runtimes=quickjs,");
-            } else if has_command("bun") {
-                log::debug!("JS runtime check: bun found");
-                ytdl_opts.push_str("js-runtimes=bun,");
+            if let Some(runtime) = detect_js_runtime(ytdlp_bin) {
+                log::debug!("JS runtime check: {} found", runtime);
+                ytdl_opts.push_str(&format!("js-runtimes={},", runtime));
             } else {
-                log::warn!("No JS runtime found (Deno/Node). YouTube playback may fail with 403.");
+                log::warn!(
+                    "No JS runtime found (Node/QuickJS/Bun). YouTube playback may fail with 403."
+                );
             }
         }
 

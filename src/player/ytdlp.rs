@@ -1,38 +1,53 @@
 use std::process::{Command, Stdio};
 
-pub fn check_deno_availability(ytdlp_bin: &str) -> bool {
+pub fn has_runtime(ytdlp_bin: &str, cmd: &str) -> bool {
+    let binary_name = if cfg!(windows) {
+        format!("{}.exe", cmd)
+    } else {
+        cmd.to_string()
+    };
+
     let p = std::path::Path::new(ytdlp_bin);
-    if p.parent().is_some_and(|parent| {
-        parent
-            .join(if cfg!(windows) { "deno.exe" } else { "deno" })
-            .exists()
-            || parent.join("deno").exists()
-    }) {
+    if p.parent()
+        .is_some_and(|parent| parent.join(&binary_name).exists() || parent.join(cmd).exists())
+    {
         return true;
     }
 
     let check_cmd = if cfg!(windows) { "where" } else { "which" };
-    let Ok(output) = Command::new(check_cmd).arg(ytdlp_bin).output() else {
-        return has_command("deno");
-    };
+    if let Ok(output) = Command::new(check_cmd).arg(ytdlp_bin).output()
+        && output.status.success()
+    {
+        let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let first_line = path_str.lines().next().unwrap_or("").trim();
+        let ytdlp_path = std::path::Path::new(first_line);
 
-    if !output.status.success() {
-        return has_command("deno");
+        if ytdlp_path
+            .parent()
+            .is_some_and(|p| p.join(&binary_name).exists() || p.join(cmd).exists())
+        {
+            return true;
+        }
     }
 
-    let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let first_line = path_str.lines().next().unwrap_or("").trim();
-    let ytdlp_path = std::path::Path::new(first_line);
+    has_command(cmd)
+}
 
-    if ytdlp_path.parent().is_some_and(|p| {
-        p.join(if cfg!(windows) { "deno.exe" } else { "deno" })
-            .exists()
-            || p.join("deno").exists()
-    }) {
-        return true;
+pub fn detect_js_runtime(ytdlp_bin: &str) -> Option<&'static str> {
+    const RUNTIMES: &[(&str, &str)] = &[
+        ("node", "node"),
+        ("qjs", "quickjs"),
+        ("quickjs", "quickjs"),
+        ("bun", "bun"),
+        ("deno", "deno"),
+    ];
+
+    for &(cmd, ytdl_name) in RUNTIMES {
+        if has_runtime(ytdlp_bin, cmd) {
+            return Some(ytdl_name);
+        }
     }
-
-    has_command("deno")
+    None
 }
 
 pub fn has_command(cmd: &str) -> bool {
@@ -90,5 +105,21 @@ mod tests {
     #[test]
     fn test_has_command_invalid() {
         assert!(!has_command("this_command_definitely_does_not_exist_12345"));
+    }
+
+    #[test]
+    fn test_has_runtime_invalid() {
+        assert!(!has_runtime(
+            "yt-dlp",
+            "this_runtime_definitely_does_not_exist_12345"
+        ));
+    }
+
+    #[test]
+    fn test_detect_js_runtime_prefers_node_over_deno() {
+        if has_command("node") {
+            let detected = detect_js_runtime("yt-dlp");
+            assert_eq!(detected, Some("node"));
+        }
     }
 }

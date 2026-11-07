@@ -75,7 +75,7 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 * **Custom MPV Flags:** Pass mpv flags directly or set defaults in the config.
 * **Video Toggle:** `--video-ok` lets you include videos in your library scans.
 * **Visual Playback:** `--watch (-w)` forces the MPV window to open, allowing you to watch videos or see cover art/visualizations during playback.
-* **YouTube Auto-Config:** Automatically detects JS runtimes (Deno, Node, QuickJS, Bun) for yt-dlp YouTube playback.
+* **YouTube Auto-Config:** Automatically detects JS runtimes (Node, QuickJS, Bun, Deno) for yt-dlp YouTube playback.
 * **Clean Logging:** Verbose (`-v`) and debug (`-d`) modes, multi-session logging (`logs/session_<timestamp>_<pid>.log`) with configurable retention, and built-in interactive log viewer (`--log`).
 
 ---
@@ -89,11 +89,11 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 #### Optional (but recommended):
 - **yt-dlp** - for playing URLs. https://github.com/yt-dlp/yt-dlp
   * Compatible forks and custom binary paths can also be used. You can configure this via the `ytdlp` option in `config.toml`.
-- **JS Runtime** - for YouTube playback (Deno, Node.js, QuickJS, or Bun). Deno is recommended.
+- **JS Runtime** - for YouTube playback (Node.js, QuickJS, Bun, or Deno). Node.js or QuickJS is recommended.
 
 > [!NOTE]
 > YouTube playback now requires a JS runtime to bypass anti-bot protections.
-> `mpv-music` automatically detects and configures **Deno**, **Node**, **QuickJS**, or **Bun** for `yt-dlp`.
+> `mpv-music` automatically detects and configures **Node**, **QuickJS**, **Bun**, or **Deno** for `yt-dlp`.
 >
 > If you installed yt-dlp via a package manager (apt/dnf/pacman) instead of the official GitHub binary, it might be missing components. Try enabling the remote fix in your config (`mpv-music --config`):
 > `ytdlp_ejs_remote_github = true`
@@ -474,7 +474,7 @@ Because you don't need it. Your music library is likely under 100,000 tracks. A 
 That is likely not a bug in `mpv-music`. YouTube is constantly fighting `yt-dlp`.
 
 1. Update `yt-dlp` (`yt-dlp -U`).
-2. Make sure you have a JS runtime (Node, Deno, Bun) installed. YouTube now requires executing JavaScript to decipher video signatures. `mpv-music` tries to auto-detect this, but it can't perform miracles.
+2. Make sure you have a JS runtime (Node, QuickJS, Bun) installed. YouTube now requires executing JavaScript to decipher video signatures. `mpv-music` tries to auto-detect this, but it can't perform miracles.
 3. If you installed `yt-dlp` via package managers (apt, dnf, pacman) instead of official GitHub binaries, consider enabling `ytdlp_ejs_remote_github = true` in `config.toml`.
 4. Or you can try changing the `ytdlp_useragent` in config.
 
@@ -537,7 +537,7 @@ For unsupported formats, the indexer falls back to filename parsing. I may imple
     * **`mod.rs`**: Public playback entrypoints (`play`, `play_files`, `play_radio`), process execution, signal handling, and drop guards.
     * **`builder.rs`**: `MpvCommandBuilder` for deterministic command generation, flag assembly, and terminal banner/status formatting.
     * **`target.rs`**: `TargetKind` enum, target classification, priority scanning, and playlist inspection.
-    * **`ytdlp.rs`**: JS runtime probing (Deno/Node/Bun) and yt-dlp health checking.
+    * **`ytdlp.rs`**: JS runtime probing (Node/QuickJS/Bun/Deno) and yt-dlp health checking.
     * **`radio.rs`**: Radio IPC socket setup and Listen.moe WebSocket synchronization.
   * **`search.rs`**: **YouTube Backend.** Wraps `yt-dlp` to fetch search results and stream URLs.
   * **`dep_check.rs`**: Validates runtime dependencies (mpv, yt-dlp versions) and environment health.
