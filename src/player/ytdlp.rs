@@ -51,9 +51,17 @@ pub fn has_command(cmd: &str) -> bool {
 
 pub fn check_ytdlp_status(ytdlp_bin: &str) {
     log::info!("Attempting {} self-update ({} -U)...", ytdlp_bin, ytdlp_bin);
+    let sp = crate::ui::spinner(format!(
+        "Checking {} update status ({} -U)...",
+        ytdlp_bin, ytdlp_bin
+    ));
     let output = match Command::new(ytdlp_bin).arg("-U").output() {
-        Ok(o) => o,
+        Ok(o) => {
+            sp.finish_and_clear();
+            o
+        }
         Err(_) => {
+            sp.finish_and_clear();
             log::error!("{} executable not found in PATH", ytdlp_bin);
             return;
         }

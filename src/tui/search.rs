@@ -52,8 +52,10 @@ pub fn run_search_mode(
         return Ok(());
     }
 
-    ui::info(format!("Fetching results for '{}'...", query));
-    let results = search::search_youtube(&query, 25, cfg.ytdlp_bin())?;
+    let sp = ui::spinner(format!("Fetching results for '{}'...", query));
+    let results = search::search_youtube(&query, 25, cfg.ytdlp_bin());
+    sp.finish_and_clear();
+    let results = results?;
 
     if results.is_empty() {
         ui::warning("No results found.");

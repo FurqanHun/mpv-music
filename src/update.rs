@@ -124,9 +124,10 @@ pub fn update_self(auto_confirm: bool) -> Result<()> {
     let current_ver_str = env!("CARGO_PKG_VERSION");
     let is_dev = current_ver_str.contains("dev");
 
-    ui::info("Checking for updates...");
-
-    let json = fetch_json_from_url("https://furqanhun.github.io/mpv-music/latest.json")?;
+    let sp = ui::spinner("Checking for updates...");
+    let json_res = fetch_json_from_url("https://furqanhun.github.io/mpv-music/latest.json");
+    sp.finish_and_clear();
+    let json = json_res?;
 
     let remote_tag = json["stable"]["tag_name"]
         .as_str()
