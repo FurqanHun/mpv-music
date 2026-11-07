@@ -118,7 +118,8 @@ pub fn run_skim_input_prompt(prompt: &str, header: &str) -> Option<String> {
 pub fn multi_select_binds() -> Vec<String> {
     vec![
         "ctrl-a:select-all".to_string(),
-        "ctrl-d:deselect-all".to_string(),
+        "ctrl-d:select-all+toggle-all".to_string(),
+        "alt-d:deselect-all".to_string(),
     ]
 }
 
@@ -258,5 +259,25 @@ mod tests {
             match_candidates("AT&T", candidates),
             vec!["AT&T Band - Live"]
         );
+    }
+
+    #[test]
+    fn test_multi_select_binds_parsing() {
+        let binds = multi_select_binds();
+        let opts = SkimOptionsBuilder::default()
+            .multi(true)
+            .bind(binds)
+            .build();
+        assert!(opts.is_ok());
+        let opts = opts.unwrap();
+
+        let ctrl_d = skim::binds::parse_key("ctrl-d").expect("ctrl-d should parse");
+        let alt_d = skim::binds::parse_key("alt-d").expect("alt-d should parse");
+
+        let actions_ctrl_d = opts.keymap.get(&ctrl_d).expect("ctrl-d should be bound");
+        assert_eq!(actions_ctrl_d, &vec![Action::SelectAll, Action::ToggleAll]);
+
+        let actions_alt_d = opts.keymap.get(&alt_d).expect("alt-d should be bound");
+        assert_eq!(actions_alt_d, &vec![Action::DeselectAll]);
     }
 }

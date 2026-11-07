@@ -16,7 +16,7 @@ SEARCH & OPERATORS:
 
 INTERACTIVE TUI:
   Navigation:         Type to filter, Up/Down arrow keys or Ctrl+N/Ctrl+P to navigate
-  Multi-Select:       TAB to toggle track, Ctrl+A select all, Ctrl+D deselect all
+  Multi-Select:       TAB toggle, Ctrl+A select all, Ctrl+D deselect matching, Alt+D deselect all
   Playback:           ENTER to confirm & play, ESC to go back/exit"#,
     rename_all = "kebab-case"
 )]
