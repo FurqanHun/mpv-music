@@ -524,6 +524,7 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     log::debug!("Successfully parsed {} bytes of TOML", content.len());
 
     let mut warnings = Vec::new();
+    let mut updates = Vec::new();
     let mut needs_save = false;
 
     let legacy_ua =
@@ -531,7 +532,7 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
     if cfg.ytdlp_useragent == legacy_ua {
         log::info!("Migrating legacy ytdlp_useragent to new default");
         cfg.ytdlp_useragent = default_ytdlp_useragent();
-        warnings.push("Migrated legacy yt-dlp user agent to the new default.".to_string());
+        updates.push("migrated legacy ytdlp_useragent to default".to_string());
         needs_save = true;
     }
 
@@ -546,15 +547,12 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
 
         if is_exact_legacy {
             cfg.mpv_args.clear();
-            warnings.push(
-                "Migrated legacy mpv_default_args to built-in defaults (mpv_args = [])."
-                    .to_string(),
-            );
-        } else {
-            warnings.push("Migrated mpv_default_args key to mpv_args.".to_string());
         }
+        updates.push("migrated legacy mpv_default_args to mpv_args".to_string());
         needs_save = true;
     }
+
+    let mut migrated_exts = Vec::new();
 
     let is_exact_legacy_audio = cfg.audio_exts.len() == LEGACY_AUDIO_EXTS.len()
         && cfg
@@ -570,12 +568,8 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
             .all(|(a, b)| a.eq_ignore_ascii_case(b));
 
     if is_exact_legacy_audio || is_exact_builtin_audio {
-        log::info!("Migrating audio_exts array to ['default']");
         cfg.audio_exts = vec!["default".to_string()];
-        warnings.push(
-            "Migrated audio_exts to ['default'] (now automatically tracks all supported formats)."
-                .to_string(),
-        );
+        migrated_exts.push("audio_exts");
         needs_save = true;
     }
 
@@ -587,6 +581,7 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
             .all(|(a, b)| a.eq_ignore_ascii_case(b));
     if is_exact_builtin_video {
         cfg.video_exts = vec!["default".to_string()];
+        migrated_exts.push("video_exts");
         needs_save = true;
     }
 
@@ -598,7 +593,15 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
             .all(|(a, b)| a.eq_ignore_ascii_case(b));
     if is_exact_builtin_playlist {
         cfg.playlist_exts = vec!["default".to_string()];
+        migrated_exts.push("playlist_exts");
         needs_save = true;
+    }
+
+    if !migrated_exts.is_empty() {
+        updates.push(format!(
+            "migrated [{}] to ['default']",
+            migrated_exts.join(", ")
+        ));
     }
 
     if let Ok(table) = toml::from_str::<toml::Table>(&content) {
@@ -612,41 +615,28 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
             }
         }
         if !missing_keys.is_empty() {
-            let is_verbose_or_debug = std::env::args().any(|a| {
-                a == "-v" || a == "--verbose" || a.starts_with("-v") || a == "-d" || a == "--debug"
-            });
-            let missing_str = missing_keys.join(", ");
-            if is_verbose_or_debug {
-                ui::info(format!(
-                    "Config: Auto-populated missing options with defaults: {}",
-                    missing_str
-                ));
-            } else {
-                log::info!(
-                    "Config file missing keys: [{}]; auto-populating with defaults",
-                    missing_str
-                );
-            }
+            updates.push(format!(
+                "auto-populated missing options: {}",
+                missing_keys.join(", ")
+            ));
             needs_save = true;
         }
     }
 
     if cfg.volume > 130 {
-        warnings.push(format!(
-            "Volume {} exceeds maximum (130). Reseting to 100.",
-            cfg.volume
-        ));
+        updates.push(format!("clamped volume {} to maximum 100", cfg.volume));
         cfg.volume = 100;
         needs_save = true;
     }
 
     if cfg.max_log_sessions == 0 {
-        warnings.push(
-            "max_log_sessions cannot be 0. Use 'enable_file_logging = false' to disable file logging. Resetting to 1."
-                .to_string(),
-        );
+        updates.push("reset max_log_sessions 0 to 1".to_string());
         cfg.max_log_sessions = 1;
         needs_save = true;
+    }
+
+    if !updates.is_empty() {
+        ui::info(format!("Config updated: {}", updates.join("; ")));
     }
 
     if cfg.music_dirs.is_empty() {
@@ -1041,5 +1031,32 @@ mod tests {
 
         let on_disk = std::fs::read_to_string(&config_file).unwrap();
         assert!(on_disk.contains("\"default\""));
+    }
+
+    #[test]
+    fn test_consolidated_config_updates_on_load() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_file = temp.path().join("outdated_config.toml");
+
+        let legacy_audio = serde_json::to_string(&LEGACY_AUDIO_EXTS).unwrap();
+        let legacy_video = serde_json::to_string(&BUILTIN_VIDEO_EXTS).unwrap();
+        let content = format!(
+            "volume = 150\nmax_log_sessions = 0\naudio_exts = {}\nvideo_exts = {}\n",
+            legacy_audio, legacy_video
+        );
+        std::fs::write(&config_file, content).unwrap();
+
+        let loaded = load(Some(config_file.clone())).unwrap();
+        assert_eq!(loaded.volume, 100);
+        assert_eq!(loaded.max_log_sessions, 1);
+        assert_eq!(loaded.audio_exts, vec!["default"]);
+        assert_eq!(loaded.video_exts, vec!["default"]);
+        assert_eq!(loaded.playlist_exts, vec!["default"]);
+        assert_eq!(loaded.filename_pattern, "default");
+
+        let on_disk = std::fs::read_to_string(&config_file).unwrap();
+        assert!(on_disk.contains("volume = 100"));
+        assert!(on_disk.contains("max_log_sessions = 1"));
+        assert!(on_disk.contains("filename_pattern = \"default\""));
     }
 }
