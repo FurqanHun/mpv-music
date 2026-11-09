@@ -8,7 +8,7 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Write};
+use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::time::{Duration, SystemTime};
 use walkdir::WalkDir;
 
@@ -627,29 +627,31 @@ pub fn load_index() -> Result<(Vec<Track>, bool)> {
 
     log::info!("Loading index file from: {:?}", index_path);
     let file = File::open(&index_path)?;
-    let reader = BufReader::new(file);
-    let mut tracks = Vec::new();
+    let file_len = file.metadata().map(|m| m.len()).unwrap_or(0);
+    let est_tracks = (file_len / 180) as usize;
+    let mut tracks = Vec::with_capacity(est_tracks);
+    let mut reader = BufReader::new(file);
     let mut needs_repair = false;
     let mut line_count = 0;
+    let mut line_buf = String::new();
 
-    for line in std::io::BufRead::lines(reader) {
+    while reader.read_line(&mut line_buf)? > 0 {
         line_count += 1;
-        let l = line?;
-        if l.trim().is_empty() {
-            continue;
-        }
-
-        match serde_json::from_str::<Track>(&l) {
-            Ok(t) => tracks.push(t),
-            Err(e) => {
-                log::warn!(
-                    "Corruption detected on line {}: {}. Marking for repair...",
-                    line_count,
-                    e
-                );
-                needs_repair = true;
+        let l = line_buf.trim();
+        if !l.is_empty() {
+            match serde_json::from_str::<Track>(l) {
+                Ok(t) => tracks.push(t),
+                Err(e) => {
+                    log::warn!(
+                        "Corruption detected on line {}: {}. Marking for repair...",
+                        line_count,
+                        e
+                    );
+                    needs_repair = true;
+                }
             }
         }
+        line_buf.clear();
     }
 
     if needs_repair {
