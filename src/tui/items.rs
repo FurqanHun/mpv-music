@@ -36,24 +36,39 @@ impl SkimItem for TrackItem {
             .unwrap_or("???")
             .to_uppercase();
 
-        let type_str = if self.track.is_video() {
+        let type_str = if self.track.is_playlist() {
+            "Playlist"
+        } else if self.track.is_video() {
             "Video"
         } else {
             "Audio"
         };
         let icon = self.icon;
 
-        let text = format!(
-            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mArtist:\x1b[0m {}\n  \x1b[1;32mAlbum:\x1b[0m  {}\n  \x1b[1;35mGenre:\x1b[0m  {}\n  \x1b[1;34mType:\x1b[0m   {} ({})\n\n  \x1b[90mPath: {}\x1b[0m",
-            icon,
-            self.track.title,
-            self.track.artist,
-            self.track.album,
-            self.track.genre,
-            type_str,
-            ext,
-            self.track.path
+        let mut text = format!(
+            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mArtist:\x1b[0m   {}\n  \x1b[1;32mAlbum:\x1b[0m    {}\n  \x1b[1;35mGenre:\x1b[0m    {}",
+            icon, self.track.title, self.track.artist, self.track.album, self.track.genre
         );
+
+        if !self.track.is_playlist() {
+            if self.track.duration > 0 {
+                text.push_str(&format!(
+                    "\n  \x1b[1;33mDuration:\x1b[0m {}",
+                    indexer::format_duration(self.track.duration)
+                ));
+            }
+            if let Some(quality) =
+                indexer::format_quality(self.track.sample_rate, self.track.bitrate)
+            {
+                text.push_str(&format!("\n  \x1b[1;36mQuality:\x1b[0m  {}", quality));
+            }
+        }
+
+        text.push_str(&format!(
+            "\n  \x1b[1;34mType:\x1b[0m     {} ({})\n\n  \x1b[90mPath: {}\x1b[0m",
+            type_str, ext, self.track.path
+        ));
+
         ItemPreview::AnsiText(text)
     }
 }
@@ -416,5 +431,82 @@ mod tests {
         let text_cow = item.text();
         assert_eq!(text_cow, "Favorites (15)");
         assert!(matches!(text_cow, Cow::Borrowed(_)));
+    }
+
+    #[test]
+    fn test_track_item_display_text_and_preview() {
+        let dummy_ctx = || PreviewContext {
+            query: "",
+            cmd_query: "",
+            width: 80,
+            height: 24,
+            current_index: 0,
+            current_selection: "",
+            selected_indices: &[],
+            selections: &[],
+        };
+
+        // 1. Audio track with duration and quality specs
+        let audio_track = indexer::Track {
+            path: "/music/Kendrick - HUMBLE.flac".to_string(),
+            title: "HUMBLE.".to_string(),
+            artist: "Kendrick Lamar".to_string(),
+            album: "DAMN.".to_string(),
+            genre: "Hip-Hop".to_string(),
+            media_type: indexer::MediaType::Audio,
+            duration: 177,
+            sample_rate: Some(44100),
+            bitrate: Some(920),
+            ..Default::default()
+        };
+        let audio_item = TrackItem::new(audio_track, "♪");
+        assert_eq!(audio_item.text(), "Kendrick Lamar - HUMBLE.");
+        if let ItemPreview::AnsiText(preview) = audio_item.preview(dummy_ctx()) {
+            assert!(preview.contains("Duration:"));
+            assert!(preview.contains("02:57"));
+            assert!(preview.contains("Quality:"));
+            assert!(preview.contains("44.1 kHz • 920 kbps"));
+            assert!(preview.contains("Audio (FLAC)"));
+        } else {
+            panic!("Expected AnsiText preview");
+        }
+
+        // 2. Track with 0 duration (unknown)
+        let unknown_track = indexer::Track {
+            path: "/music/Unknown.mp3".to_string(),
+            title: "Unknown".to_string(),
+            artist: "Artist".to_string(),
+            media_type: indexer::MediaType::Audio,
+            duration: 0,
+            ..Default::default()
+        };
+        let unknown_item = TrackItem::new(unknown_track, "♪");
+        assert_eq!(unknown_item.text(), "Artist - Unknown");
+        if let ItemPreview::AnsiText(preview) = unknown_item.preview(dummy_ctx()) {
+            assert!(!preview.contains("Duration:"));
+            assert!(!preview.contains("Quality:"));
+            assert!(preview.contains("Audio (MP3)"));
+        } else {
+            panic!("Expected AnsiText preview");
+        }
+
+        // 3. Playlist track
+        let playlist_track = indexer::Track {
+            path: "/playlists/Chill.m3u".to_string(),
+            title: "Chill".to_string(),
+            artist: "Playlist".to_string(),
+            media_type: indexer::MediaType::Playlist,
+            duration: 0,
+            ..Default::default()
+        };
+        let pl_item = TrackItem::new(playlist_track, "☰");
+        assert_eq!(pl_item.text(), "Playlist - Chill");
+        if let ItemPreview::AnsiText(preview) = pl_item.preview(dummy_ctx()) {
+            assert!(!preview.contains("Duration:"));
+            assert!(!preview.contains("Quality:"));
+            assert!(preview.contains("Playlist (M3U)"));
+        } else {
+            panic!("Expected AnsiText preview");
+        }
     }
 }

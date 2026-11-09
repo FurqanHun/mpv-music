@@ -253,6 +253,7 @@ mod tests {
             mtime: 0,
             size: 0,
             media_type: crate::indexer::MediaType::Audio,
+            ..Default::default()
         }
     }
 

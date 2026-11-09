@@ -48,7 +48,7 @@ impl std::fmt::Display for MediaType {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 pub struct Track {
     pub path: String,
     pub title: String,
@@ -58,6 +58,12 @@ pub struct Track {
     pub mtime: u64,
     pub size: u64,
     pub media_type: MediaType,
+    #[serde(default)]
+    pub duration: u64,
+    #[serde(default)]
+    pub sample_rate: Option<u32>,
+    #[serde(default)]
+    pub bitrate: Option<u32>,
 }
 
 impl Track {
@@ -67,6 +73,37 @@ impl Track {
 
     pub fn is_video(&self) -> bool {
         self.media_type.is_video()
+    }
+}
+
+pub fn format_duration(seconds: u64) -> String {
+    let hours = seconds / 3600;
+    let mins = (seconds % 3600) / 60;
+    let secs = seconds % 60;
+    if hours > 0 {
+        format!("{}:{:02}:{:02}", hours, mins, secs)
+    } else {
+        format!("{:02}:{:02}", mins, secs)
+    }
+}
+
+pub fn format_sample_rate(hz: u32) -> String {
+    let khz = hz as f64 / 1000.0;
+    if hz.is_multiple_of(1000) {
+        format!("{:.0} kHz", khz)
+    } else if hz.is_multiple_of(100) {
+        format!("{:.1} kHz", khz)
+    } else {
+        format!("{:.2} kHz", khz)
+    }
+}
+
+pub fn format_quality(sample_rate: Option<u32>, bitrate: Option<u32>) -> Option<String> {
+    match (sample_rate, bitrate) {
+        (Some(sr), Some(br)) => Some(format!("{} • {} kbps", format_sample_rate(sr), br)),
+        (Some(sr), None) => Some(format_sample_rate(sr)),
+        (None, Some(br)) => Some(format!("{} kbps", br)),
+        (None, None) => None,
     }
 }
 
@@ -458,17 +495,20 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
             let size = metadata.len();
             let path_str = path.to_string_lossy().to_string();
 
-            if let Some(old_track) = old_cache
-                .get(&path_str)
-                .filter(|t| t.mtime == mtime && t.size == size)
-            {
+            if let Some(old_track) = old_cache.get(&path_str).filter(|t| {
+                t.mtime == mtime
+                    && t.size == size
+                    && (t.duration > 0 || media_type == MediaType::Playlist)
+            }) {
                 log::debug!("Cache hit (Unchanged): {}", path_str);
                 return Some(old_track.clone());
             }
 
             let filename = path.file_name()?.to_string_lossy().to_string();
             let recovery_key = (size, mtime, filename);
-            if let Some(recovered) = recovery_map.get(&recovery_key) {
+            if let Some(recovered) = recovery_map.get(&recovery_key)
+                && (recovered.duration > 0 || media_type == MediaType::Playlist)
+            {
                 log::debug!("Smart Recovery (Moved/Renamed): {}", path_str);
                 let mut new_entry = recovered.clone();
                 new_entry.path = path_str;
@@ -478,6 +518,9 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
             log::debug!("Cache miss: Probing {}", path_str);
 
             let (mut title, mut artist, mut album, mut genre);
+            let mut duration: u64 = 0;
+            let mut sample_rate: Option<u32> = None;
+            let mut bitrate: Option<u32> = None;
 
             if media_type == MediaType::Playlist {
                 title = path
@@ -495,7 +538,7 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
                 genre = String::new();
 
                 let parse_opts = ParseOptions::new()
-                    .read_properties(false)
+                    .read_properties(true)
                     .read_cover_art(false);
                 let probe_res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     Probe::open(path)
@@ -505,6 +548,11 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
 
                 match probe_res {
                     Ok(Ok(tagged_file)) => {
+                        let props = tagged_file.properties();
+                        duration = props.duration().as_secs();
+                        sample_rate = props.sample_rate();
+                        bitrate = props.audio_bitrate().or_else(|| props.overall_bitrate());
+
                         if let Some(tag) = tagged_file
                             .primary_tag()
                             .or_else(|| tagged_file.first_tag())
@@ -575,6 +623,9 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
                 mtime,
                 size,
                 media_type,
+                duration,
+                sample_rate,
+                bitrate,
             })
         })
         .collect();
@@ -1115,6 +1166,7 @@ mod tests {
             mtime: 1000,
             size: 2000,
             media_type: MediaType::Audio,
+            ..Default::default()
         }
     }
 
@@ -1245,5 +1297,54 @@ mod tests {
         assert!(was_repaired);
         // Ensure damaged file was removed so next launch triggers a clean scan
         assert!(!index_path.exists());
+    }
+
+    #[test]
+    fn test_format_duration() {
+        assert_eq!(format_duration(0), "00:00");
+        assert_eq!(format_duration(5), "00:05");
+        assert_eq!(format_duration(59), "00:59");
+        assert_eq!(format_duration(60), "01:00");
+        assert_eq!(format_duration(225), "03:45");
+        assert_eq!(format_duration(3599), "59:59");
+        assert_eq!(format_duration(3600), "1:00:00");
+        assert_eq!(format_duration(3665), "1:01:05");
+        assert_eq!(format_duration(7325), "2:02:05");
+    }
+
+    #[test]
+    fn test_format_sample_rate() {
+        assert_eq!(format_sample_rate(44100), "44.1 kHz");
+        assert_eq!(format_sample_rate(48000), "48 kHz");
+        assert_eq!(format_sample_rate(88200), "88.2 kHz");
+        assert_eq!(format_sample_rate(96000), "96 kHz");
+        assert_eq!(format_sample_rate(192000), "192 kHz");
+        assert_eq!(format_sample_rate(22050), "22.05 kHz");
+    }
+
+    #[test]
+    fn test_format_quality() {
+        assert_eq!(
+            format_quality(Some(44100), Some(320)),
+            Some("44.1 kHz • 320 kbps".to_string())
+        );
+        assert_eq!(
+            format_quality(Some(48000), None),
+            Some("48 kHz".to_string())
+        );
+        assert_eq!(
+            format_quality(None, Some(920)),
+            Some("920 kbps".to_string())
+        );
+        assert_eq!(format_quality(None, None), None);
+    }
+
+    #[test]
+    fn test_legacy_track_deserialization_defaults() {
+        let legacy_json = r#"{"path":"/music/song.mp3","title":"Song","artist":"Artist","album":"Album","genre":"Pop","mtime":100,"size":200,"media_type":"audio"}"#;
+        let track: Track = serde_json::from_str(legacy_json).unwrap();
+        assert_eq!(track.duration, 0);
+        assert_eq!(track.sample_rate, None);
+        assert_eq!(track.bitrate, None);
     }
 }

@@ -115,6 +115,7 @@ mod tests {
             mtime: 0,
             size: 0,
             media_type: indexer::MediaType::Audio,
+            ..Default::default()
         }
     }
 
