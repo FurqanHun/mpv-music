@@ -5,6 +5,10 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 ## [Unreleased](https://github.com/FurqanHun/mpv-music/compare/v0.29.1...HEAD)
 
 ### Features
+- **config:** consolidate config migrations, auto-populations, and value clamps into a single unified startup notification ([`fdf01f3`](https://github.com/FurqanHun/mpv-music/commit/fdf01f3))
+- **config:** support dynamic `["default"]` extension lists with addition and exclusion tokens (`!ext`, `-ext`) for `audio_exts`, `video_exts`, and `playlist_exts`, and auto-migrate legacy hardcoded defaults ([`230c267`](https://github.com/FurqanHun/mpv-music/commit/230c267))
+- **indexer:** add configurable `filename_pattern` supporting `{artist}`, `{title}`, `{album}`, `{track}` with graceful fallback to default heuristics on mismatch ([`8571406`](https://github.com/FurqanHun/mpv-music/commit/8571406))
+- **indexer:** strip leading track numbers from filenames in default fallback and infer artist/album from parent directory hierarchy ([`5e7004c`](https://github.com/FurqanHun/mpv-music/commit/5e7004c))
 - **tui:** add filtered deselect-all (`ctrl-d`) and global deselect (`alt-d`) keybindings ([`524f44b`](https://github.com/FurqanHun/mpv-music/commit/524f44b1d617a345901838a46c332fefcea9f49e))
 - **ui:** add progress spinner for ytdlp operations and update check ([`dc9d823`](https://github.com/FurqanHun/mpv-music/commit/dc9d823ce804c57f95f04d964084d3edff0f3a4b))
 - **player:** add live stream detection, clean titles, and album powerbar ([`be892b3`](https://github.com/FurqanHun/mpv-music/commit/be892b3ee385c94bb9a2d216508f75ff3bb8bc05))

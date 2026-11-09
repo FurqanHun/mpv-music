@@ -402,6 +402,11 @@ audio_exts = ["default"]
 video_exts = ["default"]
 playlist_exts = ["default"]
 
+# --- Filename Parsing Pattern ---
+# Format string for parsing tags from filenames when audio metadata is missing.
+# Tokens: {artist}, {title}, {album}, {track}. Use "default" for built-in smart heuristics.
+filename_pattern = "default"
+
 # --- MPV Arguments ---
 # Additional flags to pass to the player (e.g. ["--gapless-audio=yes", "--af=scaletempo2"]).
 # Any flag specified here will override built-in defaults.
@@ -435,9 +440,10 @@ mpv_args = []
 | `ytdlp_useragent` | String | `"default"` | — | Custom User-Agent header for `yt-dlp` requests (`"default"` uses modern Firefox UA). |
 | `enable_file_logging` | Boolean | `true` | `--log`, `--debug` | Save logs to `~/.local/share/mpv-music/logs/`. When false, logs only output to stderr if `--verbose` or `--debug` is used. |
 | `max_log_sessions` | Integer | `3` | `--remove-log` | Maximum number of recent session logs to preserve in `logs/` (minimum: 1). Older sessions are pruned on startup. |
-| `audio_exts` | Array of Strings | `["mp3", "flac", ...]` | `-e`, `--ext <LIST>` | List of recognized audio extensions. |
-| `video_exts` | Array of Strings | `["mp4", "mkv", ...]` | — | List of recognized video extensions (active when `video_ok = true`). |
-| `playlist_exts` | Array of Strings | `["m3u", "m3u8", "pls"]` | — | List of recognized playlist extensions. |
+| `filename_pattern` | String | `"default"` | — | Custom pattern for parsing metadata from filenames (`{artist}`, `{title}`, `{album}`, `{track}`) when tags are missing. Falls back to smart heuristics if mismatched. |
+| `audio_exts` | Array of Strings | `["default"]` | `-e`, `--ext <LIST>` | List of recognized audio extensions. Supports `["default"]` with inclusions (`"midi"`) and exclusions (`"!wav"`). |
+| `video_exts` | Array of Strings | `["default"]` | — | List of recognized video extensions (active when `video_ok = true`). Supports `["default"]` and exclusions. |
+| `playlist_exts` | Array of Strings | `["default"]` | — | List of recognized playlist extensions. Supports `["default"]` and exclusions. |
 | `mpv_args` | Array of Strings | `[]` | `--mpv-args <ARGS>` | Custom raw arguments passed to mpv. Overrides built-in defaults. (Aliases legacy `mpv_default_args`). |
 
 ---
