@@ -74,15 +74,128 @@ fn to_set(exts: &[String]) -> HashSet<String> {
     exts.iter().map(|s| s.trim().to_lowercase()).collect()
 }
 
-pub(crate) fn parse_filename_metadata(filename: &str) -> (String, String) {
-    if let Some((parsed_artist, parsed_title)) = filename.split_once(" - ") {
-        (
-            parsed_artist.trim().to_string(),
-            parsed_title.trim().to_string(),
-        )
-    } else {
-        (String::new(), filename.to_string())
+pub(crate) fn strip_leading_track_number(filename: &str) -> &str {
+    let trimmed = filename.trim_start();
+    let bytes = trimmed.as_bytes();
+    if bytes.is_empty() {
+        return trimmed;
     }
+
+    let mut i = 0;
+    if bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1].is_ascii_digit() {
+        i += 1;
+        while i < bytes.len() && bytes[i].is_ascii_digit() {
+            i += 1;
+        }
+    } else {
+        let mut digits_before_dash = 0;
+        while i < bytes.len() && bytes[i].is_ascii_digit() {
+            digits_before_dash += 1;
+            i += 1;
+        }
+
+        if digits_before_dash > 0 && i < bytes.len() && bytes[i] == b'-' {
+            let next_i = i + 1;
+            let mut digits_after_dash = 0;
+            let mut j = next_i;
+            while j < bytes.len() && bytes[j].is_ascii_digit() {
+                digits_after_dash += 1;
+                j += 1;
+            }
+            if digits_before_dash <= 2 && digits_after_dash > 0 && digits_after_dash <= 3 {
+                i = j;
+            }
+        } else if digits_before_dash == 0 || digits_before_dash > 3 {
+            return trimmed;
+        }
+    }
+
+    if i == 0 {
+        return trimmed;
+    }
+
+    let remainder = &trimmed[i..];
+    if let Some(rest) = remainder.strip_prefix(" - ") {
+        rest.trim_start()
+    } else if let Some(rest) = remainder.strip_prefix(". ") {
+        rest.trim_start()
+    } else if let Some(rest) = remainder.strip_prefix("._") {
+        rest.trim_start()
+    } else if let Some(rest) = remainder.strip_prefix('.') {
+        rest.trim_start()
+    } else if let Some(rest) = remainder.strip_prefix('_') {
+        rest.trim_start()
+    } else if let Some(rest) = remainder.strip_prefix('-') {
+        rest.trim_start()
+    } else if let Some(rest) = remainder.strip_prefix(' ') {
+        if !remainder.contains(" - ") {
+            rest.trim_start()
+        } else {
+            trimmed
+        }
+    } else {
+        trimmed
+    }
+}
+
+pub(crate) fn parse_filename_metadata(filename: &str) -> (String, String) {
+    let cleaned = strip_leading_track_number(filename);
+    if let Some((parsed_artist, parsed_title)) = cleaned.split_once(" - ") {
+        let artist_trimmed = parsed_artist.trim();
+        if artist_trimmed.chars().all(|c| c.is_ascii_digit()) {
+            (String::new(), parsed_title.trim().to_string())
+        } else {
+            (artist_trimmed.to_string(), parsed_title.trim().to_string())
+        }
+    } else {
+        (String::new(), cleaned.trim().to_string())
+    }
+}
+
+pub(crate) fn infer_parent_dirs_metadata(
+    path: &std::path::Path,
+    music_dirs: &[std::path::PathBuf],
+) -> (Option<String>, Option<String>) {
+    let parent = match path.parent() {
+        Some(p) => p,
+        None => return (None, None),
+    };
+
+    let is_music_dir = |p: &std::path::Path| {
+        music_dirs.iter().any(|d| {
+            d == p
+                || d.components().eq(p.components())
+                || match (d.canonicalize(), p.canonicalize()) {
+                    (Ok(d_canon), Ok(p_canon)) => d_canon == p_canon,
+                    _ => false,
+                }
+        })
+    };
+
+    if is_music_dir(parent) {
+        return (None, None);
+    }
+
+    let parent_name = match parent.file_name() {
+        Some(name) => name.to_string_lossy().trim().to_string(),
+        None => return (None, None),
+    };
+
+    if parent_name.is_empty() {
+        return (None, None);
+    }
+
+    if let Some(gp) = parent.parent()
+        && !is_music_dir(gp)
+        && let Some(gp_name) = gp.file_name()
+    {
+        let gp_artist = gp_name.to_string_lossy().trim().to_string();
+        if !gp_artist.is_empty() {
+            return (Some(gp_artist), Some(parent_name));
+        }
+    }
+
+    (Some(parent_name), None)
 }
 
 pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
@@ -263,6 +376,21 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
                     artist = parsed_artist;
                 }
             }
+
+            if artist.is_empty() || album.is_empty() {
+                let (dir_artist, dir_album) = infer_parent_dirs_metadata(path, &config.music_dirs);
+                if artist.is_empty()
+                    && let Some(a) = dir_artist
+                {
+                    artist = a;
+                }
+                if album.is_empty()
+                    && let Some(alb) = dir_album
+                {
+                    album = alb;
+                }
+            }
+
             if artist.is_empty() {
                 artist = "UNKNOWN".to_string();
             }
@@ -446,6 +574,121 @@ mod tests {
         let (artist, title) = parse_filename_metadata("米津玄師 - Lemon 🍋");
         assert_eq!(artist, "米津玄師");
         assert_eq!(title, "Lemon 🍋");
+    }
+
+    #[test]
+    fn test_strip_leading_track_numbers() {
+        assert_eq!(strip_leading_track_number("01 - Usseewa"), "Usseewa");
+        assert_eq!(strip_leading_track_number("01. Usseewa"), "Usseewa");
+        assert_eq!(strip_leading_track_number("01.Usseewa"), "Usseewa");
+        assert_eq!(strip_leading_track_number("01._Usseewa"), "Usseewa");
+        assert_eq!(strip_leading_track_number("01_Usseewa"), "Usseewa");
+        assert_eq!(strip_leading_track_number("01-Usseewa"), "Usseewa");
+        assert_eq!(strip_leading_track_number("01 Usseewa"), "Usseewa");
+        assert_eq!(strip_leading_track_number("1-02 - Usseewa"), "Usseewa");
+        assert_eq!(strip_leading_track_number("2-10. Usseewa"), "Usseewa");
+        assert_eq!(strip_leading_track_number("A01 - Usseewa"), "Usseewa");
+        assert_eq!(strip_leading_track_number("B1. Usseewa"), "Usseewa");
+        assert_eq!(
+            strip_leading_track_number("01 - Ado - Usseewa"),
+            "Ado - Usseewa"
+        );
+        assert_eq!(
+            strip_leading_track_number("02. Ado - Readymade"),
+            "Ado - Readymade"
+        );
+        assert_eq!(
+            strip_leading_track_number("100 gecs - Money Machine"),
+            "100 gecs - Money Machine"
+        );
+        assert_eq!(
+            strip_leading_track_number("2Pac - Changes"),
+            "2Pac - Changes"
+        );
+        assert_eq!(
+            strip_leading_track_number("1975 - Somebody Else"),
+            "1975 - Somebody Else"
+        );
+        assert_eq!(
+            strip_leading_track_number("50 Cent - In Da Club"),
+            "50 Cent - In Da Club"
+        );
+        assert_eq!(
+            strip_leading_track_number("3OH!3 - DONTTRUSTME"),
+            "3OH!3 - DONTTRUSTME"
+        );
+    }
+
+    #[test]
+    fn test_parse_filename_metadata_with_track_numbers() {
+        let (artist, title) = parse_filename_metadata("01 - Ado - Usseewa");
+        assert_eq!(artist, "Ado");
+        assert_eq!(title, "Usseewa");
+
+        let (artist, title) = parse_filename_metadata("01 - Usseewa");
+        assert_eq!(artist, "");
+        assert_eq!(title, "Usseewa");
+
+        let (artist, title) = parse_filename_metadata("01. Usseewa");
+        assert_eq!(artist, "");
+        assert_eq!(title, "Usseewa");
+
+        let (artist, title) = parse_filename_metadata("01 Usseewa");
+        assert_eq!(artist, "");
+        assert_eq!(title, "Usseewa");
+
+        let (artist, title) = parse_filename_metadata("02. Ado - Readymade");
+        assert_eq!(artist, "Ado");
+        assert_eq!(title, "Readymade");
+
+        let (artist, title) = parse_filename_metadata("01_Ado - Usseewa");
+        assert_eq!(artist, "Ado");
+        assert_eq!(title, "Usseewa");
+
+        let (artist, title) = parse_filename_metadata("100 gecs - Money Machine");
+        assert_eq!(artist, "100 gecs");
+        assert_eq!(title, "Money Machine");
+
+        let (artist, title) = parse_filename_metadata("50 Cent - In Da Club");
+        assert_eq!(artist, "50 Cent");
+        assert_eq!(title, "In Da Club");
+
+        let (artist, title) = parse_filename_metadata("01 - 02 - Usseewa");
+        assert_eq!(artist, "");
+        assert_eq!(title, "Usseewa");
+    }
+
+    #[test]
+    fn test_infer_parent_dirs_metadata() {
+        let music_dir = std::path::PathBuf::from("/home/user/Music");
+        let dirs = vec![music_dir.clone()];
+
+        // Structure: Music/Artist/Album/Track.mp3
+        let path1 = music_dir
+            .join("Ado")
+            .join("Kyougen")
+            .join("01 - Usseewa.mp3");
+        let (artist, album) = infer_parent_dirs_metadata(&path1, &dirs);
+        assert_eq!(artist.as_deref(), Some("Ado"));
+        assert_eq!(album.as_deref(), Some("Kyougen"));
+
+        // Structure: Music/Artist/Track.mp3
+        let path2 = music_dir.join("Ado").join("01 - Usseewa.mp3");
+        let (artist, album) = infer_parent_dirs_metadata(&path2, &dirs);
+        assert_eq!(artist.as_deref(), Some("Ado"));
+        assert_eq!(album, None);
+
+        // Structure: Music/Track.mp3 (directly inside configured music dir)
+        let path3 = music_dir.join("01 - Usseewa.mp3");
+        let (artist, album) = infer_parent_dirs_metadata(&path3, &dirs);
+        assert_eq!(artist, None);
+        assert_eq!(album, None);
+
+        // Trailing slash handling in configured music_dirs
+        let dirs_with_slash = vec![std::path::PathBuf::from("/home/user/Music/")];
+        let (artist, album) = infer_parent_dirs_metadata(&path1, &dirs_with_slash);
+        assert_eq!(artist.as_deref(), Some("Ado"));
+        assert_eq!(album.as_deref(), Some("Kyougen"));
     }
 
     #[test]
