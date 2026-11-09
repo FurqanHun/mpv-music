@@ -595,26 +595,61 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
 pub fn save(tracks: &[Track]) -> Result<()> {
     let dirs = ProjectDirs::from("com", "furqanhun", "mpv-music")
         .context("Could not determine data directory")?;
+    save_to_dir(dirs.data_dir(), tracks)
+}
 
-    let data_dir = dirs.data_dir();
+pub(crate) fn save_to_dir(data_dir: &std::path::Path, tracks: &[Track]) -> Result<()> {
     std::fs::create_dir_all(data_dir)?;
 
-    let index_path = dirs.data_dir().join("music_index.jsonl");
+    let index_path = data_dir.join("music_index.jsonl");
+    let temp_path = data_dir.join("music_index.jsonl.tmp");
+    let bak_path = data_dir.join("music_index.jsonl.bak");
+
     log::info!(
         "Saving index ({} entries) to: {:?}",
         tracks.len(),
         index_path
     );
 
-    let file = File::create(&index_path)?;
-    let mut writer = BufWriter::new(file);
+    // Stream tracks into temp file inside an isolated scope so
+    // file handles are fully flushed, synced, and closed before renaming.
+    {
+        let file = File::create(&temp_path)?;
+        let mut writer = BufWriter::new(file);
 
-    for track in tracks {
-        serde_json::to_writer(&mut writer, track)?;
-        writeln!(writer)?;
+        for track in tracks {
+            serde_json::to_writer(&mut writer, track)?;
+            writeln!(writer)?;
+        }
+
+        writer.flush()?;
+        let _ = writer.get_ref().sync_all();
     }
 
-    writer.flush()?;
+    // Clean up any stale backup file before staging
+    let _ = std::fs::remove_file(&bak_path);
+
+    let mut staged_bak = false;
+    if index_path.exists() {
+        if let Err(e) = std::fs::rename(&index_path, &bak_path) {
+            let _ = std::fs::remove_file(&temp_path);
+            return Err(e).context("Failed to stage existing index to backup");
+        }
+        staged_bak = true;
+    }
+
+    if let Err(e) = std::fs::rename(&temp_path, &index_path) {
+        if staged_bak {
+            let _ = std::fs::rename(&bak_path, &index_path);
+        }
+        let _ = std::fs::remove_file(&temp_path);
+        return Err(e).context("Failed to commit temp index to final destination");
+    }
+
+    if staged_bak {
+        let _ = std::fs::remove_file(&bak_path);
+    }
+
     log::debug!("Index flush to disk complete.");
     Ok(())
 }
@@ -622,11 +657,51 @@ pub fn save(tracks: &[Track]) -> Result<()> {
 pub fn load_index() -> Result<(Vec<Track>, bool)> {
     let dirs = ProjectDirs::from("com", "furqanhun", "mpv-music")
         .context("Could not determine data directory")?;
-    let index_path = dirs.data_dir().join("music_index.jsonl");
+    load_index_from_dir(dirs.data_dir())
+}
 
-    if !index_path.exists() {
-        log::debug!("No existing index file found at {:?}", index_path);
-        return Ok((Vec::new(), false));
+pub(crate) fn load_index_from_dir(data_dir: &std::path::Path) -> Result<(Vec<Track>, bool)> {
+    let index_path = data_dir.join("music_index.jsonl");
+    let temp_path = data_dir.join("music_index.jsonl.tmp");
+    let bak_path = data_dir.join("music_index.jsonl.bak");
+
+    let is_usable_file = |p: &std::path::Path| -> bool {
+        p.is_file() && p.metadata().map(|m| m.len() > 0).unwrap_or(false)
+    };
+
+    if !is_usable_file(&index_path) {
+        if index_path.exists() {
+            let _ = std::fs::remove_file(&index_path);
+        }
+
+        let mut recovered = false;
+        if is_usable_file(&temp_path) {
+            log::warn!("Primary index missing or empty; recovering from temp index file...");
+            if std::fs::rename(&temp_path, &index_path).is_ok() {
+                let _ = std::fs::remove_file(&bak_path);
+                recovered = true;
+            }
+        }
+
+        if !recovered && is_usable_file(&bak_path) {
+            log::warn!("Primary index missing or empty; recovering from backup index file...");
+            if std::fs::rename(&bak_path, &index_path).is_ok() {
+                let _ = std::fs::remove_file(&temp_path);
+                recovered = true;
+            }
+        }
+
+        if !recovered {
+            let _ = std::fs::remove_file(&temp_path);
+            let _ = std::fs::remove_file(&bak_path);
+            if !index_path.exists() {
+                log::debug!("No existing index file found at {:?}", index_path);
+            }
+            return Ok((Vec::new(), false));
+        }
+    } else {
+        let _ = std::fs::remove_file(&temp_path);
+        let _ = std::fs::remove_file(&bak_path);
     }
 
     log::info!("Loading index file from: {:?}", index_path);
@@ -659,8 +734,15 @@ pub fn load_index() -> Result<(Vec<Track>, bool)> {
     }
 
     if needs_repair {
-        log::info!("Performing surgical repair on index...");
-        save(&tracks)?;
+        if !tracks.is_empty() {
+            log::info!("Performing surgical repair on index...");
+            save_to_dir(data_dir, &tracks)?;
+        } else {
+            log::warn!(
+                "Index corruption unrecoverable (no valid entries). Removing damaged index..."
+            );
+            let _ = std::fs::remove_file(&index_path);
+        }
     }
 
     log::debug!("Index loaded successfully. Loaded {} tracks.", tracks.len());
@@ -1021,5 +1103,147 @@ mod tests {
         assert!(titles.contains(&"Title"));
         #[cfg(unix)]
         assert!(titles.contains(&"Track"));
+    }
+
+    fn sample_test_track(title: &str) -> Track {
+        Track {
+            path: format!("/music/{}.mp3", title),
+            title: title.to_string(),
+            artist: "Artist".to_string(),
+            album: "Album".to_string(),
+            genre: "Genre".to_string(),
+            mtime: 1000,
+            size: 2000,
+            media_type: MediaType::Audio,
+        }
+    }
+
+    #[test]
+    fn test_atomic_save_and_cleanup() {
+        let temp = tempfile::tempdir().unwrap();
+        let data_dir = temp.path();
+
+        let tracks = vec![sample_test_track("Song 1")];
+        save_to_dir(data_dir, &tracks).unwrap();
+
+        let index_path = data_dir.join("music_index.jsonl");
+        let temp_path = data_dir.join("music_index.jsonl.tmp");
+        let bak_path = data_dir.join("music_index.jsonl.bak");
+
+        assert!(index_path.is_file());
+        assert!(!temp_path.exists());
+        assert!(!bak_path.exists());
+
+        let (loaded, _) = load_index_from_dir(data_dir).unwrap();
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(loaded[0].title, "Song 1");
+
+        // Save again to test backup staging and replacement
+        let tracks2 = vec![sample_test_track("Song 1"), sample_test_track("Song 2")];
+        save_to_dir(data_dir, &tracks2).unwrap();
+
+        assert!(index_path.is_file());
+        assert!(!temp_path.exists());
+        assert!(!bak_path.exists());
+
+        let (loaded2, _) = load_index_from_dir(data_dir).unwrap();
+        assert_eq!(loaded2.len(), 2);
+    }
+
+    #[test]
+    fn test_load_index_recovers_from_tmp_and_removes_bak() {
+        let temp = tempfile::tempdir().unwrap();
+        let data_dir = temp.path();
+
+        let index_path = data_dir.join("music_index.jsonl");
+        let temp_path = data_dir.join("music_index.jsonl.tmp");
+        let bak_path = data_dir.join("music_index.jsonl.bak");
+
+        // Primary index is 0 bytes (corrupted / truncated)
+        std::fs::write(&index_path, b"").unwrap();
+
+        // Temp path contains valid serialized tracks
+        let track = sample_test_track("Recovered From Temp");
+        let serialized = serde_json::to_string(&track).unwrap();
+        std::fs::write(&temp_path, format!("{}\n", serialized)).unwrap();
+
+        // Stale bak path
+        std::fs::write(&bak_path, b"stale data").unwrap();
+
+        let (loaded, _) = load_index_from_dir(data_dir).unwrap();
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(loaded[0].title, "Recovered From Temp");
+
+        assert!(index_path.is_file());
+        assert!(!temp_path.exists());
+        assert!(!bak_path.exists());
+    }
+
+    #[test]
+    fn test_load_index_recovers_from_bak() {
+        let temp = tempfile::tempdir().unwrap();
+        let data_dir = temp.path();
+
+        let index_path = data_dir.join("music_index.jsonl");
+        let temp_path = data_dir.join("music_index.jsonl.tmp");
+        let bak_path = data_dir.join("music_index.jsonl.bak");
+
+        // Primary index is missing, temp is 0 bytes
+        std::fs::write(&temp_path, b"").unwrap();
+
+        // Backup has valid tracks
+        let track = sample_test_track("Recovered From Bak");
+        let serialized = serde_json::to_string(&track).unwrap();
+        std::fs::write(&bak_path, format!("{}\n", serialized)).unwrap();
+
+        let (loaded, _) = load_index_from_dir(data_dir).unwrap();
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(loaded[0].title, "Recovered From Bak");
+
+        assert!(index_path.is_file());
+        assert!(!temp_path.exists());
+        assert!(!bak_path.exists());
+    }
+
+    #[test]
+    fn test_load_index_cleans_leftovers_when_primary_valid() {
+        let temp = tempfile::tempdir().unwrap();
+        let data_dir = temp.path();
+
+        let index_path = data_dir.join("music_index.jsonl");
+        let temp_path = data_dir.join("music_index.jsonl.tmp");
+        let bak_path = data_dir.join("music_index.jsonl.bak");
+
+        let track = sample_test_track("Valid Primary");
+        let serialized = serde_json::to_string(&track).unwrap();
+        std::fs::write(&index_path, format!("{}\n", serialized)).unwrap();
+
+        // Lingering leftover files from previous interrupted execution
+        std::fs::write(&temp_path, b"leftover temp").unwrap();
+        std::fs::write(&bak_path, b"leftover bak").unwrap();
+
+        let (loaded, _) = load_index_from_dir(data_dir).unwrap();
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(loaded[0].title, "Valid Primary");
+
+        assert!(index_path.is_file());
+        assert!(!temp_path.exists());
+        assert!(!bak_path.exists());
+    }
+
+    #[test]
+    fn test_load_index_unrecoverable_removes_damaged_file() {
+        let temp = tempfile::tempdir().unwrap();
+        let data_dir = temp.path();
+
+        let index_path = data_dir.join("music_index.jsonl");
+        // Index has only garbage lines with 0 valid JSON
+        std::fs::write(&index_path, b"garbage line 1\ngarbage line 2\n").unwrap();
+
+        let (loaded, was_repaired) = load_index_from_dir(data_dir).unwrap();
+        assert!(loaded.is_empty());
+        assert!(was_repaired);
+        // Ensure damaged file was removed so next launch triggers a clean scan
+        assert!(!index_path.exists());
     }
 }
