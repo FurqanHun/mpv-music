@@ -23,6 +23,10 @@ fn default_max_log_sessions() -> usize {
     3
 }
 
+fn default_filename_pattern() -> String {
+    "default".to_string()
+}
+
 pub const LEGACY_MPV_DEFAULT_ARGS: &[&str] = &[
     "--no-video",
     "--audio-display=no",
@@ -54,6 +58,7 @@ pub const KNOWN_CONFIG_KEYS: &[&str] = &[
     "video_exts",
     "playlist_exts",
     "mpv_args",
+    "filename_pattern",
 ];
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
@@ -336,6 +341,9 @@ pub struct Config {
     #[serde(alias = "mpv_default_args", default)]
     pub mpv_args: Vec<String>,
 
+    #[serde(default = "default_filename_pattern")]
+    pub filename_pattern: String,
+
     #[serde(skip, default)]
     pub ytdlp_available: bool,
     #[serde(skip, default)]
@@ -393,6 +401,7 @@ impl Default for Config {
                 .map(String::from)
                 .collect(),
             mpv_args: Vec::new(),
+            filename_pattern: default_filename_pattern(),
             ytdlp_available: false,
             ytdlp_is_nightly: false,
         }
@@ -650,12 +659,14 @@ mod tests {
         assert!(!loaded.shuffle);
         assert_eq!(loaded.player, "mpv");
         assert_eq!(loaded.ytdlp, "yt-dlp");
+        assert_eq!(loaded.filename_pattern, "default");
 
         let on_disk = std::fs::read_to_string(&config_file).unwrap();
         assert!(on_disk.contains("volume = 77"));
         assert!(on_disk.contains("player = \"mpv\""));
         assert!(on_disk.contains("ytdlp = \"yt-dlp\""));
         assert!(on_disk.contains("mpv_args = []"));
+        assert!(on_disk.contains("filename_pattern = \"default\""));
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
@@ -698,6 +709,7 @@ mod tests {
             video_exts: vec!["mkv".to_string()],
             playlist_exts: vec!["m3u8".to_string()],
             mpv_args: vec!["--fs".to_string(), "--keep-open=yes".to_string()],
+            filename_pattern: "{artist} - {title}".to_string(),
             ytdlp_available: false,
             ytdlp_is_nightly: false,
         };
@@ -718,6 +730,7 @@ mod tests {
         assert!(loaded.serial_mode);
         assert_eq!(loaded.nerd_fonts, NerdFontMode::Mono);
         assert_eq!(loaded.gapless, GaplessMode::True);
+        assert_eq!(loaded.filename_pattern, "{artist} - {title}");
         assert!(loaded.ytdlp_ejs_remote_github);
         assert_eq!(loaded.ytdlp_useragent, "CustomAgent/1.0");
         assert!(!loaded.enable_file_logging);

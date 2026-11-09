@@ -152,6 +152,160 @@ pub(crate) fn parse_filename_metadata(filename: &str) -> (String, String) {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PatternToken {
+    Artist,
+    Title,
+    Album,
+    Track,
+    Genre,
+    Ignore,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub(crate) struct ExtractedMetadata {
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    pub genre: String,
+}
+
+pub(crate) fn parse_custom_pattern(filename: &str, pattern: &str) -> Option<ExtractedMetadata> {
+    let mut tokens: Vec<(PatternToken, Option<String>)> = Vec::new();
+    let mut prefix: Option<String> = None;
+    let mut suffix: Option<String> = None;
+
+    let mut rem = pattern;
+    let mut current_literal = String::new();
+    let mut has_token = false;
+
+    while !rem.is_empty() {
+        if let Some(start_brace) = rem.find('{') {
+            current_literal.push_str(&rem[..start_brace]);
+            let after_start = &rem[start_brace + 1..];
+            if let Some(end_brace) = after_start.find('}') {
+                let raw_token = &after_start[..end_brace];
+                if raw_token.contains('{') {
+                    current_literal.push('{');
+                    rem = after_start;
+                    continue;
+                }
+
+                let token_name = raw_token.trim().to_ascii_lowercase();
+                let token = match token_name.as_str() {
+                    "artist" => PatternToken::Artist,
+                    "title" => PatternToken::Title,
+                    "album" => PatternToken::Album,
+                    "track" | "num" => PatternToken::Track,
+                    "genre" => PatternToken::Genre,
+                    _ => PatternToken::Ignore,
+                };
+
+                if !has_token {
+                    if !current_literal.is_empty() {
+                        prefix = Some(std::mem::take(&mut current_literal));
+                    }
+                } else if let Some((_, prev_delim)) = tokens.last_mut() {
+                    *prev_delim = Some(std::mem::take(&mut current_literal));
+                }
+
+                tokens.push((token, None));
+                has_token = true;
+                rem = &after_start[end_brace + 1..];
+            } else {
+                current_literal.push_str(rem);
+                break;
+            }
+        } else {
+            current_literal.push_str(rem);
+            break;
+        }
+    }
+
+    if !current_literal.is_empty() {
+        if has_token {
+            suffix = Some(current_literal);
+        } else {
+            return None;
+        }
+    }
+
+    if tokens.is_empty() {
+        return None;
+    }
+
+    let mut file_rem = filename.trim();
+    if let Some(p) = &prefix {
+        file_rem = file_rem.strip_prefix(p)?.trim_start();
+    }
+    if let Some(s) = &suffix {
+        if let Some(stripped) = file_rem.strip_suffix(s) {
+            file_rem = stripped.trim_end();
+        } else if s.starts_with('.') && !s[1..].contains('.') && !file_rem.ends_with(s) {
+            // Tolerates file extensions specified in user pattern against stem filenames
+        } else {
+            return None;
+        }
+    }
+
+    let mut meta = ExtractedMetadata::default();
+    let set_token_val = |meta: &mut ExtractedMetadata, tok: PatternToken, val: &str| {
+        let v = val.trim().to_string();
+        match tok {
+            PatternToken::Title => meta.title = v,
+            PatternToken::Artist => meta.artist = v,
+            PatternToken::Album => meta.album = v,
+            PatternToken::Genre => meta.genre = v,
+            PatternToken::Track | PatternToken::Ignore => {}
+        }
+    };
+
+    if tokens.len() == 1 {
+        set_token_val(&mut meta, tokens[0].0, file_rem);
+        return Some(meta);
+    }
+
+    let first_is_title_only = tokens[0].0 == PatternToken::Title
+        && tokens[1..].iter().all(|(t, _)| *t != PatternToken::Title);
+
+    if first_is_title_only {
+        for i in (1..tokens.len()).rev() {
+            let delim = tokens[i - 1].1.as_deref()?;
+            let (rest, val) = file_rem.rsplit_once(delim)?;
+            set_token_val(&mut meta, tokens[i].0, val);
+            file_rem = rest;
+        }
+        set_token_val(&mut meta, tokens[0].0, file_rem);
+    } else {
+        for (tok, delim_opt) in tokens.iter().take(tokens.len() - 1) {
+            let delim = delim_opt.as_deref()?;
+            let (val, rest) = file_rem.split_once(delim)?;
+            set_token_val(&mut meta, *tok, val);
+            file_rem = rest;
+        }
+        set_token_val(&mut meta, tokens.last()?.0, file_rem);
+    }
+
+    Some(meta)
+}
+
+pub(crate) fn parse_filename_with_pattern(
+    filename: &str,
+    pattern: &str,
+) -> (String, String, String, String) {
+    let p_trimmed = pattern.trim();
+    if !p_trimmed.is_empty()
+        && !p_trimmed.eq_ignore_ascii_case("default")
+        && let Some(meta) = parse_custom_pattern(filename, p_trimmed)
+        && !meta.title.is_empty()
+    {
+        return (meta.title, meta.artist, meta.album, meta.genre);
+    }
+
+    let (parsed_artist, parsed_title) = parse_filename_metadata(filename);
+    (parsed_title, parsed_artist, String::new(), String::new())
+}
+
 pub(crate) fn infer_parent_dirs_metadata(
     path: &std::path::Path,
     music_dirs: &[std::path::PathBuf],
@@ -369,11 +523,18 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
             if title.is_empty() {
                 let filename = path.file_stem()?.to_string_lossy().to_string();
 
-                let (parsed_artist, parsed_title) = parse_filename_metadata(&filename);
+                let (parsed_title, parsed_artist, parsed_album, parsed_genre) =
+                    parse_filename_with_pattern(&filename, &config.filename_pattern);
 
                 title = parsed_title;
                 if artist.is_empty() && !parsed_artist.is_empty() {
                     artist = parsed_artist;
+                }
+                if album.is_empty() && !parsed_album.is_empty() {
+                    album = parsed_album;
+                }
+                if genre.is_empty() && !parsed_genre.is_empty() {
+                    genre = parsed_genre;
                 }
             }
 
@@ -689,6 +850,131 @@ mod tests {
         let (artist, album) = infer_parent_dirs_metadata(&path1, &dirs_with_slash);
         assert_eq!(artist.as_deref(), Some("Ado"));
         assert_eq!(album.as_deref(), Some("Kyougen"));
+    }
+
+    #[test]
+    fn test_parse_custom_pattern_standard() {
+        let meta =
+            parse_custom_pattern("01 - Ado - Usseewa", "{track} - {artist} - {title}").unwrap();
+        assert_eq!(meta.artist, "Ado");
+        assert_eq!(meta.title, "Usseewa");
+
+        let meta = parse_custom_pattern("Ado - Kyougen - Usseewa", "{artist} - {album} - {title}")
+            .unwrap();
+        assert_eq!(meta.artist, "Ado");
+        assert_eq!(meta.album, "Kyougen");
+        assert_eq!(meta.title, "Usseewa");
+
+        let meta = parse_custom_pattern("01. Usseewa", "{track}. {title}").unwrap();
+        assert_eq!(meta.artist, "");
+        assert_eq!(meta.title, "Usseewa");
+
+        let meta = parse_custom_pattern("Usseewa - Live - Ado", "{title} - {artist}").unwrap();
+        assert_eq!(meta.artist, "Ado");
+        assert_eq!(meta.title, "Usseewa - Live");
+
+        let meta =
+            parse_custom_pattern("[01] Ado - Usseewa", "[{track}] {artist} - {title}").unwrap();
+        assert_eq!(meta.artist, "Ado");
+        assert_eq!(meta.title, "Usseewa");
+
+        let meta = parse_custom_pattern(
+            "01 - Ado - Usseewa (J-Pop)",
+            "{num} - {artist} - {title} ({genre})",
+        )
+        .unwrap();
+        assert_eq!(meta.artist, "Ado");
+        assert_eq!(meta.title, "Usseewa");
+        assert_eq!(meta.genre, "J-Pop");
+    }
+
+    #[test]
+    fn test_parse_filename_with_pattern_fallbacks() {
+        // Default pattern uses smart heuristics
+        let (title, artist, album, genre) =
+            parse_filename_with_pattern("01 - Ado - Usseewa", "default");
+        assert_eq!(artist, "Ado");
+        assert_eq!(title, "Usseewa");
+        assert_eq!(album, "");
+        assert_eq!(genre, "");
+
+        // Empty pattern uses smart heuristics
+        let (title, artist, _, _) = parse_filename_with_pattern("01. Readymade", "");
+        assert_eq!(artist, "");
+        assert_eq!(title, "Readymade");
+
+        // Custom pattern matches successfully
+        let (title, artist, _, _) =
+            parse_filename_with_pattern("01 - Ado - Usseewa", "{track} - {artist} - {title}");
+        assert_eq!(artist, "Ado");
+        assert_eq!(title, "Usseewa");
+
+        // Custom pattern mismatch gracefully falls back to default heuristics
+        let (title, artist, _, _) =
+            parse_filename_with_pattern("Usseewa", "{track} - {artist} - {title}");
+        assert_eq!(artist, "");
+        assert_eq!(title, "Usseewa");
+
+        let (title, artist, _, _) =
+            parse_filename_with_pattern("01 - Usseewa", "{track} - {artist} - {title}");
+        assert_eq!(artist, "");
+        assert_eq!(title, "Usseewa");
+
+        let (title, artist, _, _) =
+            parse_filename_with_pattern("100 gecs - Money Machine", "{track} - {artist} - {title}");
+        assert_eq!(artist, "100 gecs");
+        assert_eq!(title, "Money Machine");
+    }
+
+    #[test]
+    fn test_parse_custom_pattern_edge_cases() {
+        // Single token
+        let meta = parse_custom_pattern("01 - Usseewa", "{title}").unwrap();
+        assert_eq!(meta.title, "01 - Usseewa");
+
+        // Underscore delimiters
+        let meta = parse_custom_pattern("01_Ado_Usseewa", "{track}_{artist}_{title}").unwrap();
+        assert_eq!(meta.artist, "Ado");
+        assert_eq!(meta.title, "Usseewa");
+
+        // Case insensitivity of tokens
+        let meta =
+            parse_custom_pattern("01 - Ado - Usseewa", "{TRACK} - {ARTIST} - {TITLE}").unwrap();
+        assert_eq!(meta.artist, "Ado");
+        assert_eq!(meta.title, "Usseewa");
+
+        // Unknown tokens ignored cleanly
+        let meta = parse_custom_pattern(
+            "01 - Ado - Usseewa - 2022",
+            "{track} - {artist} - {title} - {year}",
+        )
+        .unwrap();
+        assert_eq!(meta.artist, "Ado");
+        assert_eq!(meta.title, "Usseewa");
+
+        // Extension tolerance in custom patterns against stem or full filename
+        let meta =
+            parse_custom_pattern("01 - Ado - Usseewa", "{track} - {artist} - {title}.mp3").unwrap();
+        assert_eq!(meta.artist, "Ado");
+        assert_eq!(meta.title, "Usseewa");
+
+        let meta =
+            parse_custom_pattern("01 - Ado - Usseewa.mp3", "{track} - {artist} - {title}.mp3")
+                .unwrap();
+        assert_eq!(meta.artist, "Ado");
+        assert_eq!(meta.title, "Usseewa");
+
+        // Whitespace tolerance around delimiters
+        let meta =
+            parse_custom_pattern("01  -  Ado  -  Usseewa", "{track} - {artist} - {title}").unwrap();
+        assert_eq!(meta.artist, "Ado");
+        assert_eq!(meta.title, "Usseewa");
+
+        // Malformed pattern (unclosed brace) returns None
+        assert!(parse_custom_pattern("01 - Ado - Usseewa", "{track - {title}").is_none());
+
+        // Literal pattern with no tokens returns None
+        assert!(parse_custom_pattern("01 - Ado - Usseewa", "Plain Text Pattern").is_none());
     }
 
     #[test]
