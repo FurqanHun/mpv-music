@@ -63,22 +63,25 @@ pub struct TagItem {
     pub count: usize,
     pub samples: Vec<String>,
     pub icon: String,
+    pub display_text: String,
 }
 
 impl TagItem {
     pub fn new(name: String, count: usize, samples: Vec<String>, icon: String) -> Self {
+        let display_text = format!("{} ({})", name, count);
         Self {
             name,
             count,
             samples,
             icon,
+            display_text,
         }
     }
 }
 
 impl SkimItem for TagItem {
     fn text(&self) -> Cow<'_, str> {
-        Cow::Owned(format!("{} ({})", self.name, self.count))
+        Cow::Borrowed(&self.display_text)
     }
 
     fn output(&self) -> Cow<'_, str> {
@@ -122,6 +125,7 @@ pub struct DirItem {
     pub count: usize,
     pub samples: Vec<String>,
     pub icon: &'static str,
+    pub display_text: String,
 }
 
 impl DirItem {
@@ -132,19 +136,21 @@ impl DirItem {
         samples: Vec<String>,
         icon: &'static str,
     ) -> Self {
+        let display_text = format!("{} ({})", dirname, count);
         Self {
             dirname,
             path,
             count,
             samples,
             icon,
+            display_text,
         }
     }
 }
 
 impl SkimItem for DirItem {
     fn text(&self) -> Cow<'_, str> {
-        Cow::Owned(format!("{} ({})", self.dirname, self.count))
+        Cow::Borrowed(&self.display_text)
     }
 
     fn output(&self) -> Cow<'_, str> {
@@ -383,5 +389,32 @@ mod tests {
         } else {
             panic!("Expected AnsiText preview");
         }
+    }
+
+    #[test]
+    fn test_tag_item_text_zero_allocation_borrow() {
+        let item = TagItem::new(
+            "Rock".to_string(),
+            42,
+            vec!["Song 1".to_string()],
+            "🎸".to_string(),
+        );
+        let text_cow = item.text();
+        assert_eq!(text_cow, "Rock (42)");
+        assert!(matches!(text_cow, Cow::Borrowed(_)));
+    }
+
+    #[test]
+    fn test_dir_item_text_zero_allocation_borrow() {
+        let item = DirItem::new(
+            "Favorites".to_string(),
+            "/music/fav".to_string(),
+            15,
+            vec![],
+            "📁",
+        );
+        let text_cow = item.text();
+        assert_eq!(text_cow, "Favorites (15)");
+        assert!(matches!(text_cow, Cow::Borrowed(_)));
     }
 }
