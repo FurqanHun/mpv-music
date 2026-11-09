@@ -5,6 +5,8 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 ## [Unreleased](https://github.com/FurqanHun/mpv-music/compare/v0.29.1...HEAD)
 
 ### Features
+- **indexer:** probe track duration, sample rate, and bitrate via lofty properties with TUI preview support ([`d197696`](https://github.com/FurqanHun/mpv-music/commit/d197696f332a561b53b381a6f67a9e05224d72fe))
+- **indexer:** implement atomic index writing with `.tmp`/`.bak` staging, crash safety, and automatic startup recovery ([`3d2bd37`](https://github.com/FurqanHun/mpv-music/commit/3d2bd37005772c9143fe77d60b98297d78133fbe))
 - **config:** consolidate config migrations, auto-populations, and value clamps into a single unified startup notification ([`fdf01f3`](https://github.com/FurqanHun/mpv-music/commit/fdf01f3))
 - **config:** support dynamic `["default"]` extension lists with addition and exclusion tokens (`!ext`, `-ext`) for `audio_exts`, `video_exts`, and `playlist_exts`, and auto-migrate legacy hardcoded defaults ([`230c267`](https://github.com/FurqanHun/mpv-music/commit/230c267))
 - **indexer:** add configurable `filename_pattern` supporting `{artist}`, `{title}`, `{album}`, `{track}` with graceful fallback to default heuristics on mismatch ([`8571406`](https://github.com/FurqanHun/mpv-music/commit/8571406))
@@ -29,11 +31,19 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 - **search:** add noise tolerance helper for parentheticals, brackets, and featured artists ([`1ea0ba0`](https://github.com/FurqanHun/mpv-music/commit/1ea0ba0429f93930ea6955a153205a2d672ef981))
 - **search:** normalize unicode, accents, apostrophes, and full-width characters ([`c581fa1`](https://github.com/FurqanHun/mpv-music/commit/c581fa1e792c3a5043bf5a04a11f26bf4c6e3b2e))
 
+### Performance Improvements
+- **search:** pre-normalize query tokens once outside candidate scoring loops ([`c1bbf0f`](https://github.com/FurqanHun/mpv-music/commit/c1bbf0f))
+- **tui:** eliminate heap allocations in `TagItem` and `DirItem` Skim rendering via cached display strings ([`cecce26`](https://github.com/FurqanHun/mpv-music/commit/cecce26))
+- **indexer:** reuse line buffer and pre-allocate vector capacity during JSONL index loading ([`2ec7260`](https://github.com/FurqanHun/mpv-music/commit/2ec7260))
+- **indexer:** use fast `DirEntry::file_type()` checks in WalkDir with symlink fallback ([`3f35283`](https://github.com/FurqanHun/mpv-music/commit/3f35283))
+- **player:** wrap temporary queue playlist file writing in `BufWriter` ([`abc7cd2`](https://github.com/FurqanHun/mpv-music/commit/abc7cd2))
+
 ### Bug Fixes
 - **search:** add adjacent transposition to bounded edit distance ([`b151b36`](https://github.com/FurqanHun/mpv-music/commit/b151b369165b6ecf72cf01daff1e0aee3ba4c10a))
 - **filter:** route multi-match title filters to track picker and support middle-typo insertions ([`8a70b22`](https://github.com/FurqanHun/mpv-music/commit/8a70b22ba5427d11340150ca27c1973f76da8675))
 
 ### Refactoring & Maintenance
+- **youtube:** reuse unified duration formatter with hour display support ([`2310618`](https://github.com/FurqanHun/mpv-music/commit/23106186e54546a845eba2d70fff0a348f9acfe6))
 - **docs(cli):** update help screens and operator guides ([`58ce7a3`](https://github.com/FurqanHun/mpv-music/commit/58ce7a343fab5eddcc70b3fef15d091ae496f880))
 - **docs(readme):** update user guide for unified search, operators, and ui features
 - **chore(config):** bump default yt-dlp user agent to firefox 159 ([`53c114b`](https://github.com/FurqanHun/mpv-music/commit/53c114b8351437e59da17a334bae4c1cfc9d1e9d))

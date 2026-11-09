@@ -55,9 +55,9 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 - **Intelligent Matching Engine:** Normalizes accents (`café` -> `cafe`), full-width Japanese characters (`Ｊｕｌｙ` -> `July`), punctuation/quotes, and strips noise tags (`(feat. ...)`, `[Remastered]`). Features out-of-order multi-word matching, tiered relevance scoring, and length-scaled typo tolerance with bounded Levenshtein fallback.
 - **Boolean Operators & Union Filtering:** Full boolean query support (`OR`, `||`, `,`, `AND`, `&&`, `;`) in global search, same-flag OR aliases (`-a "ado || eve"`), and multi-flag union via `--or` (`-a ado -g rock --or`).
 - **Interactive Disambiguation:** CLI filters prompt with a quick Skim picker when multiple candidates match rather than blindly auto-playing or guessing.
-- **Lightning-Fast Indexing:** Automatically scans your music directories utilizing multi-threading, caching metadata (Artist, Album, Title, Genre) into a JSONL index.
-- **Self-Healing Index:** Automatically validates index integrity on startup. It detects corruption (e.g., from power loss), surgically repairs broken lines to save your library, or triggers a smart rebuild to prevent crashes. In a blink of an eye.
-* **Rich Metadata Previews:** View song title, artist, album, and genre directly in the skim preview window with sample track counts and overflow indicators.
+- **Lightning-Fast Indexing:** Automatically scans your music directories utilizing multi-threading, caching metadata (Artist, Album, Title, Genre, Duration, Audio Quality) into a JSONL index.
+- **Atomic & Self-Healing Index:** Writes and flushes index updates through atomic staging files (`.tmp`/`.bak`) to eliminate partial write corruption from `SIGINT`, power loss or other conflicts. On startup, it automatically validates integrity, rescues interrupted backups, surgically repairs damaged lines, or triggers a smart rebuild in a blink of an eye.
+* **Rich Metadata Previews:** View song title, artist, album, genre, duration (`mm:ss` / `h:mm:ss`), and audio quality specifications (sample rate and bitrate, e.g. `44.1 kHz • 920 kbps`) directly in the skim preview window.
 * **Interactive Selection with Multiple Modes:**
   * **Directory Mode:** Navigate folders with clean names instead of full paths.
   * **Track Mode:** Fuzzy-search individual tracks with metadata previews.
@@ -464,7 +464,7 @@ Because you don't need it. Your music library is likely under 100,000 tracks. A 
 
 1. **Human readable:** You can `cat` or `grep` it.
 2. **Fast enough:** We load and parse 20,000 lines in milliseconds.
-3. **Corruption proof:** If one line gets corrupted, you only lose one song, not the whole database. And it is easily detectable—plus with `refresh-index`, it's automatically fixed.
+3. **Corruption proof:** Atomic staging swaps prevent partial writes, and if one line gets corrupted, you only lose one song, not the whole database. And it is easily detectable—plus with `refresh-index`, it's automatically fixed.
 
 </details>
 
