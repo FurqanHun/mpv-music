@@ -422,10 +422,14 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
         })
         .par_bridge()
         .filter_map(|entry| {
-            let path = entry.path();
-            if !path.is_file() {
+            let file_type = entry.file_type();
+            if file_type.is_dir() {
                 return None;
             }
+            if !file_type.is_file() && !entry.path().is_file() {
+                return None;
+            }
+            let path = entry.path();
 
             // log::trace!("Examining file: {:?}", path);
 
@@ -988,5 +992,34 @@ mod tests {
         assert!(serde_json::from_str::<Track>(valid_json).is_ok());
         assert!(serde_json::from_str::<Track>(corrupted_json).is_err());
         assert!(serde_json::from_str::<Track>(empty_line).is_err());
+    }
+
+    #[test]
+    fn test_scan_directory_and_symlink_support() {
+        let temp = tempfile::tempdir().unwrap();
+        let music_dir = temp.path().join("music");
+        let sub_dir = music_dir.join("subdir.album");
+        std::fs::create_dir_all(&sub_dir).unwrap();
+
+        let track_file = sub_dir.join("Artist - Title.mp3");
+        std::fs::write(&track_file, b"test audio content").unwrap();
+
+        #[cfg(unix)]
+        {
+            let symlink_file = music_dir.join("Symlink - Track.mp3");
+            let _ = std::os::unix::fs::symlink(&track_file, &symlink_file);
+        }
+
+        let config = Config {
+            music_dirs: vec![music_dir],
+            ..Default::default()
+        };
+
+        let scanned = scan(&config, true).unwrap();
+        assert!(!scanned.is_empty());
+        let titles: Vec<&str> = scanned.iter().map(|t| t.title.as_str()).collect();
+        assert!(titles.contains(&"Title"));
+        #[cfg(unix)]
+        assert!(titles.contains(&"Track"));
     }
 }
