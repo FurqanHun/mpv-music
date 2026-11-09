@@ -3,7 +3,7 @@ pub mod radio;
 pub mod target;
 pub mod ytdlp;
 
-use std::io::Write;
+use std::io::{BufWriter, Write};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -113,13 +113,15 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
     let queue_path = data_dir.join(format!("queue_{}.m3u8", pid));
 
     {
-        let mut file = std::fs::File::create(&queue_path)
+        let file = std::fs::File::create(&queue_path)
             .context("Failed to create temporary playlist file")?;
+        let mut writer = BufWriter::new(file);
 
-        writeln!(file, "#EXTM3U")?;
+        writeln!(writer, "#EXTM3U")?;
         for path in paths {
-            writeln!(file, "{}", path)?;
+            writeln!(writer, "{}", path)?;
         }
+        writer.flush()?;
     }
 
     let queue_path_str = queue_path.to_string_lossy().to_string();
