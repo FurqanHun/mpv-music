@@ -363,9 +363,9 @@ pub fn scan(config: &Config, force: bool) -> Result<Vec<Track>> {
 
     log::info!("Starting library scan. Force reindex: {}", force);
 
-    let audio_exts = to_set(&config.audio_exts);
-    let video_exts = to_set(&config.video_exts);
-    let playlist_exts = to_set(&config.playlist_exts);
+    let audio_exts = to_set(&config.resolved_audio_exts());
+    let video_exts = to_set(&config.resolved_video_exts());
+    let playlist_exts = to_set(&config.resolved_playlist_exts());
 
     let (old_cache, recovery_map) = if !force {
         if let Ok((old_tracks, _)) = load_index() {

@@ -32,7 +32,8 @@ pub fn inspect_playlist_content(path_str: &str, config: &Config) -> Option<Strin
     let path = std::path::Path::new(path_str);
 
     let ext = path.extension()?.to_str()?.to_lowercase();
-    if !config.playlist_exts.contains(&ext) {
+    let playlist_exts = config.resolved_playlist_exts();
+    if !playlist_exts.iter().any(|e| e == &ext) {
         return None;
     }
 

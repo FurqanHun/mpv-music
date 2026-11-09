@@ -393,39 +393,14 @@ enable_file_logging = true
 max_log_sessions = 3     # Number of recent session logs to preserve in logs/ directory
 
 # --- File Extensions ---
-audio_exts = [
-    "mp3",
-    "flac",
-    "wav",
-    "m4a",
-    "aac",
-    "ogg",
-    "opus",
-    "wma",
-    "alac",
-    "aiff",
-    "amr",
-]
-video_exts = [
-    "mp4",
-    "mkv",
-    "webm",
-    "avi",
-    "mov",
-    "flv",
-    "wmv",
-    "mpeg",
-    "mpg",
-    "3gp",
-    "ts",
-    "vob",
-    "m4v",
-]
-playlist_exts = [
-    "m3u",
-    "m3u8",
-    "pls",
-]
+# Recognized audio, video, and playlist extensions.
+# Use ["default"] to track all built-in extensions automatically.
+# You can include custom extensions or exclude built-in ones using ! or -:
+#   audio_exts = ["default", "midi", "!amr", "!wma"]
+#   audio_exts = ["flac", "opus"]  # Only flac and opus (no defaults)
+audio_exts = ["default"]
+video_exts = ["default"]
+playlist_exts = ["default"]
 
 # --- MPV Arguments ---
 # Additional flags to pass to the player (e.g. ["--gapless-audio=yes", "--af=scaletempo2"]).
@@ -517,20 +492,21 @@ The original `mpv-music` utilized `ffprobe` to parse metadata from everything. T
 
 Currently supported formats by `lofty`:
 
-| File Format | Metadata Format(s)           |
-|-------------|------------------------------|
-| AAC (ADTS)  | `ID3v2`, `ID3v1`             |
-| Ape         | `APE`, `ID3v2`\*, `ID3v1`    |
-| AIFF        | `ID3v2`, `Text Chunks`       |
-| FLAC        | `Vorbis Comments`, `ID3v2`\* |
-| MP3         | `ID3v2`, `ID3v1`, `APE`      |
-| MP4         | `iTunes-style ilst`          |
-| MPC         | `APE`, `ID3v2`\*, `ID3v1`\*  |                        
-| Opus        | `Vorbis Comments`            |
-| Ogg Vorbis  | `Vorbis Comments`            |
-| Speex       | `Vorbis Comments`            |
-| WAV         | `ID3v2`, `RIFF INFO`         |
-| WavPack     | `APE`, `ID3v1`               |
+| File Format | Metadata Format(s)                 |
+|-------------|------------------------------------|
+| AAC (ADTS)  | `ID3v2`, `ID3v1`                   |
+| Ape         | `APE`, `ID3v2`\*, `ID3v1`          |
+| AIFF        | `ID3v2`, `Text Chunks`             |
+| DSF         | `ID3v2`                            |
+| FLAC        | `Vorbis Comments`, `ID3v2`\*       |
+| MP3         | `ID3v2`, `ID3v1`, `APE`, `Lyrics3` |
+| MP4         | `iTunes-style ilst`                |
+| MPC         | `APE`, `ID3v2`\*, `ID3v1`\*        |
+| Opus        | `Vorbis Comments`                  |
+| Ogg Vorbis  | `Vorbis Comments`                  |
+| Speex       | `Vorbis Comments`                  |
+| WAV         | `ID3v2`, `RIFF INFO`               |
+| WavPack     | `APE`, `ID3v1`                     |
 
 For unsupported formats, the indexer falls back to filename parsing. I may implement an opt-in `ffprobe` fallback in the future if there is demand, but right now there's me and one other person I know of that actually uses this and we don't need it. Actually, there are now an estimated 30–50+ users, but no one has complained so far since the vast majority just use Opus, FLAC, WAV, or MP3 these days.
 </details>

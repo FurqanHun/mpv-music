@@ -27,6 +27,65 @@ fn default_filename_pattern() -> String {
     "default".to_string()
 }
 
+pub const BUILTIN_AUDIO_EXTS: &[&str] = &[
+    "mp3", "flac", "wav", "m4a", "aac", "ogg", "opus", "wma", "alac", "aiff", "aif", "amr", "ape",
+    "dsf", "mpc", "wv", "spx",
+];
+
+pub const BUILTIN_VIDEO_EXTS: &[&str] = &[
+    "mp4", "mkv", "webm", "avi", "mov", "flv", "wmv", "mpeg", "mpg", "3gp", "ts", "vob", "m4v",
+];
+
+pub const BUILTIN_PLAYLIST_EXTS: &[&str] = &["m3u", "m3u8", "pls"];
+
+pub const LEGACY_AUDIO_EXTS: &[&str] = &[
+    "mp3", "flac", "wav", "m4a", "aac", "ogg", "opus", "wma", "alac", "aiff", "amr",
+];
+
+fn default_exts() -> Vec<String> {
+    vec!["default".to_string()]
+}
+
+pub fn resolve_extensions(raw_exts: &[String], builtin_defaults: &[&str]) -> Vec<String> {
+    let has_default = raw_exts
+        .iter()
+        .any(|e| e.trim().eq_ignore_ascii_case("default"));
+    let mut inclusions = Vec::new();
+    let mut exclusions = std::collections::HashSet::new();
+
+    if has_default {
+        for &ext in builtin_defaults {
+            inclusions.push(ext.to_string());
+        }
+    }
+
+    for item in raw_exts {
+        let trimmed = item.trim();
+        if trimmed.eq_ignore_ascii_case("default") {
+            continue;
+        }
+        if let Some(negated) = trimmed
+            .strip_prefix('!')
+            .or_else(|| trimmed.strip_prefix('-'))
+        {
+            let clean = negated.trim().trim_start_matches('.').to_ascii_lowercase();
+            if !clean.is_empty() {
+                exclusions.insert(clean);
+            }
+        } else {
+            let clean = trimmed.trim_start_matches('.').to_ascii_lowercase();
+            if !clean.is_empty() && !inclusions.iter().any(|i| i == &clean) {
+                inclusions.push(clean);
+            }
+        }
+    }
+
+    inclusions
+        .into_iter()
+        .filter(|ext| !exclusions.contains(ext))
+        .collect()
+}
+
 pub const LEGACY_MPV_DEFAULT_ARGS: &[&str] = &[
     "--no-video",
     "--audio-display=no",
@@ -334,8 +393,11 @@ pub struct Config {
     #[serde(default = "default_player")]
     pub player: String,
 
+    #[serde(default = "default_exts")]
     pub audio_exts: Vec<String>,
+    #[serde(default = "default_exts")]
     pub video_exts: Vec<String>,
+    #[serde(default = "default_exts")]
     pub playlist_exts: Vec<String>,
 
     #[serde(alias = "mpv_default_args", default)]
@@ -383,23 +445,9 @@ impl Default for Config {
             max_log_sessions: default_max_log_sessions(),
             ytdlp: default_ytdlp(),
             player: default_player(),
-            audio_exts: vec![
-                "mp3", "flac", "wav", "m4a", "aac", "ogg", "opus", "wma", "alac", "aiff", "amr",
-            ]
-            .into_iter()
-            .map(String::from)
-            .collect(),
-            video_exts: vec![
-                "mp4", "mkv", "webm", "avi", "mov", "flv", "wmv", "mpeg", "mpg", "3gp", "ts",
-                "vob", "m4v",
-            ]
-            .into_iter()
-            .map(String::from)
-            .collect(),
-            playlist_exts: vec!["m3u", "m3u8", "pls"]
-                .into_iter()
-                .map(String::from)
-                .collect(),
+            audio_exts: default_exts(),
+            video_exts: default_exts(),
+            playlist_exts: default_exts(),
             mpv_args: Vec::new(),
             filename_pattern: default_filename_pattern(),
             ytdlp_available: false,
@@ -425,6 +473,18 @@ impl Config {
         } else {
             y
         }
+    }
+
+    pub fn resolved_audio_exts(&self) -> Vec<String> {
+        resolve_extensions(&self.audio_exts, BUILTIN_AUDIO_EXTS)
+    }
+
+    pub fn resolved_video_exts(&self) -> Vec<String> {
+        resolve_extensions(&self.video_exts, BUILTIN_VIDEO_EXTS)
+    }
+
+    pub fn resolved_playlist_exts(&self) -> Vec<String> {
+        resolve_extensions(&self.playlist_exts, BUILTIN_PLAYLIST_EXTS)
     }
 }
 
@@ -493,6 +553,51 @@ pub fn load(override_path: Option<PathBuf>) -> Result<Config> {
         } else {
             warnings.push("Migrated mpv_default_args key to mpv_args.".to_string());
         }
+        needs_save = true;
+    }
+
+    let is_exact_legacy_audio = cfg.audio_exts.len() == LEGACY_AUDIO_EXTS.len()
+        && cfg
+            .audio_exts
+            .iter()
+            .zip(LEGACY_AUDIO_EXTS.iter())
+            .all(|(a, b)| a.eq_ignore_ascii_case(b));
+    let is_exact_builtin_audio = cfg.audio_exts.len() == BUILTIN_AUDIO_EXTS.len()
+        && cfg
+            .audio_exts
+            .iter()
+            .zip(BUILTIN_AUDIO_EXTS.iter())
+            .all(|(a, b)| a.eq_ignore_ascii_case(b));
+
+    if is_exact_legacy_audio || is_exact_builtin_audio {
+        log::info!("Migrating audio_exts array to ['default']");
+        cfg.audio_exts = vec!["default".to_string()];
+        warnings.push(
+            "Migrated audio_exts to ['default'] (now automatically tracks all supported formats)."
+                .to_string(),
+        );
+        needs_save = true;
+    }
+
+    let is_exact_builtin_video = cfg.video_exts.len() == BUILTIN_VIDEO_EXTS.len()
+        && cfg
+            .video_exts
+            .iter()
+            .zip(BUILTIN_VIDEO_EXTS.iter())
+            .all(|(a, b)| a.eq_ignore_ascii_case(b));
+    if is_exact_builtin_video {
+        cfg.video_exts = vec!["default".to_string()];
+        needs_save = true;
+    }
+
+    let is_exact_builtin_playlist = cfg.playlist_exts.len() == BUILTIN_PLAYLIST_EXTS.len()
+        && cfg
+            .playlist_exts
+            .iter()
+            .zip(BUILTIN_PLAYLIST_EXTS.iter())
+            .all(|(a, b)| a.eq_ignore_ascii_case(b));
+    if is_exact_builtin_playlist {
+        cfg.playlist_exts = vec!["default".to_string()];
         needs_save = true;
     }
 
@@ -660,6 +765,9 @@ mod tests {
         assert_eq!(loaded.player, "mpv");
         assert_eq!(loaded.ytdlp, "yt-dlp");
         assert_eq!(loaded.filename_pattern, "default");
+        assert_eq!(loaded.audio_exts, vec!["default"]);
+        assert_eq!(loaded.video_exts, vec!["default"]);
+        assert_eq!(loaded.playlist_exts, vec!["default"]);
 
         let on_disk = std::fs::read_to_string(&config_file).unwrap();
         assert!(on_disk.contains("volume = 77"));
@@ -667,6 +775,7 @@ mod tests {
         assert!(on_disk.contains("ytdlp = \"yt-dlp\""));
         assert!(on_disk.contains("mpv_args = []"));
         assert!(on_disk.contains("filename_pattern = \"default\""));
+        assert!(on_disk.contains("\"default\""));
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
@@ -869,5 +978,68 @@ mod tests {
 
         cfg.ytdlp = "  yt-dlp-nightly  ".to_string();
         assert_eq!(cfg.ytdlp_bin(), "yt-dlp-nightly");
+    }
+
+    #[test]
+    fn test_resolve_extensions_default_and_overrides() {
+        // Pure default
+        let exts = vec!["default".to_string()];
+        let resolved = resolve_extensions(&exts, BUILTIN_AUDIO_EXTS);
+        assert_eq!(resolved.len(), BUILTIN_AUDIO_EXTS.len());
+        assert!(resolved.contains(&"flac".to_string()));
+        assert!(resolved.contains(&"dsf".to_string()));
+
+        // Default with addition
+        let exts = vec![
+            "default".to_string(),
+            "midi".to_string(),
+            ".m4b".to_string(),
+        ];
+        let resolved = resolve_extensions(&exts, BUILTIN_AUDIO_EXTS);
+        assert_eq!(resolved.len(), BUILTIN_AUDIO_EXTS.len() + 2);
+        assert!(resolved.contains(&"midi".to_string()));
+        assert!(resolved.contains(&"m4b".to_string()));
+
+        // Default with exclusion (! and -)
+        let exts = vec![
+            "default".to_string(),
+            "!wav".to_string(),
+            "-amr".to_string(),
+        ];
+        let resolved = resolve_extensions(&exts, BUILTIN_AUDIO_EXTS);
+        assert!(!resolved.contains(&"wav".to_string()));
+        assert!(!resolved.contains(&"amr".to_string()));
+        assert!(resolved.contains(&"flac".to_string()));
+
+        // Custom list without default
+        let exts = vec!["flac".to_string(), ".opus".to_string()];
+        let resolved = resolve_extensions(&exts, BUILTIN_AUDIO_EXTS);
+        assert_eq!(resolved, vec!["flac", "opus"]);
+
+        // Empty list
+        let empty: Vec<String> = Vec::new();
+        assert!(resolve_extensions(&empty, BUILTIN_AUDIO_EXTS).is_empty());
+    }
+
+    #[test]
+    fn test_legacy_audio_exts_migration() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_file = temp.path().join("legacy_exts.toml");
+
+        let legacy_array_toml = serde_json::to_string(&LEGACY_AUDIO_EXTS).unwrap();
+        std::fs::write(
+            &config_file,
+            format!("audio_exts = {}\n", legacy_array_toml),
+        )
+        .unwrap();
+
+        let loaded = load(Some(config_file.clone())).unwrap();
+        assert_eq!(loaded.audio_exts, vec!["default"]);
+        assert!(loaded.resolved_audio_exts().contains(&"dsf".to_string()));
+        assert!(loaded.resolved_audio_exts().contains(&"ape".to_string()));
+        assert!(loaded.resolved_audio_exts().contains(&"aif".to_string()));
+
+        let on_disk = std::fs::read_to_string(&config_file).unwrap();
+        assert!(on_disk.contains("\"default\""));
     }
 }
