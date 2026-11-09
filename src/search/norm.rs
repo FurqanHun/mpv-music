@@ -355,10 +355,9 @@ fn match_token(token: &str, norm_target: &str, norm_clean: &str) -> Option<i64> 
     None
 }
 
-pub fn score_match(query: &str, target: &str) -> Option<i64> {
+pub fn score_match_normalized(norm_query: &str, target: &str) -> Option<i64> {
     let norm_target = normalize_search_text(target);
     let norm_clean = normalize_search_text(&clean_noise(target));
-    let norm_query = normalize_search_text(query);
 
     let tokens: Vec<&str> = norm_query.split_whitespace().collect();
     if tokens.is_empty() {
@@ -374,6 +373,15 @@ pub fn score_match(query: &str, target: &str) -> Option<i64> {
     total_score -= len_diff.min(100);
 
     Some(total_score)
+}
+
+pub fn score_match(query: &str, target: &str) -> Option<i64> {
+    let norm_query = normalize_search_text(query);
+    score_match_normalized(&norm_query, target)
+}
+
+pub fn match_all_tokens_normalized(norm_query: &str, target: &str) -> bool {
+    score_match_normalized(norm_query, target).is_some()
 }
 
 pub fn match_all_tokens(query: &str, target: &str) -> bool {

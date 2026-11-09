@@ -68,7 +68,7 @@ pub fn apply_cli_filters(
                         search_vals.iter().any(|term| {
                             field_norm.contains(term)
                                 || field_clean_norm.contains(term)
-                                || crate::search::norm::match_all_tokens(term, field)
+                                || crate::search::norm::match_all_tokens_normalized(term, field)
                         })
                     }
                 } else {

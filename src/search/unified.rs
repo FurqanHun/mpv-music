@@ -1,4 +1,4 @@
-use super::norm::{normalize_search_text, score_match};
+use super::norm::{normalize_search_text, score_match_normalized};
 use crate::cli::Cli;
 use crate::config::Config;
 use crate::indexer::Track;
@@ -33,6 +33,27 @@ pub fn parse_query_branches(query: &str) -> Vec<Vec<String>> {
         .collect()
 }
 
+#[derive(Debug, Clone)]
+struct NormalizedBranch {
+    tokens: Vec<String>,
+    branch_len: usize,
+}
+
+impl NormalizedBranch {
+    fn from_raw(branch: &[String]) -> Self {
+        let mut tokens = Vec::with_capacity(branch.len());
+        let mut branch_len = 0;
+        for token in branch {
+            let norm = normalize_search_text(token);
+            if !norm.is_empty() {
+                branch_len += norm.len();
+                tokens.push(norm);
+            }
+        }
+        Self { tokens, branch_len }
+    }
+}
+
 pub fn is_direct_playback_target(target: &str) -> bool {
     let lower = target.to_lowercase();
     if lower.starts_with("http://")
@@ -48,20 +69,13 @@ pub fn is_direct_playback_target(target: &str) -> bool {
     path.exists()
 }
 
-pub fn score_branch(branch: &[String], track: &Track) -> Option<i64> {
+fn score_normalized_branch(branch: &NormalizedBranch, track: &Track) -> Option<i64> {
     let mut branch_score = 0;
-    let mut branch_len = 0;
 
-    for token in branch {
-        let norm_token = normalize_search_text(token);
-        if norm_token.is_empty() {
-            continue;
-        }
-        branch_len += norm_token.len();
-
-        let title_score = score_match(&norm_token, &track.title).map(|s| s + 20_000);
-        let artist_score = score_match(&norm_token, &track.artist).map(|s| s + 10_000);
-        let album_score = score_match(&norm_token, &track.album);
+    for norm_token in &branch.tokens {
+        let title_score = score_match_normalized(norm_token, &track.title).map(|s| s + 20_000);
+        let artist_score = score_match_normalized(norm_token, &track.artist).map(|s| s + 10_000);
+        let album_score = score_match_normalized(norm_token, &track.album);
 
         let best_token_score = match (title_score, artist_score, album_score) {
             (None, None, None) => return None,
@@ -72,35 +86,48 @@ pub fn score_branch(branch: &[String], track: &Track) -> Option<i64> {
     }
 
     let total_len = (track.title.len() + track.artist.len() + track.album.len()) as i64;
-    branch_score -= total_len.saturating_sub(branch_len as i64).min(100);
+    branch_score -= total_len.saturating_sub(branch.branch_len as i64).min(100);
 
     Some(branch_score)
 }
 
+pub fn score_branch(branch: &[String], track: &Track) -> Option<i64> {
+    let norm_branch = NormalizedBranch::from_raw(branch);
+    score_normalized_branch(&norm_branch, track)
+}
+
 pub fn score_track_unified(query: &str, track: &Track) -> Option<i64> {
-    let branches = parse_query_branches(query);
-    if branches.is_empty() {
+    let raw_branches = parse_query_branches(query);
+    if raw_branches.is_empty() {
         return Some(0);
     }
+    let branches: Vec<NormalizedBranch> = raw_branches
+        .iter()
+        .map(|b| NormalizedBranch::from_raw(b))
+        .collect();
 
     branches
         .iter()
-        .filter_map(|branch| score_branch(branch, track))
+        .filter_map(|branch| score_normalized_branch(branch, track))
         .max()
 }
 
 pub fn resolve_unified_candidates(tracks: &[Track], query: &str) -> Vec<Track> {
-    let branches = parse_query_branches(query);
-    if branches.is_empty() {
+    let raw_branches = parse_query_branches(query);
+    if raw_branches.is_empty() {
         return Vec::new();
     }
+    let branches: Vec<NormalizedBranch> = raw_branches
+        .iter()
+        .map(|b| NormalizedBranch::from_raw(b))
+        .collect();
 
     let branch_has_strong: Vec<bool> = branches
         .iter()
         .map(|branch| {
             tracks
                 .iter()
-                .any(|t| score_branch(branch, t).unwrap_or(i64::MIN) >= 30_000)
+                .any(|t| score_normalized_branch(branch, t).unwrap_or(i64::MIN) >= 30_000)
         })
         .collect();
 
@@ -111,7 +138,7 @@ pub fn resolve_unified_candidates(tracks: &[Track], query: &str) -> Vec<Track> {
             let mut keep = false;
 
             for (i, branch) in branches.iter().enumerate() {
-                if let Some(s) = score_branch(branch, t) {
+                if let Some(s) = score_normalized_branch(branch, t) {
                     best_score = Some(best_score.map_or(s, |curr| curr.max(s)));
                     if branch_has_strong[i] {
                         if s >= 30_000 {

@@ -93,7 +93,8 @@ pub fn resolve_cli_candidates(tracks: &[Track], args: &Cli) -> Vec<Track> {
                 .iter()
                 .map(|term| {
                     filtered.iter().any(|t| {
-                        crate::search::norm::score_match(term, field.extract(t)).unwrap_or(i64::MIN)
+                        crate::search::norm::score_match_normalized(term, field.extract(t))
+                            .unwrap_or(i64::MIN)
                             >= 9_000
                     })
                 })
@@ -109,7 +110,7 @@ pub fn resolve_cli_candidates(tracks: &[Track], args: &Cli) -> Vec<Track> {
                 .any(|(f_idx, (field, terms))| {
                     terms.iter().enumerate().any(|(t_idx, term)| {
                         if let Some(score) =
-                            crate::search::norm::score_match(term, field.extract(t))
+                            crate::search::norm::score_match_normalized(term, field.extract(t))
                         {
                             if term_has_strong[f_idx][t_idx] {
                                 score >= 9_000
@@ -130,7 +131,7 @@ pub fn resolve_cli_candidates(tracks: &[Track], args: &Cli) -> Vec<Track> {
                 .all(|(f_idx, (field, terms))| {
                     terms.iter().enumerate().any(|(t_idx, term)| {
                         if let Some(score) =
-                            crate::search::norm::score_match(term, field.extract(t))
+                            crate::search::norm::score_match_normalized(term, field.extract(t))
                         {
                             if term_has_strong[f_idx][t_idx] {
                                 score >= 9_000
@@ -149,9 +150,9 @@ pub fn resolve_cli_candidates(tracks: &[Track], args: &Cli) -> Vec<Track> {
         active_fields
             .iter()
             .flat_map(|(field, terms)| {
-                terms
-                    .iter()
-                    .filter_map(|term| crate::search::norm::score_match(term, field.extract(t)))
+                terms.iter().filter_map(|term| {
+                    crate::search::norm::score_match_normalized(term, field.extract(t))
+                })
             })
             .max()
             .unwrap_or(i64::MIN)
