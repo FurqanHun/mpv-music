@@ -18,9 +18,8 @@ pub struct SearchResult {
 }
 
 fn format_duration(seconds: f64) -> String {
-    let m = (seconds / 60.0).floor();
-    let s = (seconds % 60.0).floor();
-    format!("{:02}:{:02}", m, s)
+    let s = seconds.floor() as u64;
+    crate::indexer::format_duration(s)
 }
 
 fn format_views(count: u64) -> String {
@@ -288,7 +287,7 @@ mod tests {
     fn test_duration_formatting_hours() {
         let seconds: f64 = 3665.0;
         let formatted = format_duration(seconds);
-        assert_eq!(formatted, "61:05");
+        assert_eq!(formatted, "1:01:05");
     }
 
     #[test]
