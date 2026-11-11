@@ -124,14 +124,19 @@ pub fn run_dir_mode(
     let mut files = Vec::new();
     for item in output.selected_items {
         let dir = item.output();
+        let dir_path = std::path::Path::new(dir.as_ref());
         let mut dir_tracks = Vec::new();
         for t in tracks {
-            if t.path.starts_with(dir.as_ref()) {
+            if std::path::Path::new(&t.path).starts_with(dir_path) {
                 dir_tracks.push(t.path.clone());
             }
         }
         dir_tracks.sort_by(|a, b| crate::search::natural_cmp(a, b));
-        files.extend(dir_tracks);
+        for path in dir_tracks {
+            if !files.contains(&path) {
+                files.push(path);
+            }
+        }
     }
     if files.is_empty() {
         return Ok(());
@@ -267,6 +272,72 @@ mod tests {
                 "/music/Album/2 - Track 2.flac".to_string(),
                 "/music/Album/03 - Track 3.flac".to_string(),
                 "/music/Album/10 - Track 10.flac".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_dir_prefix_component_isolation() {
+        use std::path::Path;
+
+        let tracks = vec![
+            "/music/Rock/01 - Song A.flac",
+            "/music/Rock/02 - Song B.flac",
+            "/music/Rock and Roll/01 - Other.flac",
+            "/music/Rock/Subdir/01 - Nested.flac",
+        ];
+
+        let selected_dir = "/music/Rock";
+        let dir_path = Path::new(selected_dir);
+
+        let matched: Vec<&str> = tracks
+            .into_iter()
+            .filter(|t| Path::new(t).starts_with(dir_path))
+            .collect();
+
+        assert_eq!(
+            matched,
+            vec![
+                "/music/Rock/01 - Song A.flac",
+                "/music/Rock/02 - Song B.flac",
+                "/music/Rock/Subdir/01 - Nested.flac",
+            ]
+        );
+        assert!(!matched.contains(&"/music/Rock and Roll/01 - Other.flac"));
+    }
+
+    #[test]
+    fn test_dir_multi_select_parent_and_child_no_duplicates() {
+        use std::path::Path;
+
+        let tracks = [
+            "/music/Rock/01 - Song A.flac",
+            "/music/Rock/Subdir/01 - Nested.flac",
+        ];
+
+        let selected_dirs = vec!["/music/Rock", "/music/Rock/Subdir"];
+
+        let mut files = Vec::new();
+        for dir in selected_dirs {
+            let dir_path = Path::new(dir);
+            let mut dir_tracks: Vec<&str> = tracks
+                .iter()
+                .copied()
+                .filter(|t| Path::new(t).starts_with(dir_path))
+                .collect();
+            dir_tracks.sort_by(|a, b| crate::search::natural_cmp(a, b));
+            for path in dir_tracks {
+                if !files.contains(&path) {
+                    files.push(path);
+                }
+            }
+        }
+
+        assert_eq!(
+            files,
+            vec![
+                "/music/Rock/01 - Song A.flac",
+                "/music/Rock/Subdir/01 - Nested.flac",
             ]
         );
     }
