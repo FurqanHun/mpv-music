@@ -143,15 +143,47 @@ pub fn build_dir_items(
 
     root_items.sort_by(|a, b| crate::search::natural_cmp(&a.dirname, &b.dirname));
 
+    let mut clean_roots: Vec<(std::path::PathBuf, Option<std::path::PathBuf>)> = music_dirs
+        .iter()
+        .map(|r| {
+            let p = std::path::Path::new(r);
+            let clean = p.components().as_path().to_path_buf();
+            let canon = p.canonicalize().ok();
+            (clean, canon)
+        })
+        .collect();
+    // Prioritize deeper root paths if one root contains another
+    clean_roots.sort_by_key(|a| std::cmp::Reverse(a.0.components().count()));
+
     let mut regular_items: Vec<DirItem> = dir_map
         .into_iter()
         .filter(|(path, _)| !handled_root_paths.contains(path))
         .map(|(path, files)| {
             let count = files.len();
-            let name = std::path::Path::new(&path)
-                .file_name()
-                .map(|s| s.to_string_lossy().to_string())
-                .unwrap_or_else(|| path.clone());
+            let path_obj = std::path::Path::new(&path);
+
+            let rel_name = clean_roots.iter().find_map(|(clean, canon)| {
+                if let Ok(rel) = path_obj.strip_prefix(clean) {
+                    let s = rel.to_string_lossy().to_string();
+                    if !s.is_empty() {
+                        return Some(s);
+                    }
+                }
+                if let Some(rel) = canon.as_ref().and_then(|cp| path_obj.strip_prefix(cp).ok()) {
+                    let s = rel.to_string_lossy().to_string();
+                    if !s.is_empty() {
+                        return Some(s);
+                    }
+                }
+                None
+            });
+
+            let name = rel_name.unwrap_or_else(|| {
+                path_obj
+                    .file_name()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| path.clone())
+            });
 
             DirItem::new(name, path, count, files, icons.folder(), false)
         })
@@ -465,17 +497,71 @@ mod tests {
         assert!(items[1].is_root);
         assert_eq!(items[1].text(), "[Root] OtherRoot (1)");
 
-        // Followed by regular subdirectories
-        assert_eq!(items[2].dirname, "Album1");
+        // Followed by regular subdirectories relative to root
+        assert_eq!(items[2].dirname, "Ado/Album1");
         assert_eq!(items[2].count, 2);
         assert!(!items[2].is_root);
+        assert_eq!(items[2].text(), "Ado/Album1 (2)");
 
-        assert_eq!(items[3].dirname, "Album2");
+        assert_eq!(items[3].dirname, "Ado/Album2");
         assert_eq!(items[3].count, 1);
         assert!(!items[3].is_root);
+        assert_eq!(items[3].text(), "Ado/Album2 (1)");
 
         // OtherRoot directly contained Single.flac, so it should NOT be duplicated as a regular directory
         assert_eq!(items.len(), 4);
+    }
+
+    #[test]
+    fn test_build_dir_items_relative_disambiguation() {
+        use std::path::PathBuf;
+
+        let tracks = vec![
+            indexer::Track {
+                path: "/music/Root/Queen/Greatest Hits/01 - Bohemian.flac".to_string(),
+                ..Default::default()
+            },
+            indexer::Track {
+                path: "/music/Root/Tupac/Greatest Hits/01 - Changes.flac".to_string(),
+                ..Default::default()
+            },
+            indexer::Track {
+                path: "/music/Root/Ado/Kyogen/01 - Readymade.flac".to_string(),
+                ..Default::default()
+            },
+        ];
+
+        let music_dirs = vec![PathBuf::from("/music/Root")];
+        let icons = Icons::new(crate::config::NerdFontMode::None);
+        let items = build_dir_items(&tracks, &music_dirs, &icons);
+
+        assert_eq!(items[0].dirname, "[Root] Root");
+        assert_eq!(items[1].dirname, "Ado/Kyogen");
+        assert_eq!(items[2].dirname, "Queen/Greatest Hits");
+        assert_eq!(items[3].dirname, "Tupac/Greatest Hits");
+    }
+
+    #[test]
+    fn test_build_dir_items_nested_roots_prefer_deepest() {
+        use std::path::PathBuf;
+
+        let tracks = vec![indexer::Track {
+            path: "/music/Base/Rock/Classic/01 - Song.flac".to_string(),
+            ..Default::default()
+        }];
+
+        // Two roots where one is parent of the other
+        let music_dirs = vec![
+            PathBuf::from("/music/Base"),
+            PathBuf::from("/music/Base/Rock"),
+        ];
+
+        let icons = Icons::new(crate::config::NerdFontMode::None);
+        let items = build_dir_items(&tracks, &music_dirs, &icons);
+
+        // Deeper root /music/Base/Rock should strip prefix for Classic, giving "Classic" instead of "Rock/Classic"
+        let classic_item = items.iter().find(|i| !i.is_root).unwrap();
+        assert_eq!(classic_item.dirname, "Classic");
     }
 
     #[test]
