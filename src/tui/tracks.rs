@@ -230,8 +230,16 @@ pub fn run_playlist_mode(
         return Ok(());
     }
 
-    if let Some(item) = output.selected_items.first() {
-        player::play(&item.output(), cfg, extra_args)?;
+    let paths: Vec<String> = output
+        .selected_items
+        .iter()
+        .map(|item| item.output().to_string())
+        .collect();
+
+    if paths.len() == 1 {
+        player::play(&paths[0], cfg, extra_args)?;
+    } else if !paths.is_empty() {
+        player::play_files(&paths, cfg, extra_args)?;
     }
     Ok(())
 }
