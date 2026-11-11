@@ -58,10 +58,11 @@ It indexes your music collection into a lightning-fast library, providing fuzzy 
 - **Lightning-Fast Indexing:** Automatically scans your music directories utilizing multi-threading, caching metadata (Artist, Album, Title, Genre, Duration, Audio Quality) into a JSONL index.
 - **Atomic & Self-Healing Index:** Writes and flushes index updates through atomic staging files (`.tmp`/`.bak`) to eliminate partial write corruption from `SIGINT`, power loss or other conflicts. On startup, it automatically validates integrity, rescues interrupted backups, surgically repairs damaged lines, or triggers a smart rebuild in a blink of an eye.
 * **Rich Metadata Previews:** View song title, artist, album, genre, duration (`mm:ss` / `h:mm:ss`), and audio quality specifications (sample rate and bitrate, e.g. `44.1 kHz • 920 kbps`) directly in the skim preview window.
+- **Natural Track Sorting:** Plays folders, albums, and tag selections in human-friendly numerical sequence (`1`, `2`, ..., `10`) when shuffle is disabled, rather than raw ASCII byte order (`1`, `10`, `2`).
 * **Interactive Selection with Multiple Modes:**
-  * **Directory Mode:** Navigate folders with clean names instead of full paths.
-  * **Track Mode:** Fuzzy-search individual tracks with metadata previews.
-  * **Playlist Mode:** Find and play your saved `.m3u` or `.pls` playlists.
+  * **Directory Mode:** Navigate folders with clean relative paths (`Artist/Album`), pinned `[Root]` library entries, deduplicated multi-folder selection, and an adaptive preview pane detailing subfolders and direct tracks.
+  * **Track Mode:** Fuzzy-search individual tracks with live metadata previews.
+  * **Playlist Mode:** Find and play your saved `.m3u` or `.pls` playlists with single or multi-playlist queueing.
   * **Tag Filter Mode:** Drill down by genre, artist, album, or title interactively.
   * **Play All:** Instantly play your entire indexed library.
   * **Search & Stream URL:** Search YouTube (with automatic Shorts filtering) or stream URLs directly from the menu.

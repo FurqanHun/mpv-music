@@ -5,6 +5,12 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 ## [Unreleased](https://github.com/FurqanHun/mpv-music/compare/v0.29.1...HEAD)
 
 ### Features
+- **tui:** implement adaptive multi-section preview pane for Directory Mode with root headers, subfolder breakdowns, and direct track previews ([`841a5c6`](https://github.com/FurqanHun/mpv-music/commit/841a5c6))
+- **tui:** display Directory Mode items relative to configured root music directories ([`7ac3b44`](https://github.com/FurqanHun/mpv-music/commit/7ac3b44))
+- **tui:** pin configured root music directories with `[Root]` tags at the top of Directory Mode ([`792eb45`](https://github.com/FurqanHun/mpv-music/commit/792eb45))
+- **filter:** sort album and tag filter tracks naturally in numerical sequence when shuffle is disabled ([`afcfde1`](https://github.com/FurqanHun/mpv-music/commit/afcfde1))
+- **search:** implement natural alphanumeric track sorting for folder playback ([`01807bc`](https://github.com/FurqanHun/mpv-music/commit/01807bc))
+- **tui:** support multi-selection playback in playlist mode ([`907d9f4`](https://github.com/FurqanHun/mpv-music/commit/907d9f4))
 - **indexer:** probe track duration, sample rate, and bitrate via lofty properties with TUI preview support ([`d197696`](https://github.com/FurqanHun/mpv-music/commit/d197696f332a561b53b381a6f67a9e05224d72fe))
 - **indexer:** implement atomic index writing with `.tmp`/`.bak` staging, crash safety, and automatic startup recovery ([`3d2bd37`](https://github.com/FurqanHun/mpv-music/commit/3d2bd37005772c9143fe77d60b98297d78133fbe))
 - **config:** consolidate config migrations, auto-populations, and value clamps into a single unified startup notification ([`fdf01f3`](https://github.com/FurqanHun/mpv-music/commit/fdf01f3))
@@ -39,14 +45,15 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 - **player:** wrap temporary queue playlist file writing in `BufWriter` ([`abc7cd2`](https://github.com/FurqanHun/mpv-music/commit/abc7cd2))
 
 ### Bug Fixes
+- **tui:** isolate directory path prefix matching to whole path components and deduplicate nested multi-selection ([`594faee`](https://github.com/FurqanHun/mpv-music/commit/594faee))
 - **search:** add adjacent transposition to bounded edit distance ([`b151b36`](https://github.com/FurqanHun/mpv-music/commit/b151b369165b6ecf72cf01daff1e0aee3ba4c10a))
 - **filter:** route multi-match title filters to track picker and support middle-typo insertions ([`8a70b22`](https://github.com/FurqanHun/mpv-music/commit/8a70b22ba5427d11340150ca27c1973f76da8675))
 
 ### Refactoring & Maintenance
+- **chore(config):** bump default yt-dlp user agent to Firefox 160.0 ([`72265a9`](https://github.com/FurqanHun/mpv-music/commit/72265a9))
 - **youtube:** reuse unified duration formatter with hour display support ([`2310618`](https://github.com/FurqanHun/mpv-music/commit/23106186e54546a845eba2d70fff0a348f9acfe6))
 - **docs(cli):** update help screens and operator guides ([`58ce7a3`](https://github.com/FurqanHun/mpv-music/commit/58ce7a343fab5eddcc70b3fef15d091ae496f880))
 - **docs(readme):** update user guide for unified search, operators, and ui features
-- **chore(config):** bump default yt-dlp user agent to firefox 159 ([`53c114b`](https://github.com/FurqanHun/mpv-music/commit/53c114b8351437e59da17a334bae4c1cfc9d1e9d))
 - **refactor(ytdlp):** demote deno priority and update js runtime recs cause it's shutting down ([`37fb787`](https://github.com/FurqanHun/mpv-music/commit/37fb787ae811ec9a6d9f488cb852015c32e19ba8))
 - **refactor(search):** organize search modules into `src/search` directory ([`9d77ed0`](https://github.com/FurqanHun/mpv-music/commit/9d77ed0b1d31a57aeafc5d97f5231713063fbc19))
 - **chore(deps):** update dependencies and bump skim to 5.9.0 ([`6784c4d`](https://github.com/FurqanHun/mpv-music/commit/6784c4d5cf1567bc7d206f363c467a5b3a4a081e))
