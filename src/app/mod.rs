@@ -130,7 +130,8 @@ pub fn run(args: Cli) -> Result<()> {
     }
 
     if args.play_all {
-        let paths: Vec<String> = tracks.iter().map(|t| t.path.clone()).collect();
+        let mut paths: Vec<String> = tracks.iter().map(|t| t.path.clone()).collect();
+        paths.sort_by(|a, b| crate::search::natural_cmp(a, b));
         player::play_files(&paths, &cfg, extra_mpv_args)?;
     } else if let Some(maybe_val) = args.playlist {
         if let Some(playlist_name) = maybe_val {

@@ -141,7 +141,10 @@ pub fn run_tag_picker(
         })
         .collect();
 
-    run_post_filter_action(&filtered, cfg, extra_args)?;
+    let mut sorted_filtered = filtered;
+    sorted_filtered.sort_by(|a, b| crate::search::natural_cmp(&a.path, &b.path));
+
+    run_post_filter_action(&sorted_filtered, cfg, extra_args)?;
 
     Ok(true)
 }

@@ -170,6 +170,7 @@ pub fn handle_cli_filters(
     extra_mpv_args: &[String],
 ) -> Result<()> {
     let mut filtered = resolve_cli_candidates(tracks, args);
+    filtered.sort_by(|a, b| crate::search::natural_cmp(&a.path, &b.path));
 
     if filtered.is_empty() {
         ui::warning("No match.");
@@ -378,5 +379,25 @@ mod tests {
         assert_eq!(candidates.len(), 2);
         assert!(candidates.iter().any(|t| t.title == "Show"));
         assert!(candidates.iter().any(|t| t.title == "Creep"));
+    }
+
+    #[test]
+    fn test_filter_candidates_natural_sorting() {
+        let mut t1 = sample_track("Track 10", "Ado", "Adobum", "J-Pop");
+        t1.path = "/music/Adobum/10 - Track 10.flac".to_string();
+
+        let mut t2 = sample_track("Track 1", "Ado", "Adobum", "J-Pop");
+        t2.path = "/music/Adobum/1 - Track 1.flac".to_string();
+
+        let mut t3 = sample_track("Track 2", "Ado", "Adobum", "J-Pop");
+        t3.path = "/music/Adobum/2 - Track 2.flac".to_string();
+
+        let tracks = vec![t1, t2, t3];
+        let args = Cli::parse_from(["mpv-music", "-b", "Adobum"]);
+        let mut candidates = resolve_cli_candidates(&tracks, &args);
+        candidates.sort_by(|a, b| crate::search::natural_cmp(&a.path, &b.path));
+
+        let ordered_titles: Vec<&str> = candidates.iter().map(|t| t.title.as_str()).collect();
+        assert_eq!(ordered_titles, vec!["Track 1", "Track 2", "Track 10"]);
     }
 }
