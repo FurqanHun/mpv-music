@@ -399,6 +399,54 @@ where
     });
 }
 
+pub fn natural_cmp(a: &str, b: &str) -> std::cmp::Ordering {
+    let mut a_bytes = a.as_bytes().iter().copied().peekable();
+    let mut b_bytes = b.as_bytes().iter().copied().peekable();
+
+    while let (Some(&ba), Some(&bb)) = (a_bytes.peek(), b_bytes.peek()) {
+        if ba.is_ascii_digit() && bb.is_ascii_digit() {
+            let mut num_a: u64 = 0;
+            while let Some(&d) = a_bytes.peek() {
+                if d.is_ascii_digit() {
+                    num_a = num_a.saturating_mul(10).saturating_add((d - b'0') as u64);
+                    a_bytes.next();
+                } else {
+                    break;
+                }
+            }
+
+            let mut num_b: u64 = 0;
+            while let Some(&d) = b_bytes.peek() {
+                if d.is_ascii_digit() {
+                    num_b = num_b.saturating_mul(10).saturating_add((d - b'0') as u64);
+                    b_bytes.next();
+                } else {
+                    break;
+                }
+            }
+
+            if num_a != num_b {
+                return num_a.cmp(&num_b);
+            }
+        } else {
+            let la = ba.to_ascii_lowercase();
+            let lb = bb.to_ascii_lowercase();
+            if la != lb {
+                return la.cmp(&lb);
+            }
+            a_bytes.next();
+            b_bytes.next();
+        }
+    }
+
+    let len_cmp = a.len().cmp(&b.len());
+    if len_cmp != std::cmp::Ordering::Equal {
+        len_cmp
+    } else {
+        a.cmp(b)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -510,5 +558,57 @@ mod tests {
         assert!(match_all_tokens("gnetle", "Gentle"));
         assert!(match_all_tokens("gnetle", "The Gentle Men"));
         assert!(match_all_tokens("unforgtable", "Unforgettable"));
+    }
+
+    #[test]
+    fn test_natural_cmp() {
+        use std::cmp::Ordering;
+
+        assert_eq!(natural_cmp("1 - Track", "2 - Track"), Ordering::Less);
+        assert_eq!(natural_cmp("2 - Track", "10 - Track"), Ordering::Less);
+        assert_eq!(natural_cmp("10 - Track", "2 - Track"), Ordering::Greater);
+        assert_eq!(natural_cmp("01 - Track", "02 - Track"), Ordering::Less);
+        assert_eq!(natural_cmp("09 - Track", "10 - Track"), Ordering::Less);
+
+        let mut tracks = vec![
+            "10 - Track 10",
+            "1 - Track 1",
+            "2 - Track 2",
+            "11 - Track 11",
+            "20 - Track 20",
+        ];
+        tracks.sort_by(|a, b| natural_cmp(a, b));
+        assert_eq!(
+            tracks,
+            vec![
+                "1 - Track 1",
+                "2 - Track 2",
+                "10 - Track 10",
+                "11 - Track 11",
+                "20 - Track 20",
+            ]
+        );
+
+        let mut multi_disc = vec![
+            "CD2/1 - Track",
+            "CD1/10 - Track",
+            "CD1/2 - Track",
+            "CD1/1 - Track",
+        ];
+        multi_disc.sort_by(|a, b| natural_cmp(a, b));
+        assert_eq!(
+            multi_disc,
+            vec![
+                "CD1/1 - Track",
+                "CD1/2 - Track",
+                "CD1/10 - Track",
+                "CD2/1 - Track",
+            ]
+        );
+
+        assert_eq!(natural_cmp("track", "track 1"), Ordering::Less);
+        assert_eq!(natural_cmp("track 1", "track"), Ordering::Greater);
+        assert_eq!(natural_cmp("Track", "track"), Ordering::Less);
+        assert_eq!(natural_cmp("track", "track"), Ordering::Equal);
     }
 }

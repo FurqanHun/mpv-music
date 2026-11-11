@@ -124,11 +124,14 @@ pub fn run_dir_mode(
     let mut files = Vec::new();
     for item in output.selected_items {
         let dir = item.output();
+        let mut dir_tracks = Vec::new();
         for t in tracks {
             if t.path.starts_with(dir.as_ref()) {
-                files.push(t.path.clone());
+                dir_tracks.push(t.path.clone());
             }
         }
+        dir_tracks.sort_by(|a, b| crate::search::natural_cmp(a, b));
+        files.extend(dir_tracks);
     }
     if files.is_empty() {
         return Ok(());
@@ -242,4 +245,29 @@ pub fn run_playlist_mode(
         player::play_files(&paths, cfg, extra_args)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_dir_tracks_natural_sorting() {
+        let mut tracks = vec![
+            "/music/Album/10 - Track 10.flac".to_string(),
+            "/music/Album/1 - Track 1.flac".to_string(),
+            "/music/Album/2 - Track 2.flac".to_string(),
+            "/music/Album/03 - Track 3.flac".to_string(),
+        ];
+
+        tracks.sort_by(|a, b| crate::search::natural_cmp(a, b));
+
+        assert_eq!(
+            tracks,
+            vec![
+                "/music/Album/1 - Track 1.flac".to_string(),
+                "/music/Album/2 - Track 2.flac".to_string(),
+                "/music/Album/03 - Track 3.flac".to_string(),
+                "/music/Album/10 - Track 10.flac".to_string(),
+            ]
+        );
+    }
 }

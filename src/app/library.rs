@@ -60,12 +60,13 @@ pub fn load_or_scan_tracks(
             let mut temp_cfg = cfg.clone();
             temp_cfg.music_dirs = vec![target_canonical.clone()];
 
-            let session_tracks = indexer::scan(&temp_cfg, true)?;
+            let mut session_tracks = indexer::scan(&temp_cfg, true)?;
 
             if session_tracks.is_empty() {
                 ui::warning(format!("No music files found in: {}", target_str));
                 return Ok(None);
             }
+            session_tracks.sort_by(|a, b| crate::search::natural_cmp(&a.path, &b.path));
             tracks = session_tracks;
         } else if crate::search::unified::is_direct_playback_target(target) {
             if target.starts_with("http://") || target.starts_with("https://") {
