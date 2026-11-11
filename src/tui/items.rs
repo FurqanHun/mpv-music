@@ -139,17 +139,22 @@ pub struct DirItem {
     pub path: String,
     pub count: usize,
     pub samples: Vec<String>,
+    pub subfolders: Vec<(String, usize)>,
+    pub root_info: Option<String>,
     pub icon: &'static str,
     pub is_root: bool,
     pub display_text: String,
 }
 
 impl DirItem {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         dirname: String,
         path: String,
         count: usize,
         samples: Vec<String>,
+        subfolders: Vec<(String, usize)>,
+        root_info: Option<String>,
         icon: &'static str,
         is_root: bool,
     ) -> Self {
@@ -168,6 +173,8 @@ impl DirItem {
             path,
             count,
             samples,
+            subfolders,
+            root_info,
             icon,
             is_root,
             display_text,
@@ -185,34 +192,72 @@ impl SkimItem for DirItem {
     }
 
     fn preview(&self, _context: PreviewContext) -> ItemPreview {
-        let max_samples = 15;
-        let mut sample_text = String::new();
-        let shown = self.samples.len().min(max_samples);
-        for (i, song) in self.samples.iter().take(shown).enumerate() {
-            sample_text.push_str(&format!("  {}. {}\n", i + 1, song));
-        }
+        let mut lines = Vec::new();
+        lines.push(format!(
+            "\n  {} \x1b[1;36m{}\x1b[0m\n",
+            self.icon, self.dirname
+        ));
 
-        if self.count > shown {
-            let remaining = self.count - shown;
-            let noun = if remaining == 1 { "file" } else { "files" };
-            sample_text.push_str(&format!(
-                "  \x1b[90m... and {} more {}\x1b[0m\n",
-                remaining, noun
-            ));
-        }
-
-        let section_header = if self.count <= max_samples {
-            "Contents:"
+        if self.is_root {
+            lines.push(format!("  \x1b[1;33mRoot:\x1b[0m  {}", self.path));
+        } else if let Some(ref root) = self.root_info {
+            lines.push(format!("  \x1b[1;33mRoot:\x1b[0m  {}", root));
+            lines.push(format!("  \x1b[1;33mPath:\x1b[0m  {}", self.path));
         } else {
-            "Sample Contents:"
-        };
+            lines.push(format!("  \x1b[1;33mPath:\x1b[0m  {}", self.path));
+        }
 
-        let path_label = if self.is_root { "Root:" } else { "Path:" };
-        let output = format!(
-            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33m{}\x1b[0m {}\n  \x1b[1;33mFiles:\x1b[0m {}\n\n  \x1b[1;32m{}\x1b[0m\n{}",
-            self.icon, self.dirname, path_label, self.path, self.count, section_header, sample_text
-        );
-        ItemPreview::AnsiText(output)
+        let tracks_noun = if self.count == 1 { "track" } else { "tracks" };
+        lines.push(format!(
+            "  \x1b[1;33mFiles:\x1b[0m {} {}",
+            self.count, tracks_noun
+        ));
+
+        if !self.subfolders.is_empty() {
+            let max_subfolders = 12;
+            let count_sub = self.subfolders.len();
+            lines.push(String::new());
+            lines.push(format!("  \x1b[1;32mSubfolders ({}):\x1b[0m", count_sub));
+            for (sub_name, sub_count) in self.subfolders.iter().take(max_subfolders) {
+                let noun = if *sub_count == 1 { "track" } else { "tracks" };
+                lines.push(format!(
+                    "    {} {} \x1b[90m({} {})\x1b[0m",
+                    self.icon, sub_name, sub_count, noun
+                ));
+            }
+            if count_sub > max_subfolders {
+                let rem = count_sub - max_subfolders;
+                lines.push(format!(
+                    "    \x1b[90m... and {} more subfolders\x1b[0m",
+                    rem
+                ));
+            }
+        }
+
+        if !self.samples.is_empty() {
+            let max_samples = 15;
+            lines.push(String::new());
+            let section_header = if !self.subfolders.is_empty() {
+                format!("Direct Files ({}):", self.samples.len())
+            } else if self.count <= max_samples {
+                "Contents:".to_string()
+            } else {
+                "Sample Contents:".to_string()
+            };
+
+            lines.push(format!("  \x1b[1;32m{}\x1b[0m", section_header));
+            let shown = self.samples.len().min(max_samples);
+            for (i, song) in self.samples.iter().take(shown).enumerate() {
+                lines.push(format!("    {}. {}", i + 1, song));
+            }
+            if self.samples.len() > max_samples {
+                let rem = self.samples.len() - max_samples;
+                let noun = if rem == 1 { "file" } else { "files" };
+                lines.push(format!("    \x1b[90m... and {} more {}\x1b[0m", rem, noun));
+            }
+        }
+
+        ItemPreview::AnsiText(lines.join("\n"))
     }
 }
 
@@ -360,6 +405,7 @@ impl SkimItem for MenuItem {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tui::icons::Icons;
 
     #[test]
     fn test_search_item_preview_live_stream() {
@@ -421,11 +467,12 @@ mod tests {
 
     #[test]
     fn test_tag_item_text_zero_allocation_borrow() {
+        let icons = Icons::new(crate::config::NerdFontMode::Normal);
         let item = TagItem::new(
             "Rock".to_string(),
             42,
             vec!["Song 1".to_string()],
-            "🎸".to_string(),
+            icons.genre().to_string(),
         );
         let text_cow = item.text();
         assert_eq!(text_cow, "Rock (42)");
@@ -434,12 +481,15 @@ mod tests {
 
     #[test]
     fn test_dir_item_text_zero_allocation_borrow() {
+        let icons = Icons::new(crate::config::NerdFontMode::Normal);
         let item = DirItem::new(
             "Favorites".to_string(),
             "/music/fav".to_string(),
             15,
             vec![],
-            "📁",
+            vec![],
+            None,
+            icons.folder(),
             false,
         );
         let text_cow = item.text();
@@ -449,18 +499,102 @@ mod tests {
 
     #[test]
     fn test_dir_item_root_badge() {
+        let icons = Icons::new(crate::config::NerdFontMode::Normal);
         let item = DirItem::new(
             "musicdd".to_string(),
             "/music/musicdd".to_string(),
             42,
             vec![],
-            "📁",
+            vec![],
+            None,
+            icons.folder(),
             true,
         );
         let text_cow = item.text();
         assert_eq!(text_cow, "[Root] musicdd (42)");
         assert_eq!(item.dirname, "[Root] musicdd");
         assert!(item.is_root);
+    }
+
+    #[test]
+    fn test_dir_item_adaptive_preview_container_leaf_mixed() {
+        let dummy_ctx = || PreviewContext {
+            query: "",
+            cmd_query: "",
+            width: 80,
+            height: 24,
+            current_index: 0,
+            current_selection: "",
+            selected_indices: &[],
+            selections: &[],
+        };
+        let icons = Icons::new(crate::config::NerdFontMode::Normal);
+
+        // 1. Container directory (e.g. root with only subfolders)
+        let container = DirItem::new(
+            "musicdd".to_string(),
+            "/music/musicdd".to_string(),
+            30,
+            vec![],
+            vec![("Ado".to_string(), 20), ("Queen".to_string(), 10)],
+            None,
+            icons.folder(),
+            true,
+        );
+        if let ItemPreview::AnsiText(p) = container.preview(dummy_ctx()) {
+            assert!(p.contains("Root:"));
+            assert!(p.contains("/music/musicdd"));
+            assert!(p.contains("Subfolders (2):"));
+            assert!(p.contains(&format!("{} Ado", icons.folder())));
+            assert!(p.contains(&format!("{} Queen", icons.folder())));
+            assert!(!p.contains("Contents:"));
+            assert!(!p.contains("Direct Files"));
+        } else {
+            panic!("Expected AnsiText preview");
+        }
+
+        // 2. Leaf directory (only direct files)
+        let leaf = DirItem::new(
+            "Kyogen".to_string(),
+            "/music/musicdd/Ado/Kyogen".to_string(),
+            2,
+            vec!["01 - Song.flac".to_string(), "02 - Song.flac".to_string()],
+            vec![],
+            Some("musicdd (/music/musicdd)".to_string()),
+            icons.folder(),
+            false,
+        );
+        if let ItemPreview::AnsiText(p) = leaf.preview(dummy_ctx()) {
+            assert!(p.contains("Root:"));
+            assert!(p.contains("musicdd (/music/musicdd)"));
+            assert!(p.contains("Path:"));
+            assert!(p.contains("/music/musicdd/Ado/Kyogen"));
+            assert!(p.contains("Contents:"));
+            assert!(p.contains("1. 01 - Song.flac"));
+            assert!(!p.contains("Subfolders"));
+        } else {
+            panic!("Expected AnsiText preview");
+        }
+
+        // 3. Mixed directory (both subfolders and direct files, with Nerd Font icon)
+        let mixed = DirItem::new(
+            "Music".to_string(),
+            "/home/qan/Music".to_string(),
+            12,
+            vec!["Loose.mp3".to_string()],
+            vec![("Rock".to_string(), 11)],
+            None,
+            icons.folder(),
+            true,
+        );
+        if let ItemPreview::AnsiText(p) = mixed.preview(dummy_ctx()) {
+            assert!(p.contains("Subfolders (1):"));
+            assert!(p.contains(&format!("{} Rock", icons.folder())));
+            assert!(p.contains("Direct Files (1):"));
+            assert!(p.contains("1. Loose.mp3"));
+        } else {
+            panic!("Expected AnsiText preview");
+        }
     }
 
     #[test]
@@ -475,6 +609,7 @@ mod tests {
             selected_indices: &[],
             selections: &[],
         };
+        let icons = Icons::new(crate::config::NerdFontMode::Normal);
 
         // 1. Audio track with duration and quality specs
         let audio_track = indexer::Track {
@@ -489,7 +624,7 @@ mod tests {
             bitrate: Some(920),
             ..Default::default()
         };
-        let audio_item = TrackItem::new(audio_track, "♪");
+        let audio_item = TrackItem::new(audio_track, icons.track());
         assert_eq!(audio_item.text(), "Kendrick Lamar - HUMBLE.");
         if let ItemPreview::AnsiText(preview) = audio_item.preview(dummy_ctx()) {
             assert!(preview.contains("Duration:"));
@@ -510,7 +645,7 @@ mod tests {
             duration: 0,
             ..Default::default()
         };
-        let unknown_item = TrackItem::new(unknown_track, "♪");
+        let unknown_item = TrackItem::new(unknown_track, icons.track());
         assert_eq!(unknown_item.text(), "Artist - Unknown");
         if let ItemPreview::AnsiText(preview) = unknown_item.preview(dummy_ctx()) {
             assert!(!preview.contains("Duration:"));
@@ -529,7 +664,7 @@ mod tests {
             duration: 0,
             ..Default::default()
         };
-        let pl_item = TrackItem::new(playlist_track, "☰");
+        let pl_item = TrackItem::new(playlist_track, icons.playlist());
         assert_eq!(pl_item.text(), "Playlist - Chill");
         if let ItemPreview::AnsiText(preview) = pl_item.preview(dummy_ctx()) {
             assert!(!preview.contains("Duration:"));

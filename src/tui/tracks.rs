@@ -100,7 +100,8 @@ pub fn build_dir_items(
             continue;
         }
 
-        let mut sample_files = Vec::new();
+        let mut direct_files = Vec::new();
+        let mut subfolder_counts: HashMap<String, usize> = HashMap::new();
         let mut total_tracks = 0;
 
         for t in tracks {
@@ -109,12 +110,26 @@ pub fn build_dir_items(
                 || root_canon.as_ref().is_some_and(|c| tp.starts_with(c));
             if matches {
                 total_tracks += 1;
-                if sample_files.len() < 20 {
-                    let file_name = tp
-                        .file_name()
-                        .map(|s| s.to_string_lossy().to_string())
-                        .unwrap_or_else(|| "???".to_string());
-                    sample_files.push(file_name);
+                let rel = tp
+                    .strip_prefix(clean_root)
+                    .ok()
+                    .or_else(|| root_canon.as_ref().and_then(|c| tp.strip_prefix(c).ok()));
+
+                if let Some(r) = rel {
+                    let mut comps = r.components();
+                    let first = comps.next();
+                    let second = comps.next();
+                    if second.is_none() {
+                        if direct_files.len() < 20 {
+                            let file_name = first
+                                .map(|c| c.as_os_str().to_string_lossy().to_string())
+                                .unwrap_or_else(|| "???".to_string());
+                            direct_files.push(file_name);
+                        }
+                    } else if let Some(first_comp) = first {
+                        let sub_name = first_comp.as_os_str().to_string_lossy().to_string();
+                        *subfolder_counts.entry(sub_name).or_insert(0) += 1;
+                    }
                 }
             }
         }
@@ -130,11 +145,16 @@ pub fn build_dir_items(
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_else(|| root_str.clone());
 
+            let mut subfolders: Vec<(String, usize)> = subfolder_counts.into_iter().collect();
+            subfolders.sort_by(|a, b| crate::search::natural_cmp(&a.0, &b.0));
+
             root_items.push(DirItem::new(
                 folder_name,
                 root_str,
                 total_tracks,
-                sample_files,
+                direct_files,
+                subfolders,
+                None,
                 icons.folder(),
                 true,
             ));
@@ -159,10 +179,22 @@ pub fn build_dir_items(
         .into_iter()
         .filter(|(path, _)| !handled_root_paths.contains(path))
         .map(|(path, files)| {
-            let count = files.len();
             let path_obj = std::path::Path::new(&path);
 
-            let rel_name = clean_roots.iter().find_map(|(clean, canon)| {
+            let matching_root = clean_roots.iter().find(|(clean, canon)| {
+                path_obj.starts_with(clean)
+                    || canon.as_ref().is_some_and(|c| path_obj.starts_with(c))
+            });
+
+            let root_info = matching_root.map(|(clean, _)| {
+                let name = clean
+                    .file_name()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| clean.to_string_lossy().to_string());
+                format!("{} ({})", name, clean.display())
+            });
+
+            let rel_name = matching_root.and_then(|(clean, canon)| {
                 if let Ok(rel) = path_obj.strip_prefix(clean) {
                     let s = rel.to_string_lossy().to_string();
                     if !s.is_empty() {
@@ -185,7 +217,33 @@ pub fn build_dir_items(
                     .unwrap_or_else(|| path.clone())
             });
 
-            DirItem::new(name, path, count, files, icons.folder(), false)
+            let mut subfolder_counts: HashMap<String, usize> = HashMap::new();
+            for t in tracks {
+                let tp = std::path::Path::new(&t.path);
+                if let Ok(rel) = tp.strip_prefix(path_obj) {
+                    let mut comps = rel.components();
+                    if let (Some(first), Some(_second)) = (comps.next(), comps.next()) {
+                        let sub_name = first.as_os_str().to_string_lossy().to_string();
+                        *subfolder_counts.entry(sub_name).or_insert(0) += 1;
+                    }
+                }
+            }
+
+            let mut subfolders: Vec<(String, usize)> = subfolder_counts.into_iter().collect();
+            subfolders.sort_by(|a, b| crate::search::natural_cmp(&a.0, &b.0));
+
+            let total_count = files.len() + subfolders.iter().map(|(_, c)| *c).sum::<usize>();
+
+            DirItem::new(
+                name,
+                path,
+                total_count,
+                files,
+                subfolders,
+                root_info,
+                icons.folder(),
+                false,
+            )
         })
         .collect();
 
