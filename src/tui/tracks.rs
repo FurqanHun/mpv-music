@@ -6,7 +6,7 @@ use crate::player;
 use anyhow::{Context, Result};
 use skim::prelude::*;
 use std::borrow::Borrow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub fn run_track_mode<T>(tracks: &[T], cfg: &config::Config, extra_args: &[String]) -> Result<()>
 where
@@ -64,42 +64,120 @@ where
     Ok(())
 }
 
+pub fn build_dir_items(
+    tracks: &[indexer::Track],
+    music_dirs: &[std::path::PathBuf],
+    icons: &Icons,
+) -> Vec<DirItem> {
+    let mut dir_map: HashMap<String, Vec<String>> = HashMap::new();
+
+    for t in tracks {
+        if let Some(parent) = std::path::Path::new(&t.path).parent() {
+            let parent_str = parent.to_string_lossy().to_string();
+            let file_name = std::path::Path::new(&t.path)
+                .file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| "???".to_string());
+
+            dir_map.entry(parent_str).or_default().push(file_name);
+        }
+    }
+
+    let mut root_items = Vec::new();
+    let mut handled_root_paths = HashSet::new();
+
+    for root in music_dirs {
+        let root_path = std::path::Path::new(root);
+        let clean_root = root_path.components().as_path();
+        let root_str = clean_root.to_string_lossy().to_string();
+        let root_canon = root_path.canonicalize().ok();
+
+        if handled_root_paths.contains(&root_str)
+            || root_canon
+                .as_ref()
+                .is_some_and(|c| handled_root_paths.contains(&c.to_string_lossy().to_string()))
+        {
+            continue;
+        }
+
+        let mut sample_files = Vec::new();
+        let mut total_tracks = 0;
+
+        for t in tracks {
+            let tp = std::path::Path::new(&t.path);
+            let matches = tp.starts_with(clean_root)
+                || root_canon.as_ref().is_some_and(|c| tp.starts_with(c));
+            if matches {
+                total_tracks += 1;
+                if sample_files.len() < 20 {
+                    let file_name = tp
+                        .file_name()
+                        .map(|s| s.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "???".to_string());
+                    sample_files.push(file_name);
+                }
+            }
+        }
+
+        if total_tracks > 0 {
+            handled_root_paths.insert(root_str.clone());
+            if let Some(ref canon) = root_canon {
+                handled_root_paths.insert(canon.to_string_lossy().to_string());
+            }
+
+            let folder_name = clean_root
+                .file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| root_str.clone());
+
+            root_items.push(DirItem::new(
+                folder_name,
+                root_str,
+                total_tracks,
+                sample_files,
+                icons.folder(),
+                true,
+            ));
+        }
+    }
+
+    root_items.sort_by(|a, b| crate::search::natural_cmp(&a.dirname, &b.dirname));
+
+    let mut regular_items: Vec<DirItem> = dir_map
+        .into_iter()
+        .filter(|(path, _)| !handled_root_paths.contains(path))
+        .map(|(path, files)| {
+            let count = files.len();
+            let name = std::path::Path::new(&path)
+                .file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| path.clone());
+
+            DirItem::new(name, path, count, files, icons.folder(), false)
+        })
+        .collect();
+
+    regular_items.sort_by(|a, b| {
+        let cmp = crate::search::natural_cmp(&a.dirname, &b.dirname);
+        if cmp == std::cmp::Ordering::Equal {
+            crate::search::natural_cmp(&a.path, &b.path)
+        } else {
+            cmp
+        }
+    });
+
+    let mut skim_items = root_items;
+    skim_items.extend(regular_items);
+    skim_items
+}
+
 pub fn run_dir_mode(
     tracks: &[indexer::Track],
     cfg: &config::Config,
     extra_args: &[String],
 ) -> Result<()> {
-    let mut dir_map: HashMap<String, Vec<String>> = HashMap::new();
-
-    for t in tracks {
-        let parent = std::path::Path::new(&t.path)
-            .parent()
-            .unwrap()
-            .to_string_lossy()
-            .to_string();
-
-        let file_name = std::path::Path::new(&t.path)
-            .file_name()
-            .map(|s| s.to_string_lossy().to_string())
-            .unwrap_or_else(|| "???".to_string());
-
-        dir_map.entry(parent).or_default().push(file_name);
-    }
-
     let icons = Icons::new(cfg.nerd_fonts);
-    let skim_items: Vec<DirItem> = dir_map
-        .into_iter()
-        .map(|(path, files)| {
-            let count = files.len();
-            let name = std::path::Path::new(&path)
-                .file_name()
-                .unwrap()
-                .to_string_lossy()
-                .to_string();
-
-            DirItem::new(name, path, count, files, icons.folder())
-        })
-        .collect();
+    let skim_items = build_dir_items(tracks, &cfg.music_dirs, &icons);
 
     let folder_prompt = icons.prompt(icons.folder(), "Folders");
     let opts = SkimOptionsBuilder::default()
@@ -125,9 +203,11 @@ pub fn run_dir_mode(
     for item in output.selected_items {
         let dir = item.output();
         let dir_path = std::path::Path::new(dir.as_ref());
+        let dir_canon = dir_path.canonicalize().ok();
         let mut dir_tracks = Vec::new();
         for t in tracks {
-            if std::path::Path::new(&t.path).starts_with(dir_path) {
+            let tp = std::path::Path::new(&t.path);
+            if tp.starts_with(dir_path) || dir_canon.as_ref().is_some_and(|c| tp.starts_with(c)) {
                 dir_tracks.push(t.path.clone());
             }
         }
@@ -254,6 +334,7 @@ pub fn run_playlist_mode(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
     fn test_dir_tracks_natural_sorting() {
         let mut tracks = vec![
@@ -340,5 +421,114 @@ mod tests {
                 "/music/Rock/Subdir/01 - Nested.flac",
             ]
         );
+    }
+
+    #[test]
+    fn test_build_dir_items_pinned_roots_and_nested_subfolders() {
+        use std::path::PathBuf;
+
+        let tracks = vec![
+            indexer::Track {
+                path: "/music/musicdd/Ado/Album1/01 - Song.flac".to_string(),
+                ..Default::default()
+            },
+            indexer::Track {
+                path: "/music/musicdd/Ado/Album1/02 - Song.flac".to_string(),
+                ..Default::default()
+            },
+            indexer::Track {
+                path: "/music/musicdd/Ado/Album2/01 - Other.flac".to_string(),
+                ..Default::default()
+            },
+            indexer::Track {
+                path: "/music/OtherRoot/Single.flac".to_string(),
+                ..Default::default()
+            },
+        ];
+
+        let music_dirs = vec![
+            PathBuf::from("/music/musicdd"),
+            PathBuf::from("/music/OtherRoot"),
+        ];
+
+        let icons = Icons::new(crate::config::NerdFontMode::None);
+        let items = build_dir_items(&tracks, &music_dirs, &icons);
+
+        // Pinned roots must be first
+        assert_eq!(items[0].dirname, "[Root] musicdd");
+        assert_eq!(items[0].count, 3);
+        assert!(items[0].is_root);
+        assert_eq!(items[0].text(), "[Root] musicdd (3)");
+
+        assert_eq!(items[1].dirname, "[Root] OtherRoot");
+        assert_eq!(items[1].count, 1);
+        assert!(items[1].is_root);
+        assert_eq!(items[1].text(), "[Root] OtherRoot (1)");
+
+        // Followed by regular subdirectories
+        assert_eq!(items[2].dirname, "Album1");
+        assert_eq!(items[2].count, 2);
+        assert!(!items[2].is_root);
+
+        assert_eq!(items[3].dirname, "Album2");
+        assert_eq!(items[3].count, 1);
+        assert!(!items[3].is_root);
+
+        // OtherRoot directly contained Single.flac, so it should NOT be duplicated as a regular directory
+        assert_eq!(items.len(), 4);
+    }
+
+    #[test]
+    fn test_build_dir_items_empty_roots_omitted() {
+        use std::path::PathBuf;
+
+        let tracks = vec![indexer::Track {
+            path: "/music/Active/01 - Song.flac".to_string(),
+            ..Default::default()
+        }];
+
+        let music_dirs = vec![
+            PathBuf::from("/music/Active"),
+            PathBuf::from("/music/NonExistentOrEmpty"),
+        ];
+
+        let icons = Icons::new(crate::config::NerdFontMode::None);
+        let items = build_dir_items(&tracks, &music_dirs, &icons);
+
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].dirname, "[Root] Active");
+    }
+
+    #[test]
+    fn test_build_dir_items_trailing_slashes_and_duplicates() {
+        use std::path::PathBuf;
+
+        let tracks = vec![
+            indexer::Track {
+                path: "/music/Active/01 - Song.flac".to_string(),
+                ..Default::default()
+            },
+            indexer::Track {
+                path: "/music/Active/Sub/02 - Nested.flac".to_string(),
+                ..Default::default()
+            },
+        ];
+
+        // Has trailing slash and duplicate
+        let music_dirs = vec![
+            PathBuf::from("/music/Active/"),
+            PathBuf::from("/music/Active"),
+        ];
+
+        let icons = Icons::new(crate::config::NerdFontMode::None);
+        let items = build_dir_items(&tracks, &music_dirs, &icons);
+
+        // Exactly one root item and one subfolder
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].dirname, "[Root] Active");
+        assert_eq!(items[0].count, 2);
+        assert!(items[0].is_root);
+        assert_eq!(items[1].dirname, "Sub");
+        assert_eq!(items[1].count, 1);
     }
 }

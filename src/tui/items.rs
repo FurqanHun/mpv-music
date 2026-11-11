@@ -140,6 +140,7 @@ pub struct DirItem {
     pub count: usize,
     pub samples: Vec<String>,
     pub icon: &'static str,
+    pub is_root: bool,
     pub display_text: String,
 }
 
@@ -150,14 +151,25 @@ impl DirItem {
         count: usize,
         samples: Vec<String>,
         icon: &'static str,
+        is_root: bool,
     ) -> Self {
-        let display_text = format!("{} ({})", dirname, count);
+        let display_text = if is_root {
+            format!("[Root] {} ({})", dirname, count)
+        } else {
+            format!("{} ({})", dirname, count)
+        };
+        let formatted_dirname = if is_root {
+            format!("[Root] {}", dirname)
+        } else {
+            dirname
+        };
         Self {
-            dirname,
+            dirname: formatted_dirname,
             path,
             count,
             samples,
             icon,
+            is_root,
             display_text,
         }
     }
@@ -195,9 +207,10 @@ impl SkimItem for DirItem {
             "Sample Contents:"
         };
 
+        let path_label = if self.is_root { "Root:" } else { "Path:" };
         let output = format!(
-            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33mPath:\x1b[0m {}\n  \x1b[1;33mFiles:\x1b[0m {}\n\n  \x1b[1;32m{}\x1b[0m\n{}",
-            self.icon, self.dirname, self.path, self.count, section_header, sample_text
+            "\n  {} \x1b[1;36m{}\x1b[0m\n\n  \x1b[1;33m{}\x1b[0m {}\n  \x1b[1;33mFiles:\x1b[0m {}\n\n  \x1b[1;32m{}\x1b[0m\n{}",
+            self.icon, self.dirname, path_label, self.path, self.count, section_header, sample_text
         );
         ItemPreview::AnsiText(output)
     }
@@ -427,10 +440,27 @@ mod tests {
             15,
             vec![],
             "📁",
+            false,
         );
         let text_cow = item.text();
         assert_eq!(text_cow, "Favorites (15)");
         assert!(matches!(text_cow, Cow::Borrowed(_)));
+    }
+
+    #[test]
+    fn test_dir_item_root_badge() {
+        let item = DirItem::new(
+            "musicdd".to_string(),
+            "/music/musicdd".to_string(),
+            42,
+            vec![],
+            "📁",
+            true,
+        );
+        let text_cow = item.text();
+        assert_eq!(text_cow, "[Root] musicdd (42)");
+        assert_eq!(item.dirname, "[Root] musicdd");
+        assert!(item.is_root);
     }
 
     #[test]
