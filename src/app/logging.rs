@@ -8,6 +8,74 @@ pub fn logs_dir(data_dir: &Path) -> PathBuf {
     data_dir.join("logs")
 }
 
+pub fn default_log_dir() -> Option<PathBuf> {
+    directories::ProjectDirs::from("com", "furqanhun", "mpv-music").map(|dirs| {
+        dirs.state_dir()
+            .unwrap_or_else(|| dirs.data_local_dir())
+            .to_path_buf()
+    })
+}
+
+pub fn migrate_legacy_logs(data_dir: &Path, log_dir: &Path) {
+    if data_dir == log_dir {
+        return;
+    }
+    let legacy_logs = logs_dir(data_dir);
+    let target_logs = logs_dir(log_dir);
+    let legacy_single = data_dir.join("mpv-music.log");
+
+    let mut migrated_any = false;
+
+    if legacy_logs.exists() && legacy_logs.is_dir() {
+        if let Ok(entries) = std::fs::read_dir(&legacy_logs) {
+            for entry in entries.flatten() {
+                let old_path = entry.path();
+                if old_path.is_file() {
+                    let new_path = target_logs.join(entry.file_name());
+                    let _ = std::fs::create_dir_all(&target_logs);
+                    if !new_path.exists() {
+                        if std::fs::rename(&old_path, &new_path).is_ok() {
+                            migrated_any = true;
+                        } else if let Ok(data) = std::fs::read(&old_path)
+                            && std::fs::write(&new_path, data).is_ok()
+                        {
+                            let _ = std::fs::remove_file(&old_path);
+                            migrated_any = true;
+                        }
+                    } else {
+                        let _ = std::fs::remove_file(&old_path);
+                    }
+                }
+            }
+        }
+        let _ = std::fs::remove_dir(&legacy_logs);
+    }
+
+    if legacy_single.exists() && legacy_single.is_file() {
+        let new_single = target_logs.join("mpv-music.log");
+        let _ = std::fs::create_dir_all(&target_logs);
+        if !new_single.exists() {
+            if std::fs::rename(&legacy_single, &new_single).is_ok() {
+                migrated_any = true;
+            } else if let Ok(data) = std::fs::read(&legacy_single)
+                && std::fs::write(&new_single, data).is_ok()
+            {
+                let _ = std::fs::remove_file(&legacy_single);
+                migrated_any = true;
+            }
+        } else {
+            let _ = std::fs::remove_file(&legacy_single);
+        }
+    }
+
+    if migrated_any {
+        crate::ui::info(format!(
+            "Logs migrated: moved session logs to {}",
+            target_logs.display()
+        ));
+    }
+}
+
 pub fn list_log_files(data_dir: &Path) -> Vec<PathBuf> {
     let dir = logs_dir(data_dir);
     let mut files = Vec::new();

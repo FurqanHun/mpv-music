@@ -112,7 +112,8 @@ fn test_user_flow_isolated_dir_management() {
 fn test_user_flow_isolated_log_deletion() {
     let temp = tempfile::tempdir().expect("Failed to create tempdir");
     let fake_data_dir = temp.path().join("data");
-    let logs_dir = fake_data_dir.join("mpv-music").join("logs");
+    let fake_state_dir = temp.path().join("state");
+    let logs_dir = fake_state_dir.join("mpv-music").join("logs");
     fs::create_dir_all(&logs_dir).unwrap();
 
     // Populate fake session logs
@@ -128,6 +129,7 @@ fn test_user_flow_isolated_log_deletion() {
         .arg("--rm-log")
         .arg("1")
         .env("XDG_DATA_HOME", &fake_data_dir)
+        .env("XDG_STATE_HOME", &fake_state_dir)
         .env("HOME", temp.path())
         .output()
         .expect("Failed to run --rm-log 1");
@@ -140,6 +142,7 @@ fn test_user_flow_isolated_log_deletion() {
     let rm_all_output = Command::new(bin_path())
         .arg("--remove-log")
         .env("XDG_DATA_HOME", &fake_data_dir)
+        .env("XDG_STATE_HOME", &fake_state_dir)
         .env("HOME", temp.path())
         .output()
         .expect("Failed to run --remove-log");
@@ -152,6 +155,7 @@ fn test_user_flow_isolated_log_deletion() {
     let rm_empty_output = Command::new(bin_path())
         .arg("--remove-log")
         .env("XDG_DATA_HOME", &fake_data_dir)
+        .env("XDG_STATE_HOME", &fake_state_dir)
         .env("HOME", temp.path())
         .output()
         .expect("Failed to run --remove-log empty");

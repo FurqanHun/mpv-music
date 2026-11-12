@@ -22,7 +22,8 @@ pub fn run(args: Cli) -> Result<()> {
 
     let dirs = ProjectDirs::from("com", "furqanhun", "mpv-music")
         .context("Could not determine system paths")?;
-    let log_dir = dirs.data_dir();
+    let data_dir = dirs.data_dir();
+    let log_dir = dirs.state_dir().unwrap_or_else(|| dirs.data_local_dir());
     let config_dir = dirs.config_dir();
     let config_file = config_dir.join("config.toml");
 
@@ -31,6 +32,8 @@ pub fn run(args: Cli) -> Result<()> {
     } else {
         None
     };
+
+    logging::migrate_legacy_logs(data_dir, log_dir);
 
     // utility flags: handled before logger init to prevent file locks
     if handle_utility_flags(&args, &config_file, log_dir)? {
@@ -41,8 +44,8 @@ pub fn run(args: Cli) -> Result<()> {
 
     let _logger_handle = logging::init(&args, &cfg, log_dir)?;
 
-    cleanup::cleanup_stale_queue_files(log_dir);
-    cleanup::migrate_legacy_yt_cache(log_dir, dirs.cache_dir());
+    cleanup::cleanup_stale_queue_files(data_dir);
+    cleanup::migrate_legacy_yt_cache(data_dir, dirs.cache_dir());
 
     log::info!("Starting MPV-Music...");
     log::debug!("CLI Args: {:?}", args);

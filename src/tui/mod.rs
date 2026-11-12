@@ -152,11 +152,9 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
             }
 
             Some(s) if s.contains("View Log") => {
-                let data_dir = ProjectDirs::from("com", "furqanhun", "mpv-music")
-                    .unwrap()
-                    .data_dir()
-                    .to_path_buf();
-                let logs = crate::app::logging::list_log_files(&data_dir);
+                let log_dir = crate::app::logging::default_log_dir()
+                    .unwrap_or_else(|| std::path::PathBuf::from("."));
+                let logs = crate::app::logging::list_log_files(&log_dir);
 
                 if logs.is_empty() {
                     ui::warning("Log file does not exist.");
@@ -197,11 +195,9 @@ pub fn run_settings_menu(tracks: &mut Vec<indexer::Track>, cfg: &mut config::Con
                 let _ = std::process::Command::new(viewer).arg(target_file).status();
             }
             Some(s) if s.contains("Delete Log") => {
-                let data_dir = ProjectDirs::from("com", "furqanhun", "mpv-music")
-                    .unwrap()
-                    .data_dir()
-                    .to_path_buf();
-                let logs = crate::app::logging::list_log_files(&data_dir);
+                let log_dir = crate::app::logging::default_log_dir()
+                    .unwrap_or_else(|| std::path::PathBuf::from("."));
+                let logs = crate::app::logging::list_log_files(&log_dir);
 
                 if logs.is_empty() {
                     ui::warning("No log file found to delete.");
