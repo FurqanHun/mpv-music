@@ -38,6 +38,7 @@ if (Get-Command mpv-music -ErrorAction SilentlyContinue) {
 
 # Expand environment variables and resolve path
 $InstallDir = [System.Environment]::ExpandEnvironmentVariables($InstallDir)
+$InstallDir = $InstallDir.TrimEnd('\').TrimEnd('/')
 if (-not (Test-Path $InstallDir)) {
     New-Item -ItemType Directory -Path $InstallDir | Out-Null
 }

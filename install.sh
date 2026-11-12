@@ -93,6 +93,7 @@ else
 fi
 
 INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
+[[ "$INSTALL_DIR" != "/" ]] && INSTALL_DIR="${INSTALL_DIR%/}"
 mkdir -p "$INSTALL_DIR"
 
 INSTALLED_BINARY="$INSTALL_DIR/mpv-music"
@@ -227,7 +228,7 @@ fi
 fi
 # --- 6. PATH Verification ---
 case ":$PATH:" in
-    *":$INSTALL_DIR:"*)
+    *":$INSTALL_DIR:"* | *":$INSTALL_DIR/:"*)
         if [[ "$UPDATE_MODE" == "true" ]]; then
             echo -e "\n${GREEN}Update complete!${NC} You are now running the latest version."
         else
