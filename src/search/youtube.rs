@@ -40,7 +40,7 @@ struct CacheEntry {
 
 fn get_cache_path() -> Option<std::path::PathBuf> {
     ProjectDirs::from("com", "furqanhun", "mpv-music")
-        .map(|dirs| dirs.data_dir().join("yt_cache.json"))
+        .map(|dirs| dirs.cache_dir().join("yt_cache.json"))
 }
 
 fn load_cache() -> (HashMap<String, CacheEntry>, bool) {

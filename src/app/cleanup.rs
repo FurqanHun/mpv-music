@@ -80,6 +80,36 @@ pub fn cleanup_stale_queue_files(data_dir: &Path) {
     }
 }
 
+pub fn migrate_legacy_yt_cache(data_dir: &Path, cache_dir: &Path) {
+    let legacy_file = data_dir.join("yt_cache.json");
+    if !legacy_file.exists() {
+        return;
+    }
+
+    let cache_file = cache_dir.join("yt_cache.json");
+    if !cache_file.exists() {
+        if let Some(parent) = cache_file.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        if fs::rename(&legacy_file, &cache_file).is_ok() {
+            crate::ui::info(format!(
+                "Cache migrated: moved YouTube cache to {}",
+                cache_file.display()
+            ));
+        } else if let Ok(data) = fs::read(&legacy_file)
+            && fs::write(&cache_file, data).is_ok()
+        {
+            let _ = fs::remove_file(&legacy_file);
+            crate::ui::info(format!(
+                "Cache migrated: moved YouTube cache to {}",
+                cache_file.display()
+            ));
+        }
+    } else {
+        let _ = fs::remove_file(&legacy_file);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -42,6 +42,7 @@ pub fn run(args: Cli) -> Result<()> {
     let _logger_handle = logging::init(&args, &cfg, log_dir)?;
 
     cleanup::cleanup_stale_queue_files(log_dir);
+    cleanup::migrate_legacy_yt_cache(log_dir, dirs.cache_dir());
 
     log::info!("Starting MPV-Music...");
     log::debug!("CLI Args: {:?}", args);
