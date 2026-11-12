@@ -49,21 +49,28 @@ fn load_cache() -> (HashMap<String, CacheEntry>, bool) {
         None => return (HashMap::new(), false),
     };
 
-    if path.exists()
-        && let Ok(content) = fs::read_to_string(&path)
-        && let Ok(map) = serde_json::from_str::<HashMap<String, CacheEntry>>(&content)
-    {
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-        let initial_len = map.len();
-        let pruned_map: HashMap<String, CacheEntry> = map
-            .into_iter()
-            .filter(|(_, v)| now.saturating_sub(v.timestamp) < 86400)
-            .collect();
-        let was_pruned = initial_len != pruned_map.len();
-        return (pruned_map, was_pruned);
+    if path.exists() {
+        if let Ok(content) = fs::read_to_string(&path)
+            && let Ok(map) = serde_json::from_str::<HashMap<String, CacheEntry>>(&content)
+        {
+            let now = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            let initial_len = map.len();
+            let pruned_map: HashMap<String, CacheEntry> = map
+                .into_iter()
+                .filter(|(_, v)| now.saturating_sub(v.timestamp) < 86400)
+                .collect();
+            let was_pruned = initial_len != pruned_map.len();
+            return (pruned_map, was_pruned);
+        } else {
+            log::warn!(
+                "Corrupted or unreadable YouTube cache detected at {:?}, removing.",
+                path
+            );
+            let _ = fs::remove_file(&path);
+        }
     }
     (HashMap::new(), false)
 }
