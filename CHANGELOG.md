@@ -5,6 +5,8 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 ## [Unreleased](https://github.com/FurqanHun/mpv-music/compare/v0.29.1...HEAD)
 
 ### Features
+- **logging:** store session logs in system state directory (`~/.local/state/mpv-music/logs/`) with startup migration ([`98cb537`](https://github.com/FurqanHun/mpv-music/commit/98cb537))
+- **search:** store YouTube search cache in system cache directory (`~/.cache/mpv-music/`) with startup migration ([`a70f3c9`](https://github.com/FurqanHun/mpv-music/commit/a70f3c9))
 - **tui:** implement adaptive multi-section preview pane for Directory Mode with root headers, subfolder breakdowns, and direct track previews ([`841a5c6`](https://github.com/FurqanHun/mpv-music/commit/841a5c6))
 - **tui:** display Directory Mode items relative to configured root music directories ([`7ac3b44`](https://github.com/FurqanHun/mpv-music/commit/7ac3b44))
 - **tui:** pin configured root music directories with `[Root]` tags at the top of Directory Mode ([`792eb45`](https://github.com/FurqanHun/mpv-music/commit/792eb45))
@@ -45,6 +47,7 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 - **player:** wrap temporary queue playlist file writing in `BufWriter` ([`abc7cd2`](https://github.com/FurqanHun/mpv-music/commit/abc7cd2))
 
 ### Bug Fixes
+- **search:** purge corrupted YouTube cache immediately on load failure ([`49ab354`](https://github.com/FurqanHun/mpv-music/commit/49ab354))
 - **tui:** isolate directory path prefix matching to whole path components and deduplicate nested multi-selection ([`594faee`](https://github.com/FurqanHun/mpv-music/commit/594faee))
 - **search:** add adjacent transposition to bounded edit distance ([`b151b36`](https://github.com/FurqanHun/mpv-music/commit/b151b369165b6ecf72cf01daff1e0aee3ba4c10a))
 - **filter:** route multi-match title filters to track picker and support middle-typo insertions ([`8a70b22`](https://github.com/FurqanHun/mpv-music/commit/8a70b22ba5427d11340150ca27c1973f76da8675))

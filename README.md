@@ -187,9 +187,11 @@ That creates:
 
 - Index: `~/.local/share/mpv-music/music_index.jsonl`
 
-- Logs: `~/.local/share/mpv-music/logs/` (e.g. `session_<timestamp>_<pid>.log`)
+- Cache: `~/.cache/mpv-music/` (e.g. `yt_cache.json`)
 
-The project respects XDG standards and uses the `directories` crate to automatically support proper config/data paths across Linux, Windows, and macOS.
+- Logs: `~/.local/state/mpv-music/logs/` (e.g. `session_<timestamp>_<pid>.log`)
+
+The project respects XDG standards and uses the `directories` crate to automatically support proper config, data, cache, and state paths across Linux, Windows, and macOS.
 
 > [!TIP]
 > **Optional: Clean Terminal Icons (Nerd Fonts)**
@@ -269,7 +271,7 @@ mpv-music [FILTER_FLAGS] [--play-all]
 
 Any mpv flag also works: `--no-video`, `--volume=50`, `--shuffle`, etc.
 
-Session logs are saved to `~/.local/share/mpv-music/logs/` (`session_<timestamp>_<pid>.log`). By default, the most recent 3 sessions are preserved (configurable via `max_log_sessions`). You can disable file logging by setting `enable_file_logging = false` in your config.
+Session logs are saved to `~/.local/state/mpv-music/logs/` (`session_<timestamp>_<pid>.log`). By default, the most recent 3 sessions are preserved (configurable via `max_log_sessions`). You can disable file logging by setting `enable_file_logging = false` in your config.
 
 ### Search & Operators:
 
@@ -439,7 +441,7 @@ mpv_args = []
 | `ytdlp` | String | `"yt-dlp"` | `--ytdlp <BIN>` | Custom `yt-dlp` binary, fork, or path (e.g. `"yt-dlp-nightly"`). |
 | `ytdlp_ejs_remote_github` | Boolean | `false` | — | Enables remote PhantomJS/EJS solver fallback for package manager builds of `yt-dlp`. |
 | `ytdlp_useragent` | String | `"default"` | — | Custom User-Agent header for `yt-dlp` requests (`"default"` uses modern Firefox UA). |
-| `enable_file_logging` | Boolean | `true` | `--log`, `--debug` | Save logs to `~/.local/share/mpv-music/logs/`. When false, logs only output to stderr if `--verbose` or `--debug` is used. |
+| `enable_file_logging` | Boolean | `true` | `--log`, `--debug` | Save logs to `~/.local/state/mpv-music/logs/`. When false, logs only output to stderr if `--verbose` or `--debug` is used. |
 | `max_log_sessions` | Integer | `3` | `--remove-log` | Maximum number of recent session logs to preserve in `logs/` (minimum: 1). Older sessions are pruned on startup. |
 | `filename_pattern` | String | `"default"` | — | Custom pattern for parsing metadata from filenames (`{artist}`, `{title}`, `{album}`, `{track}`) when tags are missing. Falls back to smart heuristics if mismatched. |
 | `audio_exts` | Array of Strings | `["default"]` | `-e`, `--ext <LIST>` | List of recognized audio extensions. Supports `["default"]` with inclusions (`"midi"`) and exclusions (`"!wav"`). |
