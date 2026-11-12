@@ -162,8 +162,81 @@
         <div id="changelog-container">
         <div class="release">
             <div class="meta">
+                <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.30.0-dev.1" target="_blank" class="tag">v0.30.0-dev.1</a>
+                <span class="prerelease">Pre-release</span>
+                <span style="margin-left: auto;">November 12, 2026</span>
+            </div>
+            <div class="body">
+                <h3>Features</h3>
+<ul>
+<li><strong>logging:</strong> store session logs in system state directory (<code>~/.local/state/mpv-music/logs/</code>) with startup migration</li>
+<li><strong>search:</strong> store YouTube search cache in system cache directory (<code>~/.cache/mpv-music/</code>) with startup migration</li>
+<li><strong>tui:</strong> implement adaptive multi-section preview pane for Directory Mode with root headers, subfolder breakdowns, and direct track previews</li>
+<li><strong>tui:</strong> display Directory Mode items relative to configured root music directories</li>
+<li><strong>tui:</strong> pin configured root music directories with <code>[Root]</code> tags at the top of Directory Mode</li>
+<li><strong>filter:</strong> sort album and tag filter tracks naturally in numerical sequence when shuffle is disabled</li>
+<li><strong>search:</strong> implement natural alphanumeric track sorting for folder playback</li>
+<li><strong>tui:</strong> support multi-selection playback in playlist mode</li>
+<li><strong>indexer:</strong> probe track duration, sample rate, and bitrate via lofty properties with TUI preview support</li>
+<li><strong>indexer:</strong> implement atomic index writing with <code>.tmp</code>/<code>.bak</code> staging, crash safety, and automatic startup recovery</li>
+<li><strong>config:</strong> consolidate config migrations, auto-populations, and value clamps into a single unified startup notification</li>
+<li><strong>config:</strong> support dynamic <code>["default"]</code> extension lists with addition and exclusion tokens (<code>!ext</code>, <code>-ext</code>) for <code>audio_exts</code>, <code>video_exts</code>, and <code>playlist_exts</code>, and auto-migrate legacy hardcoded defaults</li>
+<li><strong>indexer:</strong> add configurable <code>filename_pattern</code> supporting <code>{artist}</code>, <code>{title}</code>, <code>{album}</code>, <code>{track}</code> with graceful fallback to default heuristics on mismatch</li>
+<li><strong>indexer:</strong> strip leading track numbers from filenames in default fallback and infer artist/album from parent directory hierarchy</li>
+<li><strong>tui:</strong> add filtered deselect-all (<code>ctrl-d</code>) and global deselect (<code>alt-d</code>) keybindings</li>
+<li><strong>ui:</strong> add progress spinner for ytdlp operations and update check</li>
+<li><strong>player:</strong> add live stream detection, clean titles, and album powerbar</li>
+<li><strong>icons:</strong> update album nerd font icon to vinyl record</li>
+<li><strong>tui:</strong> align interactive search bar with CLI boolean operators</li>
+<li><strong>cli:</strong> add <code>--or</code> flag for multi-flag union filtering and candidate resolution</li>
+<li><strong>filter:</strong> support same-flag OR aliases and per-branch pruning</li>
+<li><strong>search:</strong> scale typo tolerance by length and add bounded edit distance fallback</li>
+<li><strong>search:</strong> support boolean OR and AND operators in unified queries</li>
+<li><strong>tui:</strong> enable native normalization, adaptive typo tolerance, and anchor column display</li>
+<li><strong>search:</strong> support unified multi-field query across title, artist, and album</li>
+<li><strong>filter:</strong> add smart ambiguity resolution in CLI filters</li>
+<li><strong>filter:</strong> remove exact-match hard-shadowing in CLI filters</li>
+<li><strong>search:</strong> handle prepended and appended typo edge cases in search tokens</li>
+<li><strong>search:</strong> add relevance scoring tiers and relevance sorting</li>
+<li><strong>search:</strong> add typo and fuzzy tolerance with skim matcher</li>
+<li><strong>search:</strong> add multi-word and out-of-order token matching</li>
+<li><strong>search:</strong> add noise tolerance helper for parentheticals, brackets, and featured artists</li>
+<li><strong>search:</strong> normalize unicode, accents, apostrophes, and full-width characters</li>
+</ul>
+<h3>Performance Improvements</h3>
+<ul>
+<li><strong>search:</strong> pre-normalize query tokens once outside candidate scoring loops</li>
+<li><strong>tui:</strong> eliminate heap allocations in <code>TagItem</code> and <code>DirItem</code> Skim rendering via cached display strings</li>
+<li><strong>indexer:</strong> reuse line buffer and pre-allocate vector capacity during JSONL index loading</li>
+<li><strong>indexer:</strong> use fast <code>DirEntry::file_type()</code> checks in WalkDir with symlink fallback</li>
+<li><strong>player:</strong> wrap temporary queue playlist file writing in <code>BufWriter</code></li>
+</ul>
+<h3>Bug Fixes</h3>
+<ul>
+<li><strong>search:</strong> purge corrupted YouTube cache immediately on load failure</li>
+<li><strong>tui:</strong> isolate directory path prefix matching to whole path components and deduplicate nested multi-selection</li>
+<li><strong>search:</strong> add adjacent transposition to bounded edit distance</li>
+<li><strong>filter:</strong> route multi-match title filters to track picker and support middle-typo insertions</li>
+</ul>
+<h3>Refactoring &amp; Maintenance</h3>
+<ul>
+<li><strong>chore(config):</strong> bump default yt-dlp user agent to Firefox 160.0</li>
+<li><strong>youtube:</strong> reuse unified duration formatter with hour display support</li>
+<li><strong>docs(cli):</strong> update help screens and operator guides</li>
+<li><strong>docs(readme):</strong> update user guide for unified search, operators, and ui features</li>
+<li><strong>refactor(ytdlp):</strong> demote deno priority and update js runtime recs cause it's shutting down</li>
+<li><strong>refactor(search):</strong> organize search modules into <code>src/search</code> directory</li>
+<li><strong>chore(deps):</strong> update dependencies and bump skim to 5.9.0</li>
+<li><strong>ci(release):</strong> automate Fedora Copr build trigger via webhook</li>
+<li><strong>build(fedora):</strong> add COPR spec file and document Fedora package installation</li>
+</ul>
+            </div>
+        </div>
+        
+        <div class="release">
+            <div class="meta">
                 <a href="https://github.com/FurqanHun/mpv-music/releases/tag/v0.29.1" target="_blank" class="tag">v0.29.1</a>
-                <span class="latest-badge">Latest</span>
+                
                 <span style="margin-left: auto;">October 18, 2026</span>
             </div>
             <div class="body">
