@@ -45,7 +45,15 @@ if (-not (Test-Path $InstallDir)) {
 
 $InstalledBinary = Join-Path $InstallDir "mpv-music.exe"
 
-$ArchPlatform = "x86_64-pc-windows-msvc"
+$Arch = $env:PROCESSOR_ARCHITEW6432
+if (-not $Arch) {
+    $Arch = $env:PROCESSOR_ARCHITECTURE
+}
+if ($Arch -match "ARM64") {
+    $ArchPlatform = "aarch64-pc-windows-msvc"
+} else {
+    $ArchPlatform = "x86_64-pc-windows-msvc"
+}
 
 # --- Fetch Release and Asset ---
 if (-not [string]::IsNullOrWhiteSpace($Tag)) {
