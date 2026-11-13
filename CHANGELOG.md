@@ -12,6 +12,7 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 - **installer:** normalize installation directory by stripping trailing slashes in PATH verification
 
 ### Refactoring & Maintenance
+- **test:** prune synthetic padding tests and consolidate redundant micro-tests
 - **config:** standardize boolean and default keywords and deduplicate serde deserializers
 - **docs:** document unofficial Arch Linux AUR packages with community disclaimer in README and web pages
 

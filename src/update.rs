@@ -205,33 +205,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_version_simple() {
-        assert_eq!(parse_version("1.2.3"), (1, 2, 3));
-        assert_eq!(parse_version("0.24.0"), (0, 24, 0));
-        assert_eq!(parse_version("2.0.1"), (2, 0, 1));
-    }
+    fn test_parse_version() {
+        let test_cases = [
+            ("1.2.3", (1, 2, 3)),
+            ("0.24.0", (0, 24, 0)),
+            ("2.0.1", (2, 0, 1)),
+            ("v1.2.3", (1, 2, 3)),
+            ("v0.25.0", (0, 25, 0)),
+            ("0.25.0-dev.1", (0, 25, 0)),
+            ("0.30.0-dev.1", (0, 30, 0)),
+            ("1.0.0-dev", (1, 0, 0)),
+            ("1.2", (1, 2, 0)),
+            ("5", (5, 0, 0)),
+            ("abc", (0, 0, 0)),
+            ("1.x.3", (1, 0, 3)),
+        ];
 
-    #[test]
-    fn test_parse_version_with_v_prefix() {
-        assert_eq!(parse_version("v1.2.3"), (1, 2, 3));
-        assert_eq!(parse_version("v0.25.0"), (0, 25, 0));
-    }
-
-    #[test]
-    fn test_parse_version_dev() {
-        assert_eq!(parse_version("0.25.0-dev.1"), (0, 25, 0));
-        assert_eq!(parse_version("1.0.0-dev"), (1, 0, 0));
-    }
-
-    #[test]
-    fn test_parse_version_missing_parts() {
-        assert_eq!(parse_version("1.2"), (1, 2, 0));
-        assert_eq!(parse_version("5"), (5, 0, 0));
-    }
-
-    #[test]
-    fn test_parse_version_invalid() {
-        assert_eq!(parse_version("abc"), (0, 0, 0));
-        assert_eq!(parse_version("1.x.3"), (1, 0, 3));
+        for (input, expected) in test_cases {
+            assert_eq!(
+                parse_version(input),
+                expected,
+                "Failed parse_version for input: {}",
+                input
+            );
+        }
     }
 }

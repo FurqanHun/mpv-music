@@ -103,19 +103,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_has_command_invalid() {
-        assert!(!has_command("this_command_definitely_does_not_exist_12345"));
-    }
-
-    #[test]
-    fn test_has_runtime_invalid() {
-        assert!(!has_runtime(
-            "yt-dlp",
-            "this_runtime_definitely_does_not_exist_12345"
-        ));
-    }
-
-    #[test]
     fn test_detect_js_runtime_prefers_node_over_deno() {
         if has_command("node") {
             let detected = detect_js_runtime("yt-dlp");

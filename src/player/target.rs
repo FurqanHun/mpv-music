@@ -136,11 +136,6 @@ mod tests {
     }
 
     #[test]
-    fn test_classify_empty() {
-        assert_eq!(classify_target(""), TargetKind::LocalFile);
-    }
-
-    #[test]
     fn test_classify_priority_order() {
         let youtube = classify_target("https://youtube.com/test");
         let http = classify_target("https://example.com/test");

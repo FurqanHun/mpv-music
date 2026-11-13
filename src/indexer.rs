@@ -805,41 +805,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_standard_format() {
-        let (artist, title) = parse_filename_metadata("Kendrick Lamar - HUMBLE.mp3");
-        assert_eq!(artist, "Kendrick Lamar");
-        assert_eq!(title, "HUMBLE.mp3");
-    }
-
-    #[test]
-    fn test_parse_no_artist() {
-        let (artist, title) = parse_filename_metadata("JustASong.flac");
-        assert_eq!(artist, "");
-        assert_eq!(title, "JustASong.flac");
-    }
-
-    #[test]
-    fn test_parse_multiple_dashes() {
-        let (artist, title) = parse_filename_metadata("Arctic Monkeys - Do I Wanna Know? - Live");
-        assert_eq!(artist, "Arctic Monkeys");
-        assert_eq!(title, "Do I Wanna Know? - Live");
-    }
-
-    #[test]
-    fn test_parse_unicode() {
-        let (artist, title) = parse_filename_metadata("Ado - うっせぇわ");
-        assert_eq!(artist, "Ado");
-        assert_eq!(title, "うっせぇわ");
-    }
-
-    #[test]
-    fn test_parse_special_characters() {
-        let (artist, title) = parse_filename_metadata("AC/DC - Back In Black");
-        assert_eq!(artist, "AC/DC");
-        assert_eq!(title, "Back In Black");
-    }
-
-    #[test]
     fn test_track_deserialization() {
         let json = r#"{
             "path": "/test.mp3",

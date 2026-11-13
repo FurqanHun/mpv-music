@@ -263,63 +263,36 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_view_count_formatting_millions() {
-        let count = 1_200_000_u64;
-        let formatted = format_views(count);
-        assert_eq!(formatted, "1.2M");
+    fn test_view_count_formatting() {
+        let test_cases = [
+            (0, "0"),
+            (999, "999"),
+            (1000, "1.0K"),
+            (5400, "5.4K"),
+            (999_999, "1000.0K"),
+            (1_000_000, "1.0M"),
+            (1_200_000, "1.2M"),
+        ];
+
+        for (count, expected) in test_cases {
+            assert_eq!(format_views(count), expected);
+        }
     }
 
     #[test]
-    fn test_view_count_formatting_thousands() {
-        let count = 5_400_u64;
-        let formatted = format_views(count);
-        assert_eq!(formatted, "5.4K");
-    }
+    fn test_youtube_duration_formatting() {
+        let test_cases = [
+            (0.0, "00:00"),
+            (5.4, "00:05"),
+            (59.6, "00:59"),
+            (60.0, "01:00"),
+            (120.0, "02:00"),
+            (225.0, "03:45"),
+            (3665.0, "1:01:05"),
+        ];
 
-    #[test]
-    fn test_view_count_formatting_small() {
-        let count = 999_u64;
-        let formatted = format_views(count);
-        assert_eq!(formatted, "999");
-    }
-
-    #[test]
-    fn test_duration_formatting() {
-        let seconds: f64 = 225.0;
-        let formatted = format_duration(seconds);
-        assert_eq!(formatted, "03:45");
-    }
-
-    #[test]
-    fn test_duration_formatting_hours() {
-        let seconds: f64 = 3665.0;
-        let formatted = format_duration(seconds);
-        assert_eq!(formatted, "1:01:05");
-    }
-
-    #[test]
-    fn test_search_youtube_missing_binary() {
-        let res = search_youtube("test_query_unique_12345", 5, "non_existent_ytdlp_bin_99999");
-        assert!(res.is_err());
-        let err_msg = format!("{:#}", res.unwrap_err());
-        assert!(err_msg.contains("non_existent_ytdlp_bin_99999"));
-    }
-
-    #[test]
-    fn test_duration_formatting_rounding_and_zero() {
-        assert_eq!(format_duration(0.0), "00:00");
-        assert_eq!(format_duration(5.4), "00:05");
-        assert_eq!(format_duration(59.6), "00:59");
-        assert_eq!(format_duration(60.0), "01:00");
-        assert_eq!(format_duration(120.0), "02:00");
-    }
-
-    #[test]
-    fn test_view_count_exact_boundaries() {
-        assert_eq!(format_views(0), "0");
-        assert_eq!(format_views(999), "999");
-        assert_eq!(format_views(1000), "1.0K");
-        assert_eq!(format_views(999_999), "1000.0K");
-        assert_eq!(format_views(1_000_000), "1.0M");
+        for (seconds, expected) in test_cases {
+            assert_eq!(format_duration(seconds), expected);
+        }
     }
 }

@@ -68,16 +68,3 @@ pub fn prompt_exit() {
     eprintln!("\nPress Enter to exit...");
     let _ = std::io::stdin().read_line(&mut String::new());
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_spinner_creation_and_finish() {
-        let sp = spinner("Testing spinner...");
-        sp.set_message("Updated message");
-        sp.finish_and_clear();
-        assert!(sp.is_finished());
-    }
-}

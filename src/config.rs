@@ -845,29 +845,20 @@ mod tests {
 
     #[test]
     fn test_legacy_mpv_default_args_migration() {
-        let default_cfg = Config::default();
-        let toml_str = toml::to_string_pretty(&default_cfg).unwrap();
+        let temp = tempfile::tempdir().unwrap();
+        let config_file = temp.path().join("legacy_args.toml");
         let legacy_array_str = serde_json::to_string(&LEGACY_MPV_DEFAULT_ARGS).unwrap();
-        let legacy_toml = toml_str.replace(
-            "mpv_args = []",
-            &format!("mpv_default_args = {}", legacy_array_str),
-        );
+        std::fs::write(
+            &config_file,
+            format!("mpv_default_args = {}\n", legacy_array_str),
+        )
+        .unwrap();
 
-        let mut cfg: Config = toml::from_str(&legacy_toml).unwrap();
-        assert_eq!(cfg.mpv_args.len(), LEGACY_MPV_DEFAULT_ARGS.len());
+        let loaded = load(Some(config_file.clone())).unwrap();
+        assert!(loaded.mpv_args.is_empty());
 
-        if legacy_toml.contains("mpv_default_args") {
-            let is_exact = cfg.mpv_args.len() == LEGACY_MPV_DEFAULT_ARGS.len()
-                && cfg
-                    .mpv_args
-                    .iter()
-                    .zip(LEGACY_MPV_DEFAULT_ARGS.iter())
-                    .all(|(a, b)| a == *b);
-            if is_exact {
-                cfg.mpv_args.clear();
-            }
-        }
-        assert!(cfg.mpv_args.is_empty());
+        let on_disk = std::fs::read_to_string(&config_file).unwrap();
+        assert!(on_disk.contains("mpv_args = []"));
     }
 
     #[test]
