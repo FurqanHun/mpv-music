@@ -121,6 +121,69 @@ pub const KNOWN_CONFIG_KEYS: &[&str] = &[
     "filename_pattern",
 ];
 
+#[inline]
+pub fn is_keyword_default(s: &str) -> bool {
+    matches!(s, "default" | "auto")
+}
+
+#[inline]
+pub fn is_keyword_true(s: &str) -> bool {
+    matches!(s, "true" | "yes" | "on" | "1")
+}
+
+#[inline]
+pub fn is_keyword_false(s: &str) -> bool {
+    matches!(s, "false" | "no" | "off" | "none" | "0")
+}
+
+pub fn deserialize_from_str_or_bool<'de, D, T, F>(
+    deserializer: D,
+    bool_mapper: F,
+    expected_desc: &'static str,
+) -> std::result::Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+    F: Fn(bool) -> T,
+{
+    struct StringOrBoolVisitor<T, F> {
+        bool_mapper: F,
+        expected_desc: &'static str,
+        _marker: std::marker::PhantomData<T>,
+    }
+
+    impl<'de, T, F> serde::de::Visitor<'de> for StringOrBoolVisitor<T, F>
+    where
+        T: std::str::FromStr,
+        T::Err: std::fmt::Display,
+        F: Fn(bool) -> T,
+    {
+        type Value = T;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str(self.expected_desc)
+        }
+
+        fn visit_bool<E>(self, value: bool) -> std::result::Result<T, E> {
+            Ok((self.bool_mapper)(value))
+        }
+
+        fn visit_str<E>(self, value: &str) -> std::result::Result<T, E>
+        where
+            E: serde::de::Error,
+        {
+            value.parse().map_err(E::custom)
+        }
+    }
+
+    deserializer.deserialize_any(StringOrBoolVisitor {
+        bool_mapper,
+        expected_desc,
+        _marker: std::marker::PhantomData,
+    })
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum NerdFontMode {
@@ -130,47 +193,53 @@ pub enum NerdFontMode {
     Normal,
 }
 
-fn deserialize_nerd_fonts<'de, D>(deserializer: D) -> std::result::Result<NerdFontMode, D::Error>
+impl std::fmt::Display for NerdFontMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => write!(f, "none"),
+            Self::Mono => write!(f, "mono"),
+            Self::Normal => write!(f, "normal"),
+        }
+    }
+}
+
+impl std::str::FromStr for NerdFontMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let s_lower = s.trim().to_lowercase();
+        if is_keyword_false(&s_lower) || is_keyword_default(&s_lower) {
+            Ok(Self::None)
+        } else if is_keyword_true(&s_lower) || s_lower == "mono" {
+            Ok(Self::Mono)
+        } else if matches!(s_lower.as_str(), "normal" | "symbols" | "prop" | "propo") {
+            Ok(Self::Normal)
+        } else {
+            Err(format!(
+                "Invalid nerd_fonts value '{}'. Valid options are: \"none\", \"mono\", \"normal\"",
+                s
+            ))
+        }
+    }
+}
+
+pub fn deserialize_nerd_fonts<'de, D>(
+    deserializer: D,
+) -> std::result::Result<NerdFontMode, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    struct NerdFontVisitor;
-
-    impl<'de> serde::de::Visitor<'de> for NerdFontVisitor {
-        type Value = NerdFontMode;
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("a boolean or string (\"none\", \"mono\", \"normal\", \"symbols\")")
-        }
-
-        fn visit_bool<E>(self, value: bool) -> std::result::Result<NerdFontMode, E>
-        where
-            E: serde::de::Error,
-        {
-            Ok(if value {
+    deserialize_from_str_or_bool(
+        deserializer,
+        |b| {
+            if b {
                 NerdFontMode::Mono
             } else {
                 NerdFontMode::None
-            })
-        }
-
-        fn visit_str<E>(self, value: &str) -> std::result::Result<NerdFontMode, E>
-        where
-            E: serde::de::Error,
-        {
-            match value.to_lowercase().as_str() {
-                "none" | "off" | "false" | "no" => Ok(NerdFontMode::None),
-                "mono" | "true" | "yes" | "on" => Ok(NerdFontMode::Mono),
-                "normal" | "symbols" | "prop" | "propo" => Ok(NerdFontMode::Normal),
-                other => Err(E::custom(format!(
-                    "Invalid nerd_fonts value '{}'. Valid options are: \"none\", \"mono\", \"normal\"",
-                    other
-                ))),
             }
-        }
-    }
-
-    deserializer.deserialize_any(NerdFontVisitor)
+        },
+        "a boolean or string (\"none\", \"mono\", \"normal\", \"symbols\")",
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -196,14 +265,17 @@ impl std::str::FromStr for GaplessMode {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         let s_lower = s.trim().to_lowercase();
-        match s_lower.as_str() {
-            "default" | "weak" => Ok(Self::Default),
-            "true" | "yes" | "on" => Ok(Self::True),
-            "false" | "no" | "off" => Ok(Self::False),
-            other => Err(format!(
+        if is_keyword_default(&s_lower) || s_lower == "weak" {
+            Ok(Self::Default)
+        } else if is_keyword_true(&s_lower) {
+            Ok(Self::True)
+        } else if is_keyword_false(&s_lower) {
+            Ok(Self::False)
+        } else {
+            Err(format!(
                 "Invalid gapless value '{}'. Valid options: 'default', 'true', 'false'.",
-                other
-            )),
+                s
+            ))
         }
     }
 }
@@ -225,36 +297,17 @@ pub fn deserialize_gapless<'de, D>(deserializer: D) -> std::result::Result<Gaple
 where
     D: serde::Deserializer<'de>,
 {
-    struct GaplessVisitor;
-
-    impl<'de> serde::de::Visitor<'de> for GaplessVisitor {
-        type Value = GaplessMode;
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter
-                .write_str("a boolean (true/false) or string (\"default\", \"true\", \"false\")")
-        }
-
-        fn visit_bool<E>(self, value: bool) -> std::result::Result<GaplessMode, E>
-        where
-            E: serde::de::Error,
-        {
-            Ok(if value {
+    deserialize_from_str_or_bool(
+        deserializer,
+        |b| {
+            if b {
                 GaplessMode::True
             } else {
                 GaplessMode::False
-            })
-        }
-
-        fn visit_str<E>(self, value: &str) -> std::result::Result<GaplessMode, E>
-        where
-            E: serde::de::Error,
-        {
-            value.parse().map_err(E::custom)
-        }
-    }
-
-    deserializer.deserialize_any(GaplessVisitor)
+            }
+        },
+        "a boolean (true/false) or string (\"default\", \"true\", \"false\")",
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -282,15 +335,19 @@ impl std::str::FromStr for ReplayGainMode {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         let s_lower = s.trim().to_lowercase();
-        match s_lower.as_str() {
-            "default" | "auto" => Ok(Self::Default),
-            "album" => Ok(Self::Album),
-            "track" => Ok(Self::Track),
-            "no" | "false" | "off" | "none" => Ok(Self::No),
-            other => Err(format!(
+        if is_keyword_default(&s_lower) || is_keyword_true(&s_lower) {
+            Ok(Self::Default)
+        } else if s_lower == "album" {
+            Ok(Self::Album)
+        } else if s_lower == "track" {
+            Ok(Self::Track)
+        } else if is_keyword_false(&s_lower) {
+            Ok(Self::No)
+        } else {
+            Err(format!(
                 "Invalid replaygain value '{}'. Valid options: 'default', 'auto', 'album', 'track', 'no'.",
-                other
-            )),
+                s
+            ))
         }
     }
 }
@@ -315,37 +372,17 @@ pub fn deserialize_replaygain<'de, D>(
 where
     D: serde::Deserializer<'de>,
 {
-    struct ReplayGainVisitor;
-
-    impl<'de> serde::de::Visitor<'de> for ReplayGainVisitor {
-        type Value = ReplayGainMode;
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str(
-                "a boolean (true/false) or string (\"default\", \"auto\", \"album\", \"track\", \"no\")",
-            )
-        }
-
-        fn visit_bool<E>(self, value: bool) -> std::result::Result<ReplayGainMode, E>
-        where
-            E: serde::de::Error,
-        {
-            Ok(if value {
+    deserialize_from_str_or_bool(
+        deserializer,
+        |b| {
+            if b {
                 ReplayGainMode::Default
             } else {
                 ReplayGainMode::No
-            })
-        }
-
-        fn visit_str<E>(self, value: &str) -> std::result::Result<ReplayGainMode, E>
-        where
-            E: serde::de::Error,
-        {
-            value.parse().map_err(E::custom)
-        }
-    }
-
-    deserializer.deserialize_any(ReplayGainVisitor)
+            }
+        },
+        "a boolean (true/false) or string (\"default\", \"auto\", \"album\", \"track\", \"no\")",
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -373,20 +410,19 @@ impl std::str::FromStr for LoopMode {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         let s_lower = s.trim().to_lowercase();
-        match s_lower.as_str() {
-            "inf" | "playlist" => Ok(Self::Inf),
-            "track" | "file" => Ok(Self::Track),
-            "no" | "off" | "false" => Ok(Self::No),
-            other => {
-                if let Ok(n) = other.parse::<u32>() {
-                    Ok(Self::Count(n))
-                } else {
-                    Err(format!(
-                        "Invalid loop_mode '{}'. Valid options: 'inf', 'track', 'no', or a number.",
-                        other
-                    ))
-                }
-            }
+        if is_keyword_false(&s_lower) {
+            Ok(Self::No)
+        } else if matches!(s_lower.as_str(), "inf" | "playlist" | "all") {
+            Ok(Self::Inf)
+        } else if matches!(s_lower.as_str(), "track" | "file" | "one" | "repeat") {
+            Ok(Self::Track)
+        } else if let Ok(n) = s_lower.parse::<u32>() {
+            Ok(Self::Count(n))
+        } else {
+            Err(format!(
+                "Invalid loop_mode '{}'. Valid options: 'inf', 'track', 'no', or a number.",
+                s
+            ))
         }
     }
 }
@@ -410,7 +446,11 @@ where
         type Value = LoopMode;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("a loop mode string ('inf', 'track', 'no') or a count")
+            formatter.write_str("a boolean, a loop mode string ('inf', 'track', 'no'), or a count")
+        }
+
+        fn visit_bool<E>(self, value: bool) -> std::result::Result<LoopMode, E> {
+            Ok(if value { LoopMode::Inf } else { LoopMode::No })
         }
 
         fn visit_str<E>(self, value: &str) -> std::result::Result<LoopMode, E>
@@ -960,6 +1000,42 @@ mod tests {
             GaplessMode::Default
         );
         assert_eq!(
+            toml::from_str::<TestGapless>("gapless = \"auto\"")
+                .unwrap()
+                .gapless,
+            GaplessMode::Default
+        );
+        assert_eq!(
+            toml::from_str::<TestGapless>("gapless = \"yes\"")
+                .unwrap()
+                .gapless,
+            GaplessMode::True
+        );
+        assert_eq!(
+            toml::from_str::<TestGapless>("gapless = \"on\"")
+                .unwrap()
+                .gapless,
+            GaplessMode::True
+        );
+        assert_eq!(
+            toml::from_str::<TestGapless>("gapless = \"no\"")
+                .unwrap()
+                .gapless,
+            GaplessMode::False
+        );
+        assert_eq!(
+            toml::from_str::<TestGapless>("gapless = \"off\"")
+                .unwrap()
+                .gapless,
+            GaplessMode::False
+        );
+        assert_eq!(
+            toml::from_str::<TestGapless>("gapless = \"none\"")
+                .unwrap()
+                .gapless,
+            GaplessMode::False
+        );
+        assert_eq!(
             toml::from_str::<TestGapless>("gapless = true")
                 .unwrap()
                 .gapless,
@@ -1075,6 +1151,64 @@ mod tests {
             })
             .unwrap()
             .contains("replaygain = \"no\"")
+        );
+    }
+
+    #[test]
+    fn test_nerd_font_mode_serde() {
+        #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        struct TestNerdFont {
+            #[serde(default, deserialize_with = "deserialize_nerd_fonts")]
+            nerd_fonts: NerdFontMode,
+        }
+
+        assert_eq!(
+            toml::from_str::<TestNerdFont>("nerd_fonts = \"none\"")
+                .unwrap()
+                .nerd_fonts,
+            NerdFontMode::None
+        );
+        assert_eq!(
+            toml::from_str::<TestNerdFont>("nerd_fonts = \"default\"")
+                .unwrap()
+                .nerd_fonts,
+            NerdFontMode::None
+        );
+        assert_eq!(
+            toml::from_str::<TestNerdFont>("nerd_fonts = \"auto\"")
+                .unwrap()
+                .nerd_fonts,
+            NerdFontMode::None
+        );
+        assert_eq!(
+            toml::from_str::<TestNerdFont>("nerd_fonts = \"mono\"")
+                .unwrap()
+                .nerd_fonts,
+            NerdFontMode::Mono
+        );
+        assert_eq!(
+            toml::from_str::<TestNerdFont>("nerd_fonts = true")
+                .unwrap()
+                .nerd_fonts,
+            NerdFontMode::Mono
+        );
+        assert_eq!(
+            toml::from_str::<TestNerdFont>("nerd_fonts = false")
+                .unwrap()
+                .nerd_fonts,
+            NerdFontMode::None
+        );
+        assert_eq!(
+            toml::from_str::<TestNerdFont>("nerd_fonts = \"normal\"")
+                .unwrap()
+                .nerd_fonts,
+            NerdFontMode::Normal
+        );
+        assert_eq!(
+            toml::from_str::<TestNerdFont>("nerd_fonts = \"symbols\"")
+                .unwrap()
+                .nerd_fonts,
+            NerdFontMode::Normal
         );
     }
 
