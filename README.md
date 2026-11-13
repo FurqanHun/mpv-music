@@ -172,6 +172,19 @@ cargo build --release
 # Binary will be at target/release/mpv-music
 ```
 
+### Arch Linux (AUR - Community Maintained)
+
+> [!NOTE]
+> The AUR packages are maintained by the community ([`@mdrv`](https://aur.archlinux.org/account/mdrv)), not by me. While functional, they are not officially supported and new releases may lag behind upstream. For the latest features and official updates, [crates.io (`cargo`)](#from-cratesio-recommended), [pre-built binaries](#pre-built-binaries-recommended), or the [installer script](#pre-built-binaries-recommended) is recommended.
+
+```bash
+# Pre-compiled static binary
+yay -S mpv-music-bin
+
+# Or compile from source
+yay -S mpv-music
+```
+
 ### First run (setup):
 ```bash
 mpv-music
