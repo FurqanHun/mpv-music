@@ -160,6 +160,17 @@ pub struct Cli {
     pub no_gapless: bool,
 
     #[arg(
+        long,
+        num_args = 0..=1,
+        default_missing_value = "default",
+        help = "Set ReplayGain mode ('default', 'auto', 'album', 'track', 'no')"
+    )]
+    pub replaygain: Option<String>,
+
+    #[arg(long, help = "Disable ReplayGain volume normalization")]
+    pub no_replaygain: bool,
+
+    #[arg(
         short = 'e',
         long,
         value_name = "EXT1,EXT2",

@@ -101,6 +101,7 @@ pub const KNOWN_CONFIG_KEYS: &[&str] = &[
     "loop_mode",
     "volume",
     "gapless",
+    "replaygain",
     "music_dirs",
     "video_ok",
     "watch",
@@ -257,6 +258,97 @@ where
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ReplayGainMode {
+    #[default]
+    Default,
+    Album,
+    Track,
+    No,
+}
+
+impl std::fmt::Display for ReplayGainMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Default => write!(f, "default"),
+            Self::Album => write!(f, "album"),
+            Self::Track => write!(f, "track"),
+            Self::No => write!(f, "no"),
+        }
+    }
+}
+
+impl std::str::FromStr for ReplayGainMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let s_lower = s.trim().to_lowercase();
+        match s_lower.as_str() {
+            "default" | "auto" => Ok(Self::Default),
+            "album" => Ok(Self::Album),
+            "track" => Ok(Self::Track),
+            "no" | "false" | "off" | "none" => Ok(Self::No),
+            other => Err(format!(
+                "Invalid replaygain value '{}'. Valid options: 'default', 'auto', 'album', 'track', 'no'.",
+                other
+            )),
+        }
+    }
+}
+
+impl serde::Serialize for ReplayGainMode {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::Default => serializer.serialize_str("default"),
+            Self::Album => serializer.serialize_str("album"),
+            Self::Track => serializer.serialize_str("track"),
+            Self::No => serializer.serialize_str("no"),
+        }
+    }
+}
+
+pub fn deserialize_replaygain<'de, D>(
+    deserializer: D,
+) -> std::result::Result<ReplayGainMode, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct ReplayGainVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for ReplayGainVisitor {
+        type Value = ReplayGainMode;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str(
+                "a boolean (true/false) or string (\"default\", \"auto\", \"album\", \"track\", \"no\")",
+            )
+        }
+
+        fn visit_bool<E>(self, value: bool) -> std::result::Result<ReplayGainMode, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(if value {
+                ReplayGainMode::Default
+            } else {
+                ReplayGainMode::No
+            })
+        }
+
+        fn visit_str<E>(self, value: &str) -> std::result::Result<ReplayGainMode, E>
+        where
+            E: serde::de::Error,
+        {
+            value.parse().map_err(E::custom)
+        }
+    }
+
+    deserializer.deserialize_any(ReplayGainVisitor)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LoopMode {
     #[default]
     Inf,
@@ -368,6 +460,8 @@ pub struct Config {
     pub volume: u8,
     #[serde(default, deserialize_with = "deserialize_gapless")]
     pub gapless: GaplessMode,
+    #[serde(default, deserialize_with = "deserialize_replaygain")]
+    pub replaygain: ReplayGainMode,
 
     pub music_dirs: Vec<PathBuf>,
     pub video_ok: bool,
@@ -433,6 +527,7 @@ impl Default for Config {
             loop_mode: LoopMode::Inf,
             volume: 100,
             gapless: GaplessMode::Default,
+            replaygain: ReplayGainMode::Default,
             music_dirs,
             video_ok: false,
             watch: false,
@@ -792,6 +887,7 @@ mod tests {
             loop_mode: LoopMode::Count(7),
             volume: 125,
             gapless: GaplessMode::True,
+            replaygain: ReplayGainMode::Album,
             music_dirs: vec![PathBuf::from("/test/music1"), PathBuf::from("/test/music2")],
             video_ok: true,
             watch: true,
@@ -829,6 +925,7 @@ mod tests {
         assert!(loaded.serial_mode);
         assert_eq!(loaded.nerd_fonts, NerdFontMode::Mono);
         assert_eq!(loaded.gapless, GaplessMode::True);
+        assert_eq!(loaded.replaygain, ReplayGainMode::Album);
         assert_eq!(loaded.filename_pattern, "{artist} - {title}");
         assert!(loaded.ytdlp_ejs_remote_github);
         assert_eq!(loaded.ytdlp_useragent, "CustomAgent/1.0");
@@ -896,6 +993,88 @@ mod tests {
             })
             .unwrap()
             .contains("gapless = false")
+        );
+    }
+
+    #[test]
+    fn test_replaygain_mode_serde() {
+        #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        struct TestReplayGain {
+            #[serde(default, deserialize_with = "deserialize_replaygain")]
+            replaygain: ReplayGainMode,
+        }
+
+        assert_eq!(
+            toml::from_str::<TestReplayGain>("replaygain = \"default\"")
+                .unwrap()
+                .replaygain,
+            ReplayGainMode::Default
+        );
+        assert_eq!(
+            toml::from_str::<TestReplayGain>("replaygain = \"auto\"")
+                .unwrap()
+                .replaygain,
+            ReplayGainMode::Default
+        );
+        assert_eq!(
+            toml::from_str::<TestReplayGain>("replaygain = \"album\"")
+                .unwrap()
+                .replaygain,
+            ReplayGainMode::Album
+        );
+        assert_eq!(
+            toml::from_str::<TestReplayGain>("replaygain = \"track\"")
+                .unwrap()
+                .replaygain,
+            ReplayGainMode::Track
+        );
+        assert_eq!(
+            toml::from_str::<TestReplayGain>("replaygain = \"no\"")
+                .unwrap()
+                .replaygain,
+            ReplayGainMode::No
+        );
+        assert_eq!(
+            toml::from_str::<TestReplayGain>("replaygain = true")
+                .unwrap()
+                .replaygain,
+            ReplayGainMode::Default
+        );
+        assert_eq!(
+            toml::from_str::<TestReplayGain>("replaygain = false")
+                .unwrap()
+                .replaygain,
+            ReplayGainMode::No
+        );
+        assert!(toml::from_str::<TestReplayGain>("replaygain = \"invalid\"").is_err());
+
+        assert!(
+            toml::to_string(&TestReplayGain {
+                replaygain: ReplayGainMode::Default
+            })
+            .unwrap()
+            .contains("replaygain = \"default\"")
+        );
+        assert!(
+            toml::to_string(&TestReplayGain {
+                replaygain: ReplayGainMode::Album
+            })
+            .unwrap()
+            .contains("replaygain = \"album\"")
+        );
+        assert!(
+            toml::to_string(&TestReplayGain {
+                replaygain: ReplayGainMode::Track
+            })
+            .unwrap()
+            .contains("replaygain = \"track\"")
+        );
+        assert!(
+            toml::to_string(&TestReplayGain {
+                replaygain: ReplayGainMode::No
+            })
+            .unwrap()
+            .contains("replaygain = \"no\"")
         );
     }
 

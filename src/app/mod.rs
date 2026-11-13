@@ -136,7 +136,17 @@ pub fn run(args: Cli) -> Result<()> {
     if args.play_all {
         let mut paths: Vec<String> = tracks.iter().map(|t| t.path.clone()).collect();
         paths.sort_by(|a, b| crate::search::natural_cmp(a, b));
-        player::play_files(&paths, &cfg, extra_mpv_args)?;
+        let context = if args
+            .target
+            .as_ref()
+            .map(|t| std::path::Path::new(t).is_dir())
+            .unwrap_or(false)
+        {
+            player::PlaybackContext::Directory
+        } else {
+            player::PlaybackContext::Track
+        };
+        player::play_files_with_context(&paths, &cfg, extra_mpv_args, context)?;
     } else if let Some(maybe_val) = args.playlist {
         if let Some(playlist_name) = maybe_val {
             let name_lower = playlist_name.to_lowercase();

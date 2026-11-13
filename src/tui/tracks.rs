@@ -311,7 +311,7 @@ pub fn run_dir_mode(
     if files.is_empty() {
         return Ok(());
     }
-    player::play_files(&files, cfg, extra_args)
+    player::play_files_with_context(&files, cfg, extra_args, player::PlaybackContext::Directory)
 }
 
 pub fn run_playlist_mode(
@@ -415,9 +415,19 @@ pub fn run_playlist_mode(
         .collect();
 
     if paths.len() == 1 {
-        player::play(&paths[0], cfg, extra_args)?;
+        player::play_with_context(
+            &paths[0],
+            cfg,
+            extra_args,
+            player::PlaybackContext::Playlist,
+        )?;
     } else if !paths.is_empty() {
-        player::play_files(&paths, cfg, extra_args)?;
+        player::play_files_with_context(
+            &paths,
+            cfg,
+            extra_args,
+            player::PlaybackContext::Playlist,
+        )?;
     }
     Ok(())
 }

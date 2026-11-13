@@ -229,11 +229,16 @@ pub fn handle_cli_filters(
     }
 
     ui::info(format!("Found {} matching tracks.", filtered.len()));
+    let context = if active_filter_field(args) == Some(TagField::Album) {
+        player::PlaybackContext::Album
+    } else {
+        player::PlaybackContext::Track
+    };
     if args.play_all {
         let paths: Vec<String> = filtered.iter().map(|t| t.path.clone()).collect();
-        player::play_files(&paths, cfg, extra_mpv_args)?;
+        player::play_files_with_context(&paths, cfg, extra_mpv_args, context)?;
     } else {
-        tui::run_post_filter_action(&filtered, cfg, extra_mpv_args)?;
+        tui::run_post_filter_action(&filtered, cfg, extra_mpv_args, context)?;
     }
 
     Ok(())

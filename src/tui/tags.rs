@@ -144,7 +144,13 @@ pub fn run_tag_picker(
     let mut sorted_filtered = filtered;
     sorted_filtered.sort_by(|a, b| crate::search::natural_cmp(&a.path, &b.path));
 
-    run_post_filter_action(&sorted_filtered, cfg, extra_args)?;
+    let context = if key == "album" {
+        player::PlaybackContext::Album
+    } else {
+        player::PlaybackContext::Track
+    };
+
+    run_post_filter_action(&sorted_filtered, cfg, extra_args, context)?;
 
     Ok(true)
 }
@@ -153,6 +159,7 @@ pub fn run_post_filter_action<T>(
     tracks: &[T],
     cfg: &config::Config,
     extra_args: &[String],
+    context: player::PlaybackContext,
 ) -> Result<()>
 where
     T: Borrow<indexer::Track>,
@@ -163,7 +170,7 @@ where
 
     if tracks.len() == 1 {
         let t = tracks[0].borrow();
-        player::play(&t.path, cfg, extra_args)?;
+        player::play_with_context(&t.path, cfg, extra_args, context)?;
         return Ok(());
     }
 
@@ -175,7 +182,9 @@ where
     ];
     let pick = run_skim_simple(opts.iter().map(|s| s.as_str()).collect(), "What's next? ");
     match pick.as_deref() {
-        Some(s) if s.starts_with("1)") => player::play_files(&paths, cfg, extra_args),
+        Some(s) if s.starts_with("1)") => {
+            player::play_files_with_context(&paths, cfg, extra_args, context)
+        }
         Some(s) if s.starts_with("2)") => run_track_mode(tracks, cfg, extra_args),
         _ => Ok(()),
     }

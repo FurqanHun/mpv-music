@@ -12,7 +12,7 @@ use directories::ProjectDirs;
 
 use crate::config::Config;
 
-pub use builder::MpvCommandBuilder;
+pub use builder::{MpvCommandBuilder, PlaybackContext};
 pub use target::{classify_target, find_representative_target, resolve_target_optimization};
 pub use ytdlp::check_ytdlp_status;
 
@@ -47,6 +47,15 @@ impl Drop for IpcCleaner {
 }
 
 pub fn play(target: &str, config: &Config, extra_args: &[String]) -> Result<()> {
+    play_with_context(target, config, extra_args, PlaybackContext::Track)
+}
+
+pub fn play_with_context(
+    target: &str,
+    config: &Config,
+    extra_args: &[String],
+    context: PlaybackContext,
+) -> Result<()> {
     log::info!("Preparing playback for target: {}", target);
 
     let opt_target = resolve_target_optimization(target, config);
@@ -54,6 +63,7 @@ pub fn play(target: &str, config: &Config, extra_args: &[String]) -> Result<()> 
         .target(target)
         .optimization_target(opt_target.clone())
         .extra_args(extra_args)
+        .playback_context(context)
         .with_radio_sync();
 
     let socket_to_clean = builder.ipc_socket().map(|s| s.to_string());
@@ -97,6 +107,15 @@ pub fn play(target: &str, config: &Config, extra_args: &[String]) -> Result<()> 
 }
 
 pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> Result<()> {
+    play_files_with_context(paths, config, extra_args, PlaybackContext::Track)
+}
+
+pub fn play_files_with_context(
+    paths: &[String],
+    config: &Config,
+    extra_args: &[String],
+    context: PlaybackContext,
+) -> Result<()> {
     if paths.is_empty() {
         log::debug!("play_files called with empty path list, skipping");
         return Ok(());
@@ -129,7 +148,8 @@ pub fn play_files(paths: &[String], config: &Config, extra_args: &[String]) -> R
 
     let mut builder = MpvCommandBuilder::new(config)
         .playlist(queue_path_str)
-        .extra_args(extra_args);
+        .extra_args(extra_args)
+        .playback_context(context);
 
     if let Some(target) = best_target {
         log::debug!("Configuring mpv based on representative track: {}", target);

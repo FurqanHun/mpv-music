@@ -1,4 +1,4 @@
-use crate::config::{Config, GaplessMode, LoopMode, NerdFontMode};
+use crate::config::{Config, GaplessMode, LoopMode, NerdFontMode, ReplayGainMode};
 use crate::tui::Icons;
 use std::process::Command;
 
@@ -7,6 +7,21 @@ use super::radio::{
 };
 use super::target::classify_target;
 use super::ytdlp::detect_js_runtime;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PlaybackContext {
+    #[default]
+    Track,
+    Album,
+    Directory,
+    Playlist,
+}
+
+impl PlaybackContext {
+    pub fn is_album_or_dir(&self) -> bool {
+        matches!(self, Self::Album | Self::Directory)
+    }
+}
 
 pub const DEFAULT_BANNER_TEXT: &str = " ╔══  MPV-MUSIC  ══╗";
 
@@ -38,6 +53,7 @@ pub struct MpvCommandBuilder<'a> {
     playlist_path: Option<String>,
     optimization_target: Option<String>,
     ipc_socket: Option<String>,
+    playback_context: PlaybackContext,
 }
 
 impl<'a> MpvCommandBuilder<'a> {
@@ -49,7 +65,13 @@ impl<'a> MpvCommandBuilder<'a> {
             playlist_path: None,
             optimization_target: None,
             ipc_socket: None,
+            playback_context: PlaybackContext::default(),
         }
+    }
+
+    pub fn playback_context(mut self, context: PlaybackContext) -> Self {
+        self.playback_context = context;
+        self
     }
 
     pub fn target(mut self, target: &'a str) -> Self {
@@ -89,7 +111,12 @@ impl<'a> MpvCommandBuilder<'a> {
         let cmd_name = self.config.player_bin();
         let mut cmd = Command::new(cmd_name);
 
-        apply_common_args(&mut cmd, self.config, self.extra_args);
+        apply_common_args(
+            &mut cmd,
+            self.config,
+            self.extra_args,
+            self.playback_context,
+        );
 
         let opt_target = self.optimization_target.as_deref().or(self.target);
         if let Some(opt) = opt_target {
@@ -112,7 +139,12 @@ impl<'a> MpvCommandBuilder<'a> {
     }
 }
 
-pub fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[String]) {
+pub fn apply_common_args(
+    cmd: &mut Command,
+    config: &Config,
+    extra_args: &[String],
+    context: PlaybackContext,
+) {
     log::debug!("Applying common MPV arguments from config");
 
     if config.watch {
@@ -224,10 +256,50 @@ pub fn apply_common_args(cmd: &mut Command, config: &Config, extra_args: &[Strin
         }
     }
 
+    apply_replaygain_args(cmd, config, context);
+
     if !extra_args.is_empty() {
         log::debug!("Injecting manual CLI overrides: {:?}", extra_args);
         for arg in extra_args {
             cmd.arg(arg);
+        }
+    }
+}
+
+pub fn apply_replaygain_args(cmd: &mut Command, config: &Config, context: PlaybackContext) {
+    let has_custom_rg = config
+        .mpv_args
+        .iter()
+        .any(|a| a.starts_with("--replaygain"));
+
+    if has_custom_rg {
+        log::debug!("Custom replaygain found in mpv_args, skipping automatic configuration");
+        return;
+    }
+
+    let effective_mode = match config.replaygain {
+        ReplayGainMode::No => "no",
+        ReplayGainMode::Album => "album",
+        ReplayGainMode::Track => "track",
+        ReplayGainMode::Default => {
+            if !config.shuffle && context.is_album_or_dir() {
+                "album"
+            } else {
+                "track"
+            }
+        }
+    };
+
+    log::debug!("Setting replaygain mode: {}", effective_mode);
+    cmd.arg(format!("--replaygain={}", effective_mode));
+
+    if effective_mode != "no" {
+        let has_custom_clip = config
+            .mpv_args
+            .iter()
+            .any(|a| a.starts_with("--replaygain-clip"));
+        if !has_custom_clip {
+            cmd.arg("--replaygain-clip=no");
         }
     }
 }
@@ -387,7 +459,7 @@ mod tests {
     fn test_apply_common_args_defaults() {
         let config = Config::default();
         let mut cmd = Command::new("mpv");
-        apply_common_args(&mut cmd, &config, &[]);
+        apply_common_args(&mut cmd, &config, &[], PlaybackContext::Track);
         let args: Vec<String> = cmd
             .get_args()
             .map(|a| a.to_string_lossy().to_string())
@@ -400,6 +472,8 @@ mod tests {
         assert!(args.iter().any(|a| a.contains("MPV-MUSIC")));
         assert!(args.iter().any(|a| a.contains("term-status-msg")));
         assert!(args.iter().any(|a| a == "--gapless-audio=weak"));
+        assert!(args.iter().any(|a| a == "--replaygain=track"));
+        assert!(args.iter().any(|a| a == "--replaygain-clip=no"));
     }
 
     #[test]
@@ -409,7 +483,7 @@ mod tests {
             ..Default::default()
         };
         let mut cmd = Command::new("mpv");
-        apply_common_args(&mut cmd, &config, &[]);
+        apply_common_args(&mut cmd, &config, &[], PlaybackContext::Track);
         let args: Vec<String> = cmd
             .get_args()
             .map(|a| a.to_string_lossy().to_string())
@@ -428,6 +502,7 @@ mod tests {
                 ..Default::default()
             },
             &[],
+            PlaybackContext::Track,
         );
         assert!(cmd.get_args().any(|a| a == "--gapless-audio=yes"));
 
@@ -439,6 +514,7 @@ mod tests {
                 ..Default::default()
             },
             &[],
+            PlaybackContext::Track,
         );
         assert!(cmd.get_args().any(|a| a == "--gapless-audio=no"));
     }
@@ -450,7 +526,7 @@ mod tests {
             ..Default::default()
         };
         let mut cmd_none = Command::new("mpv");
-        apply_common_args(&mut cmd_none, &config_none, &[]);
+        apply_common_args(&mut cmd_none, &config_none, &[], PlaybackContext::Track);
         let args_none: Vec<String> = cmd_none
             .get_args()
             .map(|a| a.to_string_lossy().to_string())
@@ -477,7 +553,7 @@ mod tests {
             ..Default::default()
         };
         let mut cmd_mono = Command::new("mpv");
-        apply_common_args(&mut cmd_mono, &config_mono, &[]);
+        apply_common_args(&mut cmd_mono, &config_mono, &[], PlaybackContext::Track);
         let args_mono: Vec<String> = cmd_mono
             .get_args()
             .map(|a| a.to_string_lossy().to_string())
@@ -497,6 +573,159 @@ mod tests {
             .find(|a| a.starts_with("--term-playing-msg="))
             .unwrap();
         assert!(banner_mono.contains("── \u{f001} MPV-MUSIC ──"));
+    }
+
+    #[test]
+    fn test_apply_common_args_replaygain_modes() {
+        // 1. Explicit No
+        let mut cmd = Command::new("mpv");
+        apply_common_args(
+            &mut cmd,
+            &Config {
+                replaygain: ReplayGainMode::No,
+                ..Default::default()
+            },
+            &[],
+            PlaybackContext::Album,
+        );
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args.iter().any(|a| a == "--replaygain=no"));
+        assert!(!args.iter().any(|a| a == "--replaygain-clip=no"));
+
+        // 2. Explicit Album
+        let mut cmd = Command::new("mpv");
+        apply_common_args(
+            &mut cmd,
+            &Config {
+                replaygain: ReplayGainMode::Album,
+                shuffle: true,
+                ..Default::default()
+            },
+            &[],
+            PlaybackContext::Track,
+        );
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args.iter().any(|a| a == "--replaygain=album"));
+        assert!(args.iter().any(|a| a == "--replaygain-clip=no"));
+
+        // 3. Explicit Track
+        let mut cmd = Command::new("mpv");
+        apply_common_args(
+            &mut cmd,
+            &Config {
+                replaygain: ReplayGainMode::Track,
+                shuffle: false,
+                ..Default::default()
+            },
+            &[],
+            PlaybackContext::Album,
+        );
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args.iter().any(|a| a == "--replaygain=track"));
+        assert!(args.iter().any(|a| a == "--replaygain-clip=no"));
+
+        // 4. Default mode + shuffle off + Album context => album
+        let mut cmd = Command::new("mpv");
+        apply_common_args(
+            &mut cmd,
+            &Config {
+                replaygain: ReplayGainMode::Default,
+                shuffle: false,
+                ..Default::default()
+            },
+            &[],
+            PlaybackContext::Album,
+        );
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args.iter().any(|a| a == "--replaygain=album"));
+        assert!(args.iter().any(|a| a == "--replaygain-clip=no"));
+
+        // 5. Default mode + shuffle off + Directory context => album
+        let mut cmd = Command::new("mpv");
+        apply_common_args(
+            &mut cmd,
+            &Config {
+                replaygain: ReplayGainMode::Default,
+                shuffle: false,
+                ..Default::default()
+            },
+            &[],
+            PlaybackContext::Directory,
+        );
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args.iter().any(|a| a == "--replaygain=album"));
+        assert!(args.iter().any(|a| a == "--replaygain-clip=no"));
+
+        // 6. Default mode + shuffle on + Album context => track
+        let mut cmd = Command::new("mpv");
+        apply_common_args(
+            &mut cmd,
+            &Config {
+                replaygain: ReplayGainMode::Default,
+                shuffle: true,
+                ..Default::default()
+            },
+            &[],
+            PlaybackContext::Album,
+        );
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args.iter().any(|a| a == "--replaygain=track"));
+        assert!(args.iter().any(|a| a == "--replaygain-clip=no"));
+
+        // 7. Default mode + shuffle off + Track context => track
+        let mut cmd = Command::new("mpv");
+        apply_common_args(
+            &mut cmd,
+            &Config {
+                replaygain: ReplayGainMode::Default,
+                shuffle: false,
+                ..Default::default()
+            },
+            &[],
+            PlaybackContext::Track,
+        );
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args.iter().any(|a| a == "--replaygain=track"));
+        assert!(args.iter().any(|a| a == "--replaygain-clip=no"));
+
+        // 8. Custom replaygain in mpv_args preserves custom args
+        let mut cmd = Command::new("mpv");
+        apply_common_args(
+            &mut cmd,
+            &Config {
+                mpv_args: vec!["--replaygain=no".to_string()],
+                ..Default::default()
+            },
+            &[],
+            PlaybackContext::Album,
+        );
+        let args: Vec<String> = cmd
+            .get_args()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
+        assert!(args.iter().any(|a| a == "--replaygain=no"));
+        assert!(!args.iter().any(|a| a == "--replaygain-clip=no"));
     }
 
     #[test]

@@ -202,6 +202,13 @@ pub fn apply_cli_overrides(cfg: &mut config::Config, args: &Cli) -> Result<()> {
         cfg.gapless = config::GaplessMode::False;
     }
 
+    if let Some(ref mode) = args.replaygain {
+        cfg.replaygain = mode.parse().unwrap_or(config::ReplayGainMode::Default);
+    }
+    if args.no_replaygain {
+        cfg.replaygain = config::ReplayGainMode::No;
+    }
+
     if let Some(ref extensions) = args.ext {
         cfg.audio_exts = extensions
             .split(',')
@@ -348,5 +355,27 @@ mod tests {
         let args_gapless_default = Cli::parse_from(["mpv-music", "--gapless", "default"]);
         apply_cli_overrides(&mut cfg, &args_gapless_default).unwrap();
         assert_eq!(cfg.gapless, config::GaplessMode::Default);
+    }
+
+    #[test]
+    fn test_apply_cli_overrides_replaygain() {
+        let mut cfg = config::Config::default();
+        assert_eq!(cfg.replaygain, config::ReplayGainMode::Default);
+
+        let args_rg = Cli::parse_from(["mpv-music", "--replaygain"]);
+        apply_cli_overrides(&mut cfg, &args_rg).unwrap();
+        assert_eq!(cfg.replaygain, config::ReplayGainMode::Default);
+
+        let args_rg_album = Cli::parse_from(["mpv-music", "--replaygain", "album"]);
+        apply_cli_overrides(&mut cfg, &args_rg_album).unwrap();
+        assert_eq!(cfg.replaygain, config::ReplayGainMode::Album);
+
+        let args_rg_track = Cli::parse_from(["mpv-music", "--replaygain", "track"]);
+        apply_cli_overrides(&mut cfg, &args_rg_track).unwrap();
+        assert_eq!(cfg.replaygain, config::ReplayGainMode::Track);
+
+        let args_no_rg = Cli::parse_from(["mpv-music", "--no-replaygain"]);
+        apply_cli_overrides(&mut cfg, &args_no_rg).unwrap();
+        assert_eq!(cfg.replaygain, config::ReplayGainMode::No);
     }
 }
