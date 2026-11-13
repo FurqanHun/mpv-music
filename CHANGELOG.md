@@ -4,6 +4,15 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 
 ## [Unreleased](https://github.com/FurqanHun/mpv-music/compare/v0.30.0-dev.1...HEAD)
 
+### Features
+- **ci:** add Windows ARM64 build target and installer architecture detection
+
+### Bug Fixes
+- **installer:** normalize installation directory by stripping trailing slashes in PATH verification
+
+### Documentation
+- **aur:** document unofficial Arch Linux AUR packages with community disclaimer in README and web pages
+
 ---
 
 ## [v0.30.0-dev.1](https://github.com/FurqanHun/mpv-music/releases/tag/v0.30.0-dev.1) - 2026-11-12 (Pre-release)
