@@ -257,11 +257,13 @@ mpv-music [FILTER_FLAGS] [--play-all]
 | `--no-video` | Negates `--video-ok`, and overrides it in config. |
 | `--watch (-w)` | Play with video window enabled (forces visual mode). |
 | `--no-watch` | Disable video window (forces audio mode, which is the default). |
-| `--loop [<LOOP_ARG>]` | Enable looping (`inf`, `no`, `track`, or a NUMBER). |
+| `--loop [<LOOP_ARG>]` | Enable looping (`inf` / `playlist` / `all`, `track` / `file` / `one`, `no` / `off` / `false` / `0`, or a NUMBER). |
 | `--no-loop` | Disable all looping. |
 | `--repeat` | Loop the current track (Repeat One). |
-| `--gapless [<MODE>]` | Enable gapless playback (`default`, `true`, `false`). Defaults to `true` if flag passed without value. |
+| `--gapless [<MODE>]` | Enable gapless playback (`default` / `auto` / `weak`, `true` / `yes` / `on` / `1`, `false` / `no` / `off` / `none` / `0`). Defaults to `true` if flag passed without value. |
 | `--no-gapless` | Disable gapless playback completely. |
+| `--replaygain [<MODE>]` | Set ReplayGain mode (`default` / `auto` / `true`, `album`, `track`, `no` / `off` / `none` / `false` / `0`). Defaults to `default` (context-aware: album when not shuffled in album/directory mode; otherwise track). |
+| `--no-replaygain` | Disable ReplayGain volume normalization completely. |
 | `-e`, `--ext <EXT_LIST>` | Override allowed extensions (e.g. `-e mp3,flac`). |
 | `-g`, `--genre [<GENRE>]` | Filter by Genre (supports OR aliases like `'pop, rock'`). Opens picker if empty. |
 | `-a`, `--artist [<ARTIST>]` | Filter by Artist (supports OR aliases like `'ado \|\| eve'`). Opens picker if empty. |
@@ -324,6 +326,8 @@ mpv-music -g -a "daft punk" -p         # pick genre, then play all Daft Punk
 mpv-music -w ~/Music/video.mp4         # play with video window enabled (watch mode)
 mpv-music --volume=50 --shuffle        # custom mpv flags
 mpv-music --gapless=true               # force gapless playback
+mpv-music --replaygain=album           # force album-level ReplayGain normalization
+mpv-music --no-replaygain              # disable ReplayGain volume normalization
 mpv-music --reindex                    # rebuild the index from scratch
 mpv-music --debug                      # run with full logging enabled
 mpv-music --verbose                    # prints verbose messages
@@ -377,12 +381,13 @@ mpv-music --config
 ```toml
 # --- General Playback ---
 shuffle = true
-loop_mode = "inf"  # Options: "playlist" (same as inf), "track", "no", "inf", "5" (number of loops)
+loop_mode = "inf"  # Options: "inf" / "playlist" / "all", "track" / "file" / "one", "no" / "off" / false / "0", or a count (e.g. 5)
 volume = 100
-gapless = "default" # Options: "default" (sets "weak"), true (force gapless), false (disable)
+gapless = "default" # Options: "default" / "auto" / "weak", true / "yes" / "on" / "1" (force gapless), false / "no" / "off" / "none" / "0" (disable)
+replaygain = "default" # Options: "default" / "auto" / true (context-aware: album for unshuffled album/dir, track for shuffle/mixed), "album", "track", "no" / "off" / "none" / false / "0"
 
 # --- Appearance ---
-nerd_fonts = "none"       # Options: "none" (standard emojis), "mono", "normal"
+nerd_fonts = "none"       # Options: "none" / "off" / false / "0" / "default" / "auto" (standard emojis), "mono" / true / "yes" / "on" / "1", "normal" / "symbols" / "prop" / "propo"
 
 # --- Library Management ---
 music_dirs = [
@@ -442,10 +447,11 @@ mpv_args = []
 | :--- | :--- | :--- | :--- | :--- |
 | `player` | String | `"mpv"` | `--player <BIN>` | Media player binary, fork, or path (e.g. `"mpv"`, `"mpvnet"`). |
 | `shuffle` | Boolean | `true` | `-s`, `--shuffle` / `--no-shuffle` | Enable or disable random shuffle by default. |
-| `loop_mode` | String / Integer | `"inf"` | `--loop`, `--no-loop`, `--repeat` | Looping mode: `"inf"` (or `"playlist"`), `"track"` (or `"file"`), `"no"` (or `"off"`), or loop count (e.g. `5`). |
+| `loop_mode` | String / Integer / Boolean | `"inf"` | `--loop`, `--no-loop`, `--repeat` | Looping mode: `"inf"` / `"playlist"` / `"all"`, `"track"` / `"file"` / `"one"`, `"no"` / `"off"` / `false` / `"0"`, or loop count (e.g. `5`). |
 | `volume` | Integer | `100` | `--volume <0-130>` | Playback volume percentage (`0` to `130`). Capped at 130 max. |
-| `gapless` | String / Boolean | `"default"` | `--gapless [<MODE>]`, `--no-gapless` | Gapless playback: `"default"` (stock MPV behavior), `true` (force gapless), `false` (disable). |
-| `nerd_fonts` | String / Boolean | `"none"` | — | Icon set: `"none"` (emojis), `"mono"` (monospace Nerd Fonts), `"normal"` (proportional/symbols), or `true`/`false`. |
+| `gapless` | String / Boolean | `"default"` | `--gapless [<MODE>]`, `--no-gapless` | Gapless playback: `"default"` / `"auto"` / `"weak"`, `true` / `"yes"` / `"on"` / `"1"` (force gapless), `false` / `"no"` / `"off"` / `"none"` / `"0"` (disable). |
+| `replaygain` | String / Boolean | `"default"` | `--replaygain [<MODE>]`, `--no-replaygain` | ReplayGain normalization: `"default"` / `"auto"` / `true` (context-aware: album for unshuffled album/dir, track for shuffle/mixed), `"album"`, `"track"`, `"no"` / `"off"` / `"none"` / `false` / `"0"`. Enforces anti-clipping (`--replaygain-clip=no`). |
+| `nerd_fonts` | String / Boolean | `"none"` | — | Icon set: `"none"` / `"off"` / `false` / `"0"` / `"default"` / `"auto"` (emojis), `"mono"` / `true` / `"yes"` / `"on"` / `"1"` (monospace Nerd Fonts), `"normal"` / `"symbols"` / `"prop"` / `"propo"` (proportional/symbols). |
 | `music_dirs` | Array of Strings | `["$HOME/Music"]` | `--manage-dirs`, `--add-dir`, `--remove-dir` | List of folder paths to index and search. |
 | `video_ok` | Boolean | `false` | `--video-ok` / `--no-video` | Scan and index video files alongside audio tracks. |
 | `watch` | Boolean | `false` | `-w`, `--watch` / `--no-watch` | Open MPV's video window during playback (shows video or album art). |

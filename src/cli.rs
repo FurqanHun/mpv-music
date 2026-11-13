@@ -135,11 +135,11 @@ pub struct Cli {
     pub ytdlp: Option<String>,
 
     #[arg(
-            long = "loop",
-            num_args = 0..=1,
-            default_missing_value = "inf",
-            help = "Enable looping ('inf', 'no', 'track', or a NUMBER)"
-        )]
+        long = "loop",
+        num_args = 0..=1,
+        default_missing_value = "inf",
+        help = "Enable looping ('inf'/'playlist'/'all', 'track'/'file'/'one', 'no'/'off'/false, or a NUMBER)"
+    )]
     pub loop_arg: Option<String>,
 
     #[arg(long, help = "Disable all looping")]
@@ -152,7 +152,7 @@ pub struct Cli {
         long,
         num_args = 0..=1,
         default_missing_value = "true",
-        help = "Enable gapless playback ('default', 'true', 'false')"
+        help = "Enable gapless playback ('default'/'auto'/'weak', true/'yes'/'on', false/'no'/'off'/'none')"
     )]
     pub gapless: Option<String>,
 
@@ -163,7 +163,7 @@ pub struct Cli {
         long,
         num_args = 0..=1,
         default_missing_value = "default",
-        help = "Set ReplayGain mode ('default', 'auto', 'album', 'track', 'no')"
+        help = "Set ReplayGain mode ('default'/'auto', 'album', 'track', 'no'/'off'/'none'/false)"
     )]
     pub replaygain: Option<String>,
 

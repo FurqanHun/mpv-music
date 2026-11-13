@@ -5,13 +5,15 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 ## [Unreleased](https://github.com/FurqanHun/mpv-music/compare/v0.30.0-dev.1...HEAD)
 
 ### Features
+- **player:** add context-aware ReplayGain support and anti-clipping safeguards
 - **ci:** add Windows ARM64 build target and installer architecture detection
 
 ### Bug Fixes
 - **installer:** normalize installation directory by stripping trailing slashes in PATH verification
 
-### Documentation
-- **aur:** document unofficial Arch Linux AUR packages with community disclaimer in README and web pages
+### Refactoring & Maintenance
+- **config:** standardize boolean and default keywords and deduplicate serde deserializers
+- **docs:** document unofficial Arch Linux AUR packages with community disclaimer in README and web pages
 
 ---
 
