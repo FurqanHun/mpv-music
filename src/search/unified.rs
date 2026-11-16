@@ -122,12 +122,14 @@ pub fn resolve_unified_candidates(tracks: &[Track], query: &str) -> Vec<Track> {
         .map(|b| NormalizedBranch::from_raw(b))
         .collect();
 
+    const STRONG_MATCH_THRESHOLD: i64 = 29_000;
+
     let branch_has_strong: Vec<bool> = branches
         .iter()
         .map(|branch| {
-            tracks
-                .iter()
-                .any(|t| score_normalized_branch(branch, t).unwrap_or(i64::MIN) >= 30_000)
+            tracks.iter().any(|t| {
+                score_normalized_branch(branch, t).unwrap_or(i64::MIN) >= STRONG_MATCH_THRESHOLD
+            })
         })
         .collect();
 
@@ -141,7 +143,7 @@ pub fn resolve_unified_candidates(tracks: &[Track], query: &str) -> Vec<Track> {
                 if let Some(s) = score_normalized_branch(branch, t) {
                     best_score = Some(best_score.map_or(s, |curr| curr.max(s)));
                     if branch_has_strong[i] {
-                        if s >= 30_000 {
+                        if s >= STRONG_MATCH_THRESHOLD {
                             keep = true;
                         }
                     } else {
@@ -327,5 +329,23 @@ mod tests {
         let artists: Vec<&str> = candidates.iter().map(|t| t.artist.as_str()).collect();
         assert!(artists.contains(&"Vocella; Natori"));
         assert!(artists.contains(&"The Gentle Men"));
+    }
+
+    #[test]
+    fn test_unified_search_prunes_fuzzy_when_exact_album_word_matches() {
+        let track_ado = sample_track("Usseewa", "Ado", "Ado's Best Adobum");
+        let track_yamashita = sample_track("Itsuka", "Tatsuro Yamashita", "Cozy");
+        let track_fuzzy_remix = sample_track(
+            "いつか晴れた日に (Album Remix)",
+            "Tatsuro Yamashita",
+            "Cozy",
+        );
+
+        let tracks = vec![track_ado, track_yamashita, track_fuzzy_remix];
+        let candidates = resolve_unified_candidates(&tracks, "adobum");
+
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].title, "Usseewa");
+        assert_eq!(candidates[0].album, "Ado's Best Adobum");
     }
 }
