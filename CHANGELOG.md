@@ -9,6 +9,7 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 - **ci:** add Windows ARM64 build target and installer architecture detection
 
 ### Bug Fixes
+- **search:** calibrate strong-match threshold for length-penalized exact album words
 - **installer:** normalize installation directory by stripping trailing slashes in PATH verification
 
 ### Refactoring & Maintenance
