@@ -178,6 +178,13 @@ if [[ -n "$LATEST_TAG" ]]; then
     tar -xzf "$TEMP_DIR/$ASSET_NAME" -C "$TEMP_DIR"
     BINARY_SOURCE=$(find "$TEMP_DIR" -type f -name "mpv-music" | head -n 1)
     mv "$BINARY_SOURCE" "$INSTALLED_BINARY"
+    MAN_SOURCE=$(find "$TEMP_DIR" -type f -name "mpv-music.1" | head -n 1 || true)
+    if [[ -n "$MAN_SOURCE" ]]; then
+        MAN_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/man/man1"
+        if mkdir -p "$MAN_DIR" 2>/dev/null && mv "$MAN_SOURCE" "$MAN_DIR/mpv-music.1" 2>/dev/null; then
+            echo -e "${GREEN}[OK]${NC} Man page installed to $MAN_DIR/mpv-music.1"
+        fi
+    fi
     rm -rf "$TEMP_DIR"
 else
     # Dev fallback: manual compilation

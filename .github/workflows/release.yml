@@ -96,11 +96,14 @@ jobs:
 
           mkdir -p dist
           cp "$BIN_PATH" dist/
+          if [[ "$TARGET" != *"windows"* ]]; then
+            cp man/mpv-music.1 dist/
+          fi
           cd dist
           if [[ "$TARGET" == *"windows"* ]]; then
             7z a "../$ARCHIVE_NAME" "$BINARY_NAME"
           else
-            tar -czvf "../$ARCHIVE_NAME" "$BINARY_NAME"
+            tar -czvf "../$ARCHIVE_NAME" "$BINARY_NAME" "mpv-music.1"
           fi
           cd ..
 

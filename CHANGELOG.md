@@ -7,6 +7,7 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 ### Features
 - **player:** add context-aware ReplayGain support and anti-clipping safeguards
 - **ci:** add Windows ARM64 build target and installer architecture detection
+- **installer:** bundle `mpv-music.1` in Unix release archives and install it to `$XDG_DATA_HOME/man/man1/` in `install.sh`
 
 ### Bug Fixes
 - **search:** calibrate strong-match threshold for length-penalized exact album words
@@ -16,6 +17,7 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 - **test:** prune synthetic padding tests and consolidate redundant micro-tests
 - **config:** standardize boolean and default keywords and deduplicate serde deserializers
 - **docs:** document unofficial Arch Linux AUR packages with community disclaimer in README and web pages
+- **docs:** add `mpv-music.1` man page covering CLI options, search operators, TUI controls, and `config.toml` reference
 
 ---
 

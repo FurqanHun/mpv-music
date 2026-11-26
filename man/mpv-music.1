@@ -1,0 +1,443 @@
+.TH MPV-MUSIC 1 "November 2026" "mpv-music 0.30.0" "User Commands"
+.SH NAME
+mpv-music \- terminal-native music player and library browser for mpv
+.SH SYNOPSIS
+.B mpv-music
+[\fIOPTIONS\fR] [\fITARGET\fR]
+.SH DESCRIPTION
+.B mpv-music
+is a terminal-native music player and library browser written in Rust that wraps
+.BR mpv (1)
+with fast metadata indexing, fuzzy search (powered by skim), rich previews,
+YouTube search/streaming via
+.BR yt-dlp (1),
+and curated internet radio stations.
+.PP
+When invoked with no arguments,
+.B mpv-music
+launches the interactive Main Menu TUI. When given a
+.IR TARGET ,
+it either plays a matching local file, directory, or URL directly, or runs a
+unified fuzzy search across Track Title, Artist, and Album.
+.SH OPTIONS
+.SS "Library & Indexing"
+.TP
+.BR \-r ", " \-\-refresh\-index
+Update the music index incrementally, detecting new, modified, or removed files.
+.TP
+.B \-\-reindex
+Force a full rescan of all configured music directories.
+.TP
+.BI \-\-add\-dir " PATH..."
+Add one or more directories to
+.I music_dirs
+in
+.I config.toml
+and refresh the index.
+.TP
+.BI \-\-remove\-dir " PATH..." "\fR, \fP" \-\-rm\-dir " PATH..."
+Remove one or more directories from
+.IR music_dirs .
+.TP
+.B \-\-manage\-dirs
+Open the Interactive Directory Manager.
+.TP
+.BI \-e ", " \-\-ext " EXT1,EXT2"
+Override allowed file extensions for the current session.
+.TP
+.B \-\-serial
+Force single-threaded (serial) indexing and processing.
+.SS "Filtering & Search"
+.TP
+.BI \-a ", " \-\-artist " [QUERY]"
+Filter by Artist. Opens the interactive Artist picker if
+.I QUERY
+is omitted. Supports OR aliases (e.g., \fB\-a "ado || natori"\fR).
+.TP
+.BI \-b ", " \-\-album " [QUERY]"
+Filter by Album. Opens the interactive Album picker if
+.I QUERY
+is omitted. Supports OR aliases.
+.TP
+.BI \-g ", " \-\-genre " [QUERY]"
+Filter by Genre. Opens the interactive Genre picker if
+.I QUERY
+is omitted. Supports OR aliases (e.g., \fB\-g "pop, rock"\fR).
+.TP
+.BI \-t ", " \-\-title " [QUERY]"
+Filter by Track Title. Opens Track Mode if
+.I QUERY
+is omitted. Supports OR aliases.
+.TP
+.B \-\-or
+Combine multiple filter flags using OR (union) instead of the default AND (intersection).
+.TP
+.BI \-l ", " \-\-playlist " [QUERY]"
+Open Playlist Mode, or filter playlists if
+.I QUERY
+is provided.
+.TP
+.BI \-\-search " [QUERY]" "\fR, \fP" \-\-yt " [QUERY]"
+Search YouTube directly for tracks and live streams (requires
+.BR yt-dlp (1)).
+.TP
+.BI \-\-radio " [STATION]"
+Open Radio Mode directly, or play a specific built-in station (e.g., \fBjpop\fR, \fBvocaloid\fR).
+.SS "Playback & Audio"
+.TP
+.BR \-p ", " \-\-play\-all
+Play all matching tracks immediately without opening a disambiguation picker.
+.TP
+.BR \-s ", " \-\-shuffle
+Enable shuffle playback for this session.
+.TP
+.B \-\-no\-shuffle
+Disable shuffle playback for this session (preserves natural album/track ordering).
+.TP
+.BI \-\-loop " [MODE]"
+Enable looping. Defaults to \fBinf\fR when passed without a value. Accepted values:
+\fBinf\fR/\fBplaylist\fR/\fBall\fR, \fBtrack\fR/\fBfile\fR/\fBone\fR/\fBrepeat\fR,
+\fBno\fR/\fBoff\fR/\fBfalse\fR, or a non-negative integer repeat count.
+.TP
+.B \-\-no\-loop
+Disable all looping for this session.
+.TP
+.B \-\-repeat
+Loop the currently playing track (Repeat One).
+.TP
+.BI \-\-gapless " [MODE]"
+Configure gapless audio playback. Defaults to \fBtrue\fR when passed without a value.
+Accepted values: \fBdefault\fR/\fBauto\fR/\fBweak\fR, \fBtrue\fR/\fByes\fR/\fBon\fR,
+\fBfalse\fR/\fBno\fR/\fBoff\fR/\fBnone\fR.
+.TP
+.B \-\-no\-gapless
+Disable gapless playback for this session.
+.TP
+.BI \-\-replaygain " [MODE]"
+Configure ReplayGain volume normalization. Defaults to \fBdefault\fR when passed without a value.
+Accepted values: \fBdefault\fR/\fBauto\fR (uses \fBalbum\fR mode when shuffle is off in Album
+or Directory Mode, and \fBtrack\fR mode otherwise), \fBalbum\fR, \fBtrack\fR,
+or \fBno\fR/\fBoff\fR/\fBnone\fR/\fBfalse\fR. Enforces \fB\-\-replaygain\-clip=no\fR when active.
+.TP
+.B \-\-no\-replaygain
+Disable ReplayGain volume normalization for this session.
+.TP
+.BI \-\-volume " LEVEL"
+Set initial playback volume (0\(en100).
+.TP
+.B \-\-video\-ok
+Include video files when browsing or playing.
+.TP
+.B \-\-no\-video
+Force-disable video files (overrides \fIvideo_ok\fR in config).
+.TP
+.BR \-w ", " \-\-watch
+Play with the mpv video window enabled.
+.TP
+.B \-\-no\-watch
+Force audio-only playback (overrides \fIwatch\fR in config).
+.TP
+.BI \-\-player " BIN"
+Specify the player binary (defaults to \fBmpv\fR on Unix, \fBmpv.com\fR on Windows).
+.TP
+.BI \-\-ytdlp " BIN"
+Specify the yt-dlp binary (defaults to \fByt-dlp\fR).
+.TP
+.BI \-\-mpv\-args " ARGS..."
+Pass extra raw arguments directly to
+.BR mpv (1).
+.SS "Configuration, Logs & Updates"
+.TP
+.BI \-c ", " \-\-config " [EDITOR]"
+Open
+.I config.toml
+in \fIEDITOR\fR (falls back to \fB$EDITOR\fR, \fB$VISUAL\fR, or a system editor).
+.TP
+.BR \-\-remove\-config ", " \-\-rm\-conf
+Delete \fIconfig.toml\fR to reset settings to defaults.
+.TP
+.BI \-\-log " [PAGER]"
+View session log files.
+.TP
+.BI \-\-remove\-log " [COUNT]" "\fR, \fP" \-\-rm\-log " [COUNT]"
+Delete all log files, or the oldest \fICOUNT\fR log files.
+.TP
+.BR \-v ", " \-\-verbose
+Increase verbosity (can be repeated).
+.TP
+.BR \-d ", " \-\-debug
+Enable debug output.
+.TP
+.BR \-u ", " \-\-update
+Check for and install application updates (available when built with the \fBupdate\fR feature).
+.TP
+.BR \-y ", " \-\-yes
+Auto-confirm the update prompt (available when built with the \fBupdate\fR feature).
+.TP
+.BR \-h ", " \-\-help
+Print CLI help summary and exit.
+.TP
+.BR \-V ", " \-\-version
+Print version information and exit.
+.SH SEARCH & OPERATORS
+.B mpv-music
+normalizes Unicode accents, case, full-width characters, and punctuation, tolerates
+parenthetical tags (e.g., \fI(feat. ...)\fR, \fI[Remastered]\fR), and ranks exact and
+word-boundary matches above fuzzy typos.
+.PP
+.TP
+.B Unified Global Search
+Positional queries search across Title, Artist, and Album simultaneously:
+.br
+\fBmpv-music "dean july"\fR
+.TP
+.B OR Union
+Matches if any term matches. Supported operators: \fB||\fR, \fBOR\fR, \fB|\fR, \fB,\fR
+.br
+\fBmpv-music "natori || ado"\fR
+.TP
+.B AND Intersection
+Matches only if all terms match. Supported operators: \fB&&\fR, \fBAND\fR, space, \fB;\fR
+.br
+\fBmpv-music "ado && miku"\fR
+.TP
+.B Flag OR Aliases & \-\-or
+Individual filter flags accept OR aliases (\fB\-a "ado || eve" \-g "rock, pop"\fR).
+Pass \fB\-\-or\fR to union results across separate filter flags instead of intersecting them.
+.SH INTERACTIVE TUI
+.SS "Main Menu Modes"
+When launched with no arguments, the Main Menu provides:
+.IP \(bu 2
+\fBDirectory Mode\fR \(em Browse folders (with pinned root \fImusic_dirs\fR) and play in natural track order.
+.IP \(bu 2
+\fBTrack Mode\fR \(em Fuzzy-search all indexed tracks with metadata & duration previews.
+.IP \(bu 2
+\fBPlaylist Mode\fR \(em Select and queue \fI.m3u\fR/\fI.m3u8\fR/\fI.pls\fR playlists.
+.IP \(bu 2
+\fBTag Filter Mode\fR \(em Filter by Artist, Album, or Genre.
+.IP \(bu 2
+\fBPlay All Mode\fR \(em Queue the entire indexed library.
+.IP \(bu 2
+\fBSearch & Stream URL\fR \(em Search YouTube or stream a direct URL via \fByt\-dlp\fR(1).
+.IP \(bu 2
+\fBRadio Mode\fR \(em Play curated built-in internet radio stations.
+.IP \(bu 2
+\fBSettings\fR \(em Manage music directories, refresh/rebuild index, edit config, or clean logs.
+.SS "Navigation & Selection Keys"
+.TP
+.B Type to filter
+Fuzzy-filter the current list in real time (also supports \fB||\fR, \fBOR\fR, \fBAND\fR, \fB&&\fR, \fB,\fR).
+.TP
+.BR Up / Down ", " Ctrl+N / Ctrl+P
+Move selection cursor.
+.TP
+.B TAB
+Toggle multi-selection on the highlighted item.
+.TP
+.B Ctrl+A
+Select all currently filtered items.
+.TP
+.B Ctrl+D
+Deselect only the currently filtered items (clear the search bar first to deselect all, or press \fBAlt+D\fR).
+.TP
+.B Alt+D
+Deselect all items unconditionally.
+.TP
+.B ENTER
+Confirm selection and start playback (or enter the selected submenu).
+.TP
+.B ESC
+Go back to the previous menu or exit.
+.SH CONFIGURATION
+Configuration is stored in TOML format in
+.IR config.toml .
+Run
+.B mpv-music \-c
+to edit it or
+.B mpv-music \-\-remove\-config
+to regenerate defaults.
+.PP
+Boolean and keyword fields accept standard TOML booleans as well as flexible string aliases:
+.IP \(bu 2
+\fBTrue aliases:\fR \fBtrue\fR, \fByes\fR, \fBon\fR, \fB"1"\fR
+.IP \(bu 2
+\fBFalse aliases:\fR \fBfalse\fR, \fBno\fR, \fBoff\fR, \fBnone\fR, \fB"0"\fR
+.IP \(bu 2
+\fBDefault aliases:\fR \fB"default"\fR, \fB"auto"\fR
+.SS "Playback Settings"
+.TP
+.B shuffle
+Type: \fIbool\fR. Default: \fBtrue\fR.
+.br
+Randomize playback order by default.
+.TP
+.B loop_mode
+Type: \fIstring | bool | integer\fR. Default: \fB"inf"\fR.
+.br
+Accepted values: \fB"inf"\fR (\fB"playlist"\fR, \fB"all"\fR, \fBtrue\fR),
+\fB"track"\fR (\fB"file"\fR, \fB"one"\fR, \fB"repeat"\fR),
+\fB"no"\fR (\fB"off"\fR, \fB"none"\fR, \fBfalse\fR), or a non-negative integer count (e.g., \fB2\fR).
+.TP
+.B volume
+Type: \fIinteger (0\(en130)\fR. Default: \fB100\fR.
+.br
+Initial mpv volume level (values above \fB130\fR are clamped to \fB100\fR on load).
+.TP
+.B gapless
+Type: \fIstring | bool\fR. Default: \fB"default"\fR.
+.br
+Accepted values: \fB"default"\fR (\fB"auto"\fR, \fB"weak"\fR),
+\fBtrue\fR (\fB"yes"\fR, \fB"on"\fR), or \fBfalse\fR (\fB"no"\fR, \fB"off"\fR, \fB"none"\fR).
+.TP
+.B replaygain
+Type: \fIstring | bool\fR. Default: \fB"default"\fR.
+.br
+Accepted values: \fB"default"\fR (\fB"auto"\fR, \fBtrue\fR \(em context-aware \fBalbum\fR/\fBtrack\fR),
+\fB"album"\fR, \fB"track"\fR, or \fB"no"\fR (\fB"off"\fR, \fB"none"\fR, \fBfalse\fR).
+.SS "Library & Scanner Settings"
+.TP
+.B music_dirs
+Type: \fIarray of paths\fR. Default: system audio directory (e.g., \fB["~/Music"]\fR).
+.br
+List of root directories scanned during indexing.
+.TP
+.B video_ok
+Type: \fIbool\fR. Default: \fBfalse\fR.
+.br
+Include video extensions when indexing and browsing.
+.TP
+.B watch
+Type: \fIbool\fR. Default: \fBfalse\fR.
+.br
+Enable mpv video window during playback.
+.TP
+.B scan_hidden_dirs
+Type: \fIbool\fR. Default: \fBfalse\fR.
+.br
+Traverse hidden directories (starting with \fB.\fR) when indexing.
+.TP
+.B serial_mode
+Type: \fIbool\fR. Default: \fBfalse\fR.
+.br
+Disable parallel scanning and process files on a single thread.
+.TP
+.B filename_pattern
+Type: \fIstring\fR. Default: \fB"default"\fR.
+.br
+Fallback metadata template used when audio tags are missing. Supports
+\fB{artist}\fR, \fB{title}\fR, \fB{album}\fR, and \fB{track}\fR tokens
+(e.g., \fB"{track} - {artist} - {title}"\fR). Set to \fB"default"\fR for built-in heuristics.
+.TP
+.B audio_exts\fR, \fBvideo_exts\fR, \fBplaylist_exts
+Type: \fIarray of strings\fR. Default: \fB["default"]\fR.
+.br
+File extensions recognized by the indexer. Include \fB"default"\fR to inherit the built-in
+list, add custom extensions (e.g., \fB"TAK"\fR), or exclude specific built-in extensions
+using \fB"!"\fR or \fB"-"\fR prefixes (e.g., \fB["default", "!amr", "dsd"]\fR).
+Built-in defaults:
+.br
+\(bu \fIaudio_exts\fR: mp3, flac, wav, m4a, aac, ogg, opus, wma, alac, aiff, aif, amr, ape, dsf, mpc, wv, spx
+.br
+\(bu \fIvideo_exts\fR: mp4, mkv, webm, avi, mov, flv, wmv, mpeg, mpg, 3gp, ts, vob, m4v
+.br
+\(bu \fIplaylist_exts\fR: m3u, m3u8, pls
+.SS "UI, Logging & External Tools"
+.TP
+.B nerd_fonts
+Type: \fIstring | bool\fR. Default: \fB"none"\fR.
+.br
+Accepted values: \fB"none"\fR (\fB"default"\fR, \fB"auto"\fR, \fBfalse\fR),
+\fB"mono"\fR (\fBtrue\fR, \fB"yes"\fR, \fB"on"\fR), or
+\fB"normal"\fR (\fB"symbols"\fR, \fB"prop"\fR, \fB"propo"\fR).
+.TP
+.B player
+Type: \fIstring\fR. Default: \fB"mpv"\fR.
+.br
+Player executable name or path (\fB"default"\fR resolves to \fBmpv\fR / \fBmpv.com\fR).
+.TP
+.B mpv_args
+Type: \fIarray of strings\fR. Default: \fB[]\fR.
+.br
+Extra arguments appended to every mpv invocation (legacy key \fImpv_default_args\fR is migrated automatically).
+.TP
+.B ytdlp
+Type: \fIstring\fR. Default: \fB"yt-dlp"\fR.
+.br
+yt-dlp executable name or path (\fB"default"\fR resolves to \fByt-dlp\fR).
+.TP
+.B ytdlp_useragent
+Type: \fIstring\fR. Default: \fB"default"\fR.
+.br
+HTTP User-Agent passed to yt-dlp (\fB"default"\fR uses the built-in Firefox User-Agent).
+.TP
+.B ytdlp_ejs_remote_github
+Type: \fIbool\fR. Default: \fBfalse\fR.
+.br
+Allow yt-dlp to fetch remote EJS components from GitHub.
+.TP
+.B enable_file_logging
+Type: \fIbool\fR. Default: \fBtrue\fR.
+.br
+Write session logs to the state directory.
+.TP
+.B max_log_sessions
+Type: \fIinteger (>= 1)\fR. Default: \fB3\fR.
+.br
+Maximum number of recent log files retained on disk (\fB0\fR is reset to \fB1\fR on load).
+.SS "Example config.toml"
+.nf
+.RS 4
+shuffle = true
+loop_mode = "inf"
+volume = 100
+gapless = "default"
+replaygain = "default"
+nerd_fonts = "mono"
+music_dirs = ["/home/user/Music"]
+audio_exts = ["default", "!amr"]
+filename_pattern = "default"
+mpv_args = []
+.RE
+.fi
+.SH FILES
+Paths follow platform XDG/standard conventions:
+.TP
+.I ~/.config/mpv-music/config.toml
+Main TOML configuration file (on macOS: \fI~/Library/Application Support/com.furqanhun.mpv-music/config.toml\fR;
+on Windows: \fI%APPDATA%\\furqanhun\\mpv-music\\config\\config.toml\fR).
+.TP
+.I ~/.local/share/mpv-music/music_index.jsonl
+Indexed track metadata database.
+.TP
+.I ~/.cache/mpv-music/yt_cache.json
+Cached YouTube search metadata.
+.TP
+.I ~/.local/state/mpv-music/logs/
+Session log files (falls back to the data directory if no state directory is defined).
+.SH EXAMPLES
+.TP
+Launch the interactive TUI:
+.B mpv-music
+.TP
+Play a specific album or artist via unified search:
+.B mpv-music "currents"
+.TP
+Search with OR / AND operators and play immediately without a picker:
+.B mpv-music "ado || natori" \-p
+.TP
+Filter by multiple genres and artists using union (\-\-or):
+.B mpv-music \-a ado \-g "j-pop, rock" \-\-or
+.TP
+Play an album folder in natural track order with album ReplayGain:
+.B mpv-music \-\-no\-shuffle /path/to/album
+.TP
+Search YouTube for a track or live stream:
+.B mpv-music \-\-yt "lofi hip hop"
+.SH SEE ALSO
+.BR mpv (1),
+.BR yt-dlp (1)
+.PP
+Project homepage and documentation:
+.I https://furqanhun.github.io/mpv-music/
+.SH AUTHOR
+FurqanHun <furqanhun@proton.me>
