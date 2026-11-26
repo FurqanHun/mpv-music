@@ -276,6 +276,18 @@
             </div>
 
             <div class="os-section">
+                <h2 class="os-title">Windows (ARM64)</h2>
+                <p style="font-size: 0.9rem; color: var(--dim); margin: 0;">For Snapdragon / ARM64 Windows devices
+                    (aarch64).</p>
+                <div class="btn-group">
+                    <a id="win-arm-stable" class="btn" href="#">Download Stable <span class="tag-label"
+                            id="lbl-win-arm-stable"></span></a>
+                    <a id="win-arm-dev" class="btn dev" href="#">Download Dev <span class="tag-label"
+                            id="lbl-win-arm-dev"></span></a>
+                </div>
+            </div>
+
+            <div class="os-section">
                 <h2 class="os-title">macOS (Apple Silicon)</h2>
                 <p style="font-size: 0.9rem; color: var(--dim); margin: 0;">For M1/M2/M3 Macs (aarch64).</p>
                 <div class="btn-group">
@@ -372,6 +384,9 @@
 
                 document.getElementById('win-stable').href = buildUrl(stable, "x86_64-pc-windows-msvc", true);
                 if (dev) document.getElementById('win-dev').href = buildUrl(dev, "x86_64-pc-windows-msvc", true);
+
+                document.getElementById('win-arm-stable').href = buildUrl(stable, "aarch64-pc-windows-msvc", true);
+                if (dev) document.getElementById('win-arm-dev').href = buildUrl(dev, "aarch64-pc-windows-msvc", true);
 
                 document.getElementById('mac-arm-stable').href = buildUrl(stable, "aarch64-apple-darwin", false);
                 if (dev) document.getElementById('mac-arm-dev').href = buildUrl(dev, "aarch64-apple-darwin", false);

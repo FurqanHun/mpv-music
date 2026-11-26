@@ -283,7 +283,7 @@
         <p>
             Music for your terminal.<br />
             Blazing fast, <strong>Rust</strong> native 🦀.<br />
-            <strong>Stable v0.29.1+</strong> available.<span class="cursor"></span>
+            <strong>Stable v0.30.0+</strong> available.<span class="cursor"></span>
         </p>
 
         <p style="margin-bottom: 0; font-size: 0.9rem; color: var(--dim);"><strong>Rust (1.93.0+)</strong></p>
@@ -338,7 +338,7 @@
         </div>
 
         <h2>Supported Systems</h2>
-        <p>Linux (x86_64, ARM64), BSD/macOS, WSL, Windows</p>
+        <p>Linux (x86_64, ARM64), BSD/macOS, WSL, Windows (x86_64, ARM64)</p>
 
         <h2>Why?</h2>
         <p>
@@ -370,12 +370,24 @@
                 having a minimal interactive menu actually ended up being much smoother for browsing the library.
             </li>
             <li>
-                <strong>Keyboard Native:</strong> Designed for an entirely keyboard-driven workflow. (Though the UI
-                technically supports mouse clicks, the keyboard is just faster).
+                <strong>Keyboard Native:</strong> Designed for an entirely keyboard-driven workflow with multi-select
+                controls (<code>TAB</code>, <code>Ctrl+A</code>, <code>Ctrl+D</code>, <code>Alt+D</code>) and adaptive
+                track/folder previews with track durations.
             </li>
             <li>
-                <strong>Radio & Web Streams:</strong> Seamless integration with ad-free internet radio streams (SomaFM,
-                LISTEN.moe, Lofi) and native YouTube streaming.
+                <strong>Unified Search &amp; Boolean Operators:</strong> Search across Title, Artist, and Album with
+                Unicode/full-width normalization and typo tolerance. Combine terms with <code>OR</code>
+                (<code>||</code>, <code>OR</code>, <code>|</code>, <code>,</code>), <code>AND</code>
+                (<code>&amp;&amp;</code>, <code>AND</code>, space, <code>;</code>), or <code>--or</code> across flags.
+            </li>
+            <li>
+                <strong>Context-Aware ReplayGain &amp; Gapless Audio:</strong> Automatically switches between
+                <code>album</code> ReplayGain (sequential album/folder playback) and <code>track</code> ReplayGain
+                (shuffle or mixed queues) with anti-clipping protection.
+            </li>
+            <li>
+                <strong>Radio &amp; Web Streams:</strong> Seamless integration with ad-free internet radio streams
+                (SomaFM, LISTEN.moe, Lofi), live stream detection, and native YouTube streaming.
             </li>
             <li>
                 <strong>Terminal-Native Aesthetics:</strong> Standard emojis by default for 100% out-of-the-box
@@ -387,6 +399,15 @@
         <h2>Usage</h2>
         <p>Simply run <code>mpv-music</code> to launch the interactive TUI, or use arguments for instant playback:</p>
         <ul>
+            <li>
+                <code>mpv-music "dean july"</code> (Unified search across title, artist, and album)
+            </li>
+            <li>
+                <code>mpv-music "ado || natori" -p</code> (OR union search, play all immediately)
+            </li>
+            <li>
+                <code>mpv-music -a ado -g "j-pop, rock" --or</code> (Pool tracks across multiple filter flags)
+            </li>
             <li>
                 <code>mpv-music -a "Daft Punk"</code> (Filter by artist, instant-play if 1 match)
             </li>

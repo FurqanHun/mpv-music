@@ -1,8 +1,8 @@
 %global debug_package %{nil}
 
 Name:           mpv-music
-Version:        0.29.1
-Release:        2%{?dist}
+Version:        0.30.0
+Release:        1%{?dist}
 Summary:        A TUI-based music player wrapper for MPV
 
 License:        MIT
@@ -32,13 +32,19 @@ cargo build --release
 
 %install
 install -Dm0755 target/release/mpv-music %{buildroot}%{_bindir}/mpv-music
+install -Dm0644 man/mpv-music.1 %{buildroot}%{_mandir}/man1/mpv-music.1
 
 %files
 %license LICENSE
 %doc README.md CHANGELOG.md
 %{_bindir}/mpv-music
+%{_mandir}/man1/mpv-music.1*
 
 %changelog
+* Thu Nov 26 2026 FurqanHun <furqanhun@proton.me> - 0.30.0-1
+- Release v0.30.0
+- Upstream changelog: https://github.com/FurqanHun/mpv-music/releases/tag/v0.30.0
+
 * Tue Oct 27 2026 FurqanHun <furqanhun@proton.me> - 0.29.1-2
 - Demote yt-dlp from Recommends to Suggests so DNF does not install it by default
 
