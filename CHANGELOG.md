@@ -8,46 +8,52 @@ All notable changes to furqanhun/mpv-music will be documented in this file.
 
 ## [v0.30.0](https://github.com/FurqanHun/mpv-music/releases/tag/v0.30.0) - 2026-11-26
 
-This release introduces a major overhaul to search and filtering, adding unified multi-field queries, Unicode and full-width normalization, length-scaled typo tolerance, and boolean `AND`/`OR` operators across both the CLI and TUI. It also adds context-aware ReplayGain normalization, natural track sorting, crash-safe atomic indexing, dynamic `["default"]` extension lists, Windows ARM64 support, and a new `mpv-music(1)` man page.
+This release introduces a major overhaul across search, audio playback, library indexing, and UI ergonomics. It adds unified multi-field queries, Unicode and full-width normalization, length-scaled typo tolerance, and boolean `AND`/`OR` operators across both CLI and TUI. It also brings context-aware ReplayGain normalization, natural track sorting, crash-safe atomic indexing with audio quality probing, dynamic `["default"]` extension lists, YouTube live stream detection, Windows ARM64 support, and an offline `mpv-music(1)` man page.
 
 ### Features & Improvements
-- **Unified Multi-Field Search & Relevance Ranking:** Run positional queries (e.g., `mpv-music "dean july"`) across Title, Artist, and Album simultaneously with ranked scoring (`exact > prefix > word boundary > substring > fuzzy`), parenthetical/featured-artist noise tolerance, and smart ambiguity resolution via Skim instead of blindly auto-playing all matches.
-- **Unicode, Full-Width & Typo Tolerance:** Normalizes accents, apostrophes, hyphens, and East Asian full-width characters, with length-scaled edit distance, prepended/appended typo handling, and bounded Levenshtein fallback on word boundaries.
-- **Boolean Operators (`AND` / `OR`) Across CLI & TUI:**
-  - Use `OR` (`||`, `OR`, `|`, `,`) and `AND` (`&&`, `AND`, space, `;`) in unified queries and tag filter flags (e.g., `-a "ado || eve" -g "rock, pop"`) with per-branch pruning.
-  - Added `--or` to combine multiple filter flags as a union instead of the default intersection.
-  - Aligned the interactive TUI search bar with CLI boolean operators (`||`, `OR`, `&&`, `AND`, `,`), native normalization, adaptive typo tolerance, and anchor column display.
-- **Context-Aware ReplayGain:** Added `replaygain` in `config.toml` (defaulting to `"default"` / `"auto"`) plus `--replaygain [<MODE>]` and `--no-replaygain` CLI flags. Automatically uses `--replaygain=album` for sequential Album/Directory playback and `--replaygain=track` for shuffle or mixed queues, with `--replaygain-clip=no` anti-clipping protection.
-- **Natural Track Sorting & Directory Mode Overhaul:**
-  - Tracks in Album, Tag Filter, Directory Mode, and direct folder playback sort naturally (`01`, `02`, ...) when shuffle is off.
-  - Directory Mode now pins configured `music_dirs` roots (`[Root]`), displays relative paths, uses an adaptive multi-section preview pane, and supports multi-selection playback in Playlist Mode.
-- **Indexer Metadata, Fallback & Crash Safety:**
-  - Probes track duration (`[mm:ss]`), sample rate, and bitrate via `lofty` for TUI previews.
-  - Added configurable `filename_pattern` (`{artist}`, `{title}`, `{album}`, `{track}`) and cleaner default heuristics that strip leading track numbers and infer artist/album from parent folders.
-  - Atomic index writes using `.tmp`/`.bak` staging with automatic startup recovery.
-- **Dynamic Extension Lists & Config Standardization:**
-  - Added `["default"]` extension resolution with `!ext` / `-ext` exclusions for `audio_exts`, `video_exts`, and `playlist_exts` (with auto-migration from legacy defaults).
-  - Standardized boolean (`true`/`yes`/`on`/`1`, `false`/`no`/`off`/`none`/`0`) and `default`/`auto` keywords across config and CLI, and consolidated startup config notices into one message.
-- **Now-Playing UI, Live Streams & TUI Controls:**
-  - Added album powerbar to the mpv status line, updated the album Nerd Font icon to a vinyl record, added live stream detection (`Duration: LIVE`), clean title handling, YouTube hour duration formatting, and progress spinners for `yt-dlp` and update checks.
-  - Updated `Ctrl+D` to deselect only matching/filtered items and added `Alt+D` to deselect all unconditionally.
-- **XDG State & Cache Paths:** Moved session logs to `~/.local/state/mpv-music/logs/` and YouTube search cache to `~/.cache/mpv-music/` with automatic migration from legacy data directories.
-- **Windows ARM64 & Distribution:**
-  - Added `aarch64-pc-windows-msvc` builds to CI releases and automatic ARM64 detection in `install.ps1`.
-  - Added `man/mpv-music.1`, bundled it into Unix `.tar.gz` release archives, and updated `install.sh` to install it to `$XDG_DATA_HOME/man/man1/`.
-  - Added Fedora Copr RPM spec file and automated Copr build triggers on release, and updated `yt-dlp` default User-Agent to Firefox 161.0 (demoting Deno priority).
+- **Unified Multi-Field Search:** Run positional queries across Title, Artist, and Album simultaneously (e.g. `mpv-music "dean july"`) with multi-word, out-of-order token matching, ranked relevance scoring (`exact > prefix > word boundary > substring > fuzzy`), and smart ambiguity resolution via an interactive Skim track picker when multiple songs match.
+- **Unicode, Full-Width & Scaled Typo Tolerance:** Normalizes unicode accents, apostrophes, hyphens, and East Asian full-width characters across queries and library metadata. Integrates dynamic typo tolerance scaled by word length, handling prepended/appended character typos, adjacent transpositions, and bounded Levenshtein fallback on word boundaries.
+- **Noise Tolerance:** Built-in helper strips and ignores noise in song titles and artist names during search scoring, including parentheticals (`(Official Audio)`), brackets, remaster suffixes, and featured artist credits (`feat.`, `ft.`).
+- **Boolean Operators (`AND` / `OR`) & `--or` Union Flag:** Supports boolean `OR` (`||`, `OR`, `|`, `,`) and `AND` (`&&`, `AND`, space, `;`) across unified search queries and CLI tag filter flags (`-a "ado || eve" -g "rock, pop"`) with per-branch candidate pruning. Added `--or` to combine multiple filter flags into a union rather than intersection, and aligned the interactive TUI search bar with identical boolean syntax and anchor column display.
+- **Context-Aware ReplayGain:** Added `replaygain` configuration in `config.toml` (defaulting to `"default"` / `"auto"`), alongside `--replaygain [<MODE>]` and `--no-replaygain` CLI flags. Automatically applies `--replaygain=album` during sequential album/directory playback and `--replaygain=track` for shuffle or mixed queues, with `--replaygain-clip=no` anti-clipping protection.
+- **Natural Track Sorting:** Tracks in Album Mode, Tag Filter Mode, Directory Mode, and direct folder playback sort naturally in alphanumeric sequence (`01`, `02`, `10`, etc.) when shuffle is disabled.
+- **Directory Mode Overhaul:** Pinned configured root music directories (`[Root]`) at the top of Directory Mode, displays relative paths against library roots, and implements an adaptive multi-section preview pane showing root headers, subfolder breakdowns, and direct track listings.
+- **Playlist Mode Multi-Selection:** Interactive Playlist Mode now queues all selected playlists sequentially instead of discarding all but the first selection.
+- **Interactive Selection Controls:** Added `Ctrl+D` to deselect only matching/filtered items and `Alt+D` to deselect all items unconditionally in interactive multi-selection menus.
+- **Audio Properties Probing:** Decodes and probes track duration (`[mm:ss]`), sample rate (kHz), and bitrate (kbps) via `lofty`, displaying live audio quality properties in TUI preview panes.
+- **Crash-Safe Atomic Indexing:** Implemented atomic library index writing using temporary `.tmp` staging and `.bak` backups with automatic crash detection and startup recovery.
+- **Configurable Filename Pattern & Heuristic Fallback:** Added `filename_pattern` in `config.toml` supporting `{artist}`, `{title}`, `{album}`, and `{track}` tokens. When tags are missing or patterns mismatch, fallback heuristics strip leading track numbers and infer artist and album metadata from parent directory hierarchies.
+- **JavaScript Runtime Priority & Deno Demotion:** Reordered JS runtime probing for `yt-dlp` YouTube playback to prioritize Node.js and QuickJS over Deno, demoting Deno to lowest priority due to its deprecation and shutdown, and updated runtime recommendations accordingly.
+- **YouTube Live Stream Detection & Clean Titles:** Detects live streams via `ytdl_is_live`, displays `Duration: LIVE` and `Type: Live Stream` in search previews, adds `[ LIVE ]` badge to player status, suppresses sliding HLS DVR buffer times, cleans dynamic broadcast timestamps from titles via an MPV title hook, and silences benign FFmpeg exit errors (`--msg-level=ffmpeg=no`) in non-debug mode.
+- **Visual Feedback Spinners & Duration Formatting:** Added animated terminal progress spinners during slow operations (`yt-dlp` queries and version update checks), and expanded YouTube duration formatting to support hours (`hh:mm:ss`).
+- **Dynamic Extension Lists:** Added `["default"]` keyword support for `audio_exts`, `video_exts`, and `playlist_exts` in `config.toml` with inclusion and exclusion tokens (`!ext`, `-ext`), and automatic startup migration for legacy hardcoded lists.
+- **Standardized Keywords & Unified Startup Notifications:** Standardized boolean values (`true`/`yes`/`on`/`1`, `false`/`no`/`off`/`none`/`0`) and default aliases (`default`/`auto`) across config and CLI flags with deduplicated deserializers. Consolidated all config auto-populations, value clamps, and migrations into a single concise startup notice.
+- **XDG State & Cache Path Migration:** Moved session logs to `$XDG_STATE_HOME` (`~/.local/state/mpv-music/logs/`) and YouTube search cache to `$XDG_CACHE_HOME` (`~/.cache/mpv-music/`) with automatic startup migration from legacy directories.
+- **Nerd Font Icons & Status Line:** Added album powerbar to player status line and updated the album Nerd Font icon to a vinyl record.
+- **Windows ARM64 Support:** Added official `aarch64-pc-windows-msvc` CI release builds and automated ARM64 architecture detection in `install.ps1`.
+- **Unix Man Page:** Added `mpv-music.1` man page covering CLI flags, search operators, keybindings, and config reference. Bundled into Unix `.tar.gz` releases and installed to `$XDG_DATA_HOME/man/man1/` by `install.sh`.
+- **Fedora Copr Packaging:** Added RPM `.spec` file (`packaging/rpm/mpv-music.spec`) and automated Copr release trigger webhooks.
 
 ### Performance Improvements
-- **Zero-Allocation TUI & Search Hot Paths:** Pre-normalized query tokens once outside scoring loops, cached formatted display strings in `TagItem`/`DirItem`, reused line buffers during JSONL index loading, used `DirEntry::file_type()` in `WalkDir`, and buffered `.m3u8` playlist writes.
+- **Pre-Normalized Search Tokens:** Pre-normalizes search query tokens once outside candidate scoring loops, eliminating redundant transformations on hot paths.
+- **Zero-Allocation Skim Rendering:** Cached pre-rendered display strings in `TagItem` and `DirItem`, eliminating heap allocations during Skim redraw loops.
+- **Buffered Index Loading:** Reuses line buffers and pre-allocates vector capacity during JSONL library loading.
+- **Fast Directory Traversal:** Utilizes fast `DirEntry::file_type()` checks in WalkDir traversals with symlink fallback to minimize filesystem stat overhead.
+- **Buffered Playlist Writing:** Wrapped temporary `.m3u8` queue playlist generation in `BufWriter`.
 
 ### Bug Fixes
-- **Search Pruning, Typos & Filters:** Removed exact-match hard-shadowing in CLI filters, added adjacent transposition and middle-typo insertion support, routed multi-match title filters to the track picker, and calibrated `STRONG_MATCH_THRESHOLD` (`29,000`) so length-penalized exact album words still prune weak fuzzy noise.
-- **Directory & Cache Safety:** Isolated directory path prefix matching to whole path components, deduplicated nested multi-selection, and immediately purged corrupted `yt_cache.json` files on load failure.
-- **Installer Path Normalization:** Stripped trailing slashes from `$INSTALL_DIR` in `install.sh` and `install.ps1` to prevent false `PATH` warnings.
+- **Calibrated Search Threshold:** Tuned `STRONG_MATCH_THRESHOLD` (`29,000`) so length-penalized exact album terms continue to prune weak fuzzy noise.
+- **Directory Path Isolation:** Isolated directory path prefix matching to whole path components (`Path::starts_with`), preventing prefix collisions between sibling directories.
+- **Nested Directory Multi-Selection:** Fixed selection deduplication for nested directory structures during multi-selection.
+- **Corrupted YouTube Cache Recovery:** Immediately purges corrupted `yt_cache.json` files on load failure instead of failing repeatedly.
+- **Edit Distance & Typo Routing:** Added adjacent transposition and middle-character typo insertions to bounded edit distance, and routed ambiguous multi-match title filters directly to the interactive track picker.
+- **Installer PATH Verification:** Stripped trailing slashes from `$INSTALL_DIR` in `install.sh` and `install.ps1` to prevent false positive PATH warnings.
 
-### Documentation & Chores
-- Updated `README.md`, CLI `--help`, web guides, and `man/mpv-music.1` with unified search, boolean operators, standardized config keywords, ReplayGain, and community AUR package notes.
-- Organized search modules into `src/search/`, bumped `skim` to `5.9.0` and updated dependencies, and pruned redundant synthetic tests in favor of regression, contract, and end-to-end CLI user flow tests.
+### Dependencies & Chores
+- **Dependencies:** Bumped `skim` to **v5.9.0**, updated all dependencies in `Cargo.lock`, and bumped default `yt-dlp` User-Agent to Firefox 161.0.
+- **Codebase Organization:** Refactored search subsystem into dedicated modules inside `src/search/`.
+- **Test Suite Hygiene:** Pruned synthetic padding and micro-tests in favor of purposeful bug regressions, contract verifications, and end-to-end CLI user flow tests.
+- **Documentation:** Updated `README.md`, CLI help screens, web guides, and documented unofficial Arch Linux AUR packages with community maintenance disclaimer.
 
 ---
 
