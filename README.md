@@ -8,10 +8,6 @@
 [![github downloads](https://img.shields.io/github/downloads/FurqanHun/mpv-music/total?label=github%20downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://github.com/FurqanHun/mpv-music/releases)
 [![crates.io downloads](https://img.shields.io/crates/d/mpv-music?label=crates.io%20downloads&labelColor=27303D&color=0D1117&logo=rust&logoColor=FFFFFF&style=flat)](https://crates.io/crates/mpv-music)
 
-> [!NOTE]
-> You are viewing the documentation for the **`master` development branch**, which contains unreleased features not yet in stable.  
-> For the documentation of the latest stable release (**v0.29.1**), please see the **[v0.29.1 README](https://github.com/FurqanHun/mpv-music/tree/v0.29.1)**.
-
 **mpv-music** is a blazing-fast, terminal-native music player and library browser written in Rust.
 
 It indexes your music collection into a lightning-fast library, providing fuzzy searching (via `skim`), metadata-rich previews, and deep integration with `mpv` for high-quality playback.
