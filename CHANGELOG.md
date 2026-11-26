@@ -2,22 +2,52 @@
 
 All notable changes to furqanhun/mpv-music will be documented in this file.
 
-## [Unreleased](https://github.com/FurqanHun/mpv-music/compare/v0.30.0-dev.1...HEAD)
+## [Unreleased](https://github.com/FurqanHun/mpv-music/compare/v0.30.0...HEAD)
 
-### Features
-- **player:** add context-aware ReplayGain support and anti-clipping safeguards
-- **ci:** add Windows ARM64 build target and installer architecture detection
-- **installer:** bundle `mpv-music.1` in Unix release archives and install it to `$XDG_DATA_HOME/man/man1/` in `install.sh`
+---
+
+## [v0.30.0](https://github.com/FurqanHun/mpv-music/releases/tag/v0.30.0) - 2026-11-26
+
+This release introduces a major overhaul to search and filtering, adding unified multi-field queries, Unicode and full-width normalization, length-scaled typo tolerance, and boolean `AND`/`OR` operators across both the CLI and TUI. It also adds context-aware ReplayGain normalization, natural track sorting, crash-safe atomic indexing, dynamic `["default"]` extension lists, Windows ARM64 support, and a new `mpv-music(1)` man page.
+
+### Features & Improvements
+- **Unified Multi-Field Search & Relevance Ranking:** Run positional queries (e.g., `mpv-music "dean july"`) across Title, Artist, and Album simultaneously with ranked scoring (`exact > prefix > word boundary > substring > fuzzy`), parenthetical/featured-artist noise tolerance, and smart ambiguity resolution via Skim instead of blindly auto-playing all matches.
+- **Unicode, Full-Width & Typo Tolerance:** Normalizes accents, apostrophes, hyphens, and East Asian full-width characters, with length-scaled edit distance, prepended/appended typo handling, and bounded Levenshtein fallback on word boundaries.
+- **Boolean Operators (`AND` / `OR`) Across CLI & TUI:**
+  - Use `OR` (`||`, `OR`, `|`, `,`) and `AND` (`&&`, `AND`, space, `;`) in unified queries and tag filter flags (e.g., `-a "ado || eve" -g "rock, pop"`) with per-branch pruning.
+  - Added `--or` to combine multiple filter flags as a union instead of the default intersection.
+  - Aligned the interactive TUI search bar with CLI boolean operators (`||`, `OR`, `&&`, `AND`, `,`), native normalization, adaptive typo tolerance, and anchor column display.
+- **Context-Aware ReplayGain:** Added `replaygain` in `config.toml` (defaulting to `"default"` / `"auto"`) plus `--replaygain [<MODE>]` and `--no-replaygain` CLI flags. Automatically uses `--replaygain=album` for sequential Album/Directory playback and `--replaygain=track` for shuffle or mixed queues, with `--replaygain-clip=no` anti-clipping protection.
+- **Natural Track Sorting & Directory Mode Overhaul:**
+  - Tracks in Album, Tag Filter, Directory Mode, and direct folder playback sort naturally (`01`, `02`, ...) when shuffle is off.
+  - Directory Mode now pins configured `music_dirs` roots (`[Root]`), displays relative paths, uses an adaptive multi-section preview pane, and supports multi-selection playback in Playlist Mode.
+- **Indexer Metadata, Fallback & Crash Safety:**
+  - Probes track duration (`[mm:ss]`), sample rate, and bitrate via `lofty` for TUI previews.
+  - Added configurable `filename_pattern` (`{artist}`, `{title}`, `{album}`, `{track}`) and cleaner default heuristics that strip leading track numbers and infer artist/album from parent folders.
+  - Atomic index writes using `.tmp`/`.bak` staging with automatic startup recovery.
+- **Dynamic Extension Lists & Config Standardization:**
+  - Added `["default"]` extension resolution with `!ext` / `-ext` exclusions for `audio_exts`, `video_exts`, and `playlist_exts` (with auto-migration from legacy defaults).
+  - Standardized boolean (`true`/`yes`/`on`/`1`, `false`/`no`/`off`/`none`/`0`) and `default`/`auto` keywords across config and CLI, and consolidated startup config notices into one message.
+- **Now-Playing UI, Live Streams & TUI Controls:**
+  - Added album powerbar to the mpv status line, updated the album Nerd Font icon to a vinyl record, added live stream detection (`Duration: LIVE`), clean title handling, YouTube hour duration formatting, and progress spinners for `yt-dlp` and update checks.
+  - Updated `Ctrl+D` to deselect only matching/filtered items and added `Alt+D` to deselect all unconditionally.
+- **XDG State & Cache Paths:** Moved session logs to `~/.local/state/mpv-music/logs/` and YouTube search cache to `~/.cache/mpv-music/` with automatic migration from legacy data directories.
+- **Windows ARM64 & Distribution:**
+  - Added `aarch64-pc-windows-msvc` builds to CI releases and automatic ARM64 detection in `install.ps1`.
+  - Added `man/mpv-music.1`, bundled it into Unix `.tar.gz` release archives, and updated `install.sh` to install it to `$XDG_DATA_HOME/man/man1/`.
+  - Added Fedora Copr RPM spec file and automated Copr build triggers on release, and updated `yt-dlp` default User-Agent to Firefox 161.0 (demoting Deno priority).
+
+### Performance Improvements
+- **Zero-Allocation TUI & Search Hot Paths:** Pre-normalized query tokens once outside scoring loops, cached formatted display strings in `TagItem`/`DirItem`, reused line buffers during JSONL index loading, used `DirEntry::file_type()` in `WalkDir`, and buffered `.m3u8` playlist writes.
 
 ### Bug Fixes
-- **search:** calibrate strong-match threshold for length-penalized exact album words
-- **installer:** normalize installation directory by stripping trailing slashes in PATH verification
+- **Search Pruning, Typos & Filters:** Removed exact-match hard-shadowing in CLI filters, added adjacent transposition and middle-typo insertion support, routed multi-match title filters to the track picker, and calibrated `STRONG_MATCH_THRESHOLD` (`29,000`) so length-penalized exact album words still prune weak fuzzy noise.
+- **Directory & Cache Safety:** Isolated directory path prefix matching to whole path components, deduplicated nested multi-selection, and immediately purged corrupted `yt_cache.json` files on load failure.
+- **Installer Path Normalization:** Stripped trailing slashes from `$INSTALL_DIR` in `install.sh` and `install.ps1` to prevent false `PATH` warnings.
 
-### Refactoring & Maintenance
-- **test:** prune synthetic padding tests and consolidate redundant micro-tests
-- **config:** standardize boolean and default keywords and deduplicate serde deserializers
-- **docs:** document unofficial Arch Linux AUR packages with community disclaimer in README and web pages
-- **docs:** add `mpv-music.1` man page covering CLI options, search operators, TUI controls, and `config.toml` reference
+### Documentation & Chores
+- Updated `README.md`, CLI `--help`, web guides, and `man/mpv-music.1` with unified search, boolean operators, standardized config keywords, ReplayGain, and community AUR package notes.
+- Organized search modules into `src/search/`, bumped `skim` to `5.9.0` and updated dependencies, and pruned redundant synthetic tests in favor of regression, contract, and end-to-end CLI user flow tests.
 
 ---
 
